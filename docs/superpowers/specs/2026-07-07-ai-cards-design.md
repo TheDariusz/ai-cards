@@ -117,10 +117,19 @@ Every card has a replay-audio button for listen-and-repeat practice.
 
 Cloudflare free tier covers single-user scale. Claude + OpenAI TTS ≈ under $1/month at ~20 new words/day.
 
+## Export
+
+A settings page with two download buttons (no import):
+
+- **CSV** — one row per card: `word, word_pl, explanation_en, sentence_en, sentence_pl`. Universally usable; imports directly into Anki/Mochi/spreadsheets.
+- **JSON** — full fidelity: all card fields plus SRS state and review log, as a personal backup.
+
+Both are plain authenticated GET endpoints generating the file on the fly — no stored exports, no scheduling.
+
 ## Out of scope (YAGNI, revisit later)
 
 - Offline reviews / sync
 - Multiple users
-- Decks/tags, import/export
+- Decks/tags, import (export is in scope, see above)
 - Premium voices (ElevenLabs), multiple sentences per word
 - Voice capture
