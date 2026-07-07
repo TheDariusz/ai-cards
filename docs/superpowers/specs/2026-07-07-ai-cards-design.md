@@ -17,7 +17,7 @@ A personal English-learning flashcard service for a Polish native speaker stuck 
 | Phone | iPhone → PWA via "Add to Home Screen" |
 | TTS | AI-generated audio, stored per card |
 | Hosting | Cloudflare (Workers + D1 + R2) |
-| AI providers | Claude API for card content, OpenAI TTS for audio |
+| AI providers | OpenRouter (single key): Claude model for card content, GPT-4o Mini TTS for audio |
 | Offline | Online-only (revisit later if it hurts) |
 | Architecture | React Router 7 (framework mode) on Cloudflare Workers |
 
@@ -56,8 +56,8 @@ review_log
 
 1. User types a word, hits Add. Card is saved immediately with `status='pending'`; the UI returns to idle in ~3 seconds (user goes back to their podcast).
 2. In the background (Worker `waitUntil`):
-   a. **Claude** (`claude-sonnet-5`, structured output) generates `word_pl`, `explanation_en`, `sentence_en` (deliberately slightly above B1 — this is the level-stretching mechanism), `sentence_pl`.
-   b. **OpenAI TTS** (`gpt-4o-mini-tts`) speaks `sentence_en`; MP3 stored in R2.
+   a. **Claude via OpenRouter** (`anthropic/claude-sonnet-5`, structured output) generates `word_pl`, `explanation_en`, `sentence_en` (deliberately slightly above B1 — this is the level-stretching mechanism), `sentence_pl`. Model id is config, not code — swappable to any OpenRouter model.
+   b. **TTS via OpenRouter** (`/api/v1/audio/speech`, `gpt-4o-mini-tts`) speaks `sentence_en`; MP3 stored in R2.
    c. Card → `status='ready'`.
 3. Failures at any step → `status='failed'` with a retry button; the word is never lost. If only TTS failed, the card is still usable text-only with a "generate audio" retry.
 4. Home screen shows a small "pending" indicator; cards typically become ready within seconds (light polling while pending cards exist).
@@ -92,13 +92,13 @@ Every card has a replay-audio button for listen-and-repeat practice.
 - **React Router 7** (framework mode) on **Cloudflare Workers** — official template; loaders/actions server-side with direct binding access.
 - **D1** + **Drizzle ORM** (typed schema, migrations).
 - **R2** for MP3s, served through an authenticated app route (no public bucket).
-- **Claude API** — structured output for card generation. **OpenAI TTS** for audio (~$0.002/sentence).
+- **OpenRouter** as the single AI gateway (one API key): a Claude model for card generation (structured output) and its OpenAI-compatible TTS endpoint (`gpt-4o-mini-tts`) for audio (~$0.002/sentence). Model choices live in config so they can be swapped without code changes.
 - **PWA**: manifest + icons; "Add to Home Screen" on iPhone gives full-screen app feel; same URL on desktop.
 
 ## Auth & security
 
 - Single user. Login page with one password; hash stored as a Worker secret; signed long-lived session cookie (~90 days) so login is roughly once per device.
-- Claude/OpenAI API keys are Worker secrets, server-side only.
+- The OpenRouter API key is a Worker secret, server-side only.
 - All routes (including audio) require the session.
 
 ## Error handling
@@ -115,7 +115,7 @@ Every card has a replay-audio button for listen-and-repeat practice.
 
 ## Cost
 
-Cloudflare free tier covers single-user scale. Claude + OpenAI TTS ≈ under $1/month at ~20 new words/day.
+Cloudflare free tier covers single-user scale. OpenRouter usage (card generation + TTS, including its ~5% routing markup) ≈ under $1/month at ~20 new words/day.
 
 ## Export
 
