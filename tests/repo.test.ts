@@ -1,6 +1,6 @@
 import { describe, it, expect } from 'vitest'
 import { testDb } from './helpers/db'
-import { insertPendingCard, getDueCards, countDue, getCard, listCards, markReady, applyReview, completedDays } from '../app/db/repo'
+import { insertPendingCard, getDueCards, countDue, getCard, listCards, markReady, applyReview, completedDays, updateCardContent, deleteCard } from '../app/db/repo'
 import { dayKey } from '../app/lib/streak'
 
 const NOW = 1_750_000_000_000
@@ -67,5 +67,28 @@ describe('applyReview', () => {
     const later = NOW + 2 * DAY
     await applyReview(db, a, 'good', 'flip', null, later)
     expect(await completedDays(db)).toEqual([])
+  })
+})
+
+describe('updateCardContent / deleteCard', () => {
+  it('updates content but preserves SRS state', async () => {
+    const db = testDb()
+    const id = await insertPendingCard(db, 'reluctant', NOW)
+    await markReady(db, id, CONTENT, null)
+    const before = await getCard(db, id)
+    await updateCardContent(db, id, { ...CONTENT, sentenceEn: 'He is reluctant to go.' })
+    const after = await getCard(db, id)
+    expect(after!.sentenceEn).toBe('He is reluctant to go.')
+    expect(after!.dueAt).toBe(before!.dueAt)
+    expect(after!.ease).toBe(before!.ease)
+  })
+
+  it('deletes a card and its review log rows', async () => {
+    const db = testDb()
+    const id = await insertPendingCard(db, 'reluctant', NOW)
+    await markReady(db, id, CONTENT, null)
+    await applyReview(db, id, 'good', 'flip', null, NOW + 2 * DAY)
+    await deleteCard(db, id)
+    expect(await getCard(db, id)).toBeUndefined()
   })
 })

@@ -77,3 +77,16 @@ export async function applyReview(
 export async function completedDays(db: Db): Promise<string[]> {
   return (await db.select().from(dayLog)).map((r) => r.date).sort()
 }
+
+export async function updateCardContent(db: Db, id: number, content: CardContent): Promise<void> {
+  await db.update(cards).set(content).where(eq(cards.id, id))
+}
+
+export async function deleteCard(db: Db, id: number): Promise<void> {
+  await db.delete(reviewLog).where(eq(reviewLog.cardId, id))
+  await db.delete(cards).where(eq(cards.id, id))
+}
+
+export async function setAudioKey(db: Db, id: number, audioKey: string): Promise<void> {
+  await db.update(cards).set({ audioKey }).where(eq(cards.id, id))
+}
