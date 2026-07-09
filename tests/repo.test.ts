@@ -1,6 +1,8 @@
 import { describe, it, expect } from 'vitest'
 import { testDb } from './helpers/db'
+import { eq } from 'drizzle-orm'
 import { insertPendingCard, getDueCards, countDue, getCard, listCards, markReady, applyReview, completedDays, updateCardContent, deleteCard } from '../app/db/repo'
+import { reviewLog } from '../app/db/schema'
 import { dayKey } from '../app/lib/streak'
 
 const NOW = 1_750_000_000_000
@@ -81,6 +83,7 @@ describe('updateCardContent / deleteCard', () => {
     expect(after!.sentenceEn).toBe('He is reluctant to go.')
     expect(after!.dueAt).toBe(before!.dueAt)
     expect(after!.ease).toBe(before!.ease)
+    expect(after!.intervalDays).toBe(before!.intervalDays)
   })
 
   it('deletes a card and its review log rows', async () => {
@@ -90,5 +93,7 @@ describe('updateCardContent / deleteCard', () => {
     await applyReview(db, id, 'good', 'flip', null, NOW + 2 * DAY)
     await deleteCard(db, id)
     expect(await getCard(db, id)).toBeUndefined()
+    const orphans = await db.select().from(reviewLog).where(eq(reviewLog.cardId, id))
+    expect(orphans).toHaveLength(0)
   })
 })
