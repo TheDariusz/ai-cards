@@ -1,9 +1,14 @@
 import { describe, it, expect } from 'vitest'
 import { testDb } from './helpers/db'
-import { insertPendingCard, getDueCards, countDue, getCard, listCards, markReady } from '../app/db/repo'
+import { insertPendingCard, getDueCards, countDue, getCard, listCards, markReady, applyReview, completedDays } from '../app/db/repo'
+import { dayKey } from '../app/lib/streak'
 
 const NOW = 1_750_000_000_000
 const DAY = 86_400_000
+
+const CONTENT = {
+  wordPl: 'x', explanationEn: 'x', sentenceEn: 'x', sentencePl: 'x',
+}
 
 describe('repo', () => {
   it('inserts a pending card due tomorrow', async () => {
@@ -37,5 +42,30 @@ describe('repo', () => {
     await insertPendingCard(db, 'second', NOW + 1000)
     const all = await listCards(db)
     expect(all.map((c) => c.word)).toEqual(['second', 'first'])
+  })
+})
+
+describe('applyReview', () => {
+  it('reschedules, logs, and completes the day when no cards remain due', async () => {
+    const db = testDb()
+    const id = await insertPendingCard(db, 'reluctant', NOW)
+    await markReady(db, id, CONTENT, null)
+    const later = NOW + 2 * DAY
+    await applyReview(db, id, 'good', 'flip', null, later)
+    const card = await getCard(db, id)
+    expect(card!.dueAt).toBeGreaterThan(later)          // rescheduled
+    expect(await countDue(db, later)).toBe(0)
+    expect(await completedDays(db)).toEqual([dayKey(later)])
+  })
+
+  it('does not complete the day while cards are still due', async () => {
+    const db = testDb()
+    const a = await insertPendingCard(db, 'a', NOW)
+    const b = await insertPendingCard(db, 'b', NOW)
+    await markReady(db, a, CONTENT, null)
+    await markReady(db, b, CONTENT, null)
+    const later = NOW + 2 * DAY
+    await applyReview(db, a, 'good', 'flip', null, later)
+    expect(await completedDays(db)).toEqual([])
   })
 })
