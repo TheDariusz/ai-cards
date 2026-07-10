@@ -105,6 +105,8 @@ export default function Home({ loaderData, actionData }: Route.ComponentProps) {
       <nav className="nav">
         <Link to="/review">Review</Link>
         <Link to="/cards">Cards ({total})</Link>
+        <a href="/export/csv" download>Export CSV</a>
+        <a href="/export/json" download>Backup JSON</a>
       </nav>
     </main>
   )
