@@ -3,7 +3,6 @@ import { useEffect, useRef, useState } from 'react'
 import type { Route } from './+types/review'
 import { requireAuth } from '../lib/session'
 import { createDb, getDueCards, applyReview } from '../db/repo'
-import type { Grade } from '../lib/srs'
 
 export async function loader({ request, context }: Route.LoaderArgs) {
   const env = context.cloudflare.env
@@ -16,22 +15,30 @@ export async function action({ request, context }: Route.ActionArgs) {
   const env = context.cloudflare.env
   await requireAuth(request, env)
   const form = await request.formData()
-  await applyReview(
-    createDb(env.DB),
-    Number(form.get('cardId')),
-    String(form.get('grade')) as Grade,
-    form.get('mode') === 'write' ? 'write' : 'flip',
-    form.get('typed') ? String(form.get('typed')) : null,
-    Date.now(),
-  )
-  return { ok: true }
+  const grade = String(form.get('grade'))
+  const mode = form.get('mode') === 'write' ? 'write' : 'flip'
+  if (grade !== 'again' && grade !== 'good' && grade !== 'easy') return { ok: false as const }
+  try {
+    await applyReview(
+      createDb(env.DB),
+      Number(form.get('cardId')),
+      grade,
+      mode,
+      form.get('typed') ? String(form.get('typed')) : null,
+      Date.now(),
+    )
+    return { ok: true as const }
+  } catch (err) {
+    console.error('review submission failed:', err)
+    return { ok: false as const }
+  }
 }
 
 // useFetcher (not a navigating Form) so a network failure keeps the revealed card
 // on screen — the grade is "held in memory" (spec) and the user just taps again.
 function GradeButtons({ cardId, mode, typed }: { cardId: number; mode: string; typed?: string }) {
-  const fetcher = useFetcher()
-  const failed = fetcher.state === 'idle' && fetcher.data === undefined && fetcher.formData !== undefined
+  const fetcher = useFetcher<typeof action>()
+  const failed = fetcher.state === 'idle' && fetcher.data?.ok === false
   return (
     <fetcher.Form method="post" className="grades">
       <input type="hidden" name="cardId" value={cardId} />
@@ -97,6 +104,15 @@ export default function Review({ loaderData }: Route.ComponentProps) {
       {mode === 'flip'
         ? <FlipCard key={card.id} card={card} />
         : <p className="muted">Write mode arrives in the next task.</p>}
+    </main>
+  )
+}
+
+export function ErrorBoundary() {
+  return (
+    <main className="page">
+      <p className="error">Something went wrong submitting your review.</p>
+      <a href="/review">Back to review</a>
     </main>
   )
 }
