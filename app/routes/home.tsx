@@ -2,19 +2,27 @@ import { Form, Link, useRevalidator } from 'react-router'
 import { useEffect } from 'react'
 import type { Route } from './+types/home'
 import { requireAuth } from '../lib/session'
-import { createDb, insertPendingCard, getCard, listCards } from '../db/repo'
+import { createDb, insertPendingCard, getCard, listCards, countDue, completedDays } from '../db/repo'
 import { runCardPipeline } from '../lib/pipeline'
 import { aiFromEnv } from '../lib/openrouter'
+import { computeStreak, dayKey } from '../lib/streak'
 
 export async function loader({ request, context }: Route.LoaderArgs) {
   const env = context.cloudflare.env
   await requireAuth(request, env)
   const db = createDb(env.DB)
   const all = await listCards(db)
+  const now = Date.now()
+  const days = await completedDays(db)
+  const today = dayKey(now)
   return {
     pending: all.filter((c) => c.status === 'pending').map((c) => ({ id: c.id, word: c.word })),
     failed: all.filter((c) => c.status === 'failed').map((c) => ({ id: c.id, word: c.word })),
     total: all.length,
+    due: await countDue(db, now),
+    streak: computeStreak(days, today),
+    completed: days.filter((d) => d.startsWith(today.slice(0, 7))), // this month
+    today,
   }
 }
 
@@ -49,7 +57,7 @@ export async function action({ request, context }: Route.ActionArgs) {
 }
 
 export default function Home({ loaderData, actionData }: Route.ComponentProps) {
-  const { pending, failed, total } = loaderData
+  const { pending, failed, total, due, streak, completed, today } = loaderData
   const revalidator = useRevalidator()
 
   // light polling while cards are generating
@@ -81,6 +89,18 @@ export default function Home({ loaderData, actionData }: Route.ComponentProps) {
           <button type="submit">Retry</button>
         </Form>
       ))}
+
+      <div className="stats">
+        <div className="stat"><b>{due}</b> due today</div>
+        <div className="stat"><b>🔥 {streak}</b> day streak</div>
+      </div>
+      {due > 0 && <Link to="/review"><button style={{ width: '100%' }}>Start review</button></Link>}
+      <div className="calendar">
+        {Array.from({ length: Number(today.slice(8, 10)) }, (_, i) => {
+          const d = `${today.slice(0, 8)}${String(i + 1).padStart(2, '0')}`
+          return <span key={d} className={`day ${completed.includes(d) ? 'done' : ''}`}>{i + 1}</span>
+        })}
+      </div>
 
       <nav className="nav">
         <Link to="/review">Review</Link>
