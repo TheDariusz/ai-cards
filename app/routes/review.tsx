@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react'
 import type { Route } from './+types/review'
 import { requireAuth } from '../lib/session'
 import { createDb, getDueCards, applyReview } from '../db/repo'
+import { diffAnswer, type DiffResult } from '../lib/diff'
 
 export async function loader({ request, context }: Route.LoaderArgs) {
   const env = context.cloudflare.env
@@ -78,6 +79,49 @@ function FlipCard({ card }: { card: Route.ComponentProps['loaderData']['due'][nu
   )
 }
 
+function WriteCard({ card }: { card: Route.ComponentProps['loaderData']['due'][number] }) {
+  const [typed, setTyped] = useState('')
+  const [result, setResult] = useState<DiffResult | null>(null)
+  const audioRef = useRef<HTMLAudioElement>(null)
+  useEffect(() => {
+    if (result) audioRef.current?.play().catch(() => {})
+  }, [result])
+
+  return (
+    <>
+      <div className="card-face"><p lang="pl">{card.sentencePl}</p></div>
+      {!result ? (
+        <form onSubmit={(e) => { e.preventDefault(); setResult(diffAnswer(card.sentenceEn ?? '', typed)) }}>
+          <textarea
+            value={typed}
+            onChange={(e) => setTyped(e.target.value)}
+            placeholder="Write the English sentence…"
+            autoFocus
+            rows={3}
+          />
+          <button type="submit">Check</button>
+        </form>
+      ) : (
+        <>
+          <div className="card-face">
+            <p>
+              {result.tokens.map((t, i) => (
+                <span key={i} className={`diff-${t.kind}`}>{t.text} </span>
+              ))}
+            </p>
+            <p lang="en"><b>{card.sentenceEn}</b></p>
+            <p className="muted">
+              {Math.round(result.score * 100)}% — suggested: <b>{result.suggestedGrade}</b>
+            </p>
+            {card.audioKey && <audio ref={audioRef} controls src={`/audio/${card.id}`} />}
+          </div>
+          <GradeButtons cardId={card.id} mode="write" typed={typed} />
+        </>
+      )}
+    </>
+  )
+}
+
 export default function Review({ loaderData }: Route.ComponentProps) {
   const [params, setParams] = useSearchParams()
   const mode = params.get('mode') === 'write' ? 'write' : 'flip'
@@ -103,7 +147,7 @@ export default function Review({ loaderData }: Route.ComponentProps) {
       </button>
       {mode === 'flip'
         ? <FlipCard key={card.id} card={card} />
-        : <p className="muted">Write mode arrives in the next task.</p>}
+        : <WriteCard key={card.id} card={card} />}
     </main>
   )
 }
