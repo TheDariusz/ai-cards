@@ -1,4 +1,4 @@
-import { Form, Link, redirect } from 'react-router'
+import { Form, Link, redirect, useNavigation } from 'react-router'
 import type { Route } from './+types/card-detail'
 import { requireAuth } from '../lib/session'
 import { createDb, getCard, updateCardContent, deleteCard, setAudioKey } from '../db/repo'
@@ -31,23 +31,22 @@ export async function action({ request, params, context }: Route.ActionArgs) {
 
   if (intent === 'regenerate') {
     const hint = String(form.get('hint') ?? '').trim() || undefined
-    context.cloudflare.ctx.waitUntil(
-      runCardPipeline({ db, ai: aiFromEnv(env), audio: env.AUDIO }, id, card.word, hint),
-    )
-    return { regenerating: true }
+    await runCardPipeline({ db, ai: aiFromEnv(env), audio: env.AUDIO }, id, card.word, hint)
+    return { regenerated: true }
   }
 
   if (intent === 'retry-audio') {
     // spec: TTS-only failure leaves a usable text-only card with a "generate audio" retry
     if (card.sentenceEn) {
       const sentenceEn = card.sentenceEn
-      context.cloudflare.ctx.waitUntil(
-        (async () => {
-          const newKey = await generateAudio({ ai: aiFromEnv(env), audio: env.AUDIO }, id, sentenceEn)
-          if (card.audioKey && card.audioKey !== newKey) await env.AUDIO.delete(card.audioKey).catch(() => {})
-          await setAudioKey(db, id, newKey) // a text-only card gains audio here
-        })().catch((err) => console.error(`audio refresh failed for card ${id}:`, err)),
-      )
+      try {
+        const newKey = await generateAudio({ ai: aiFromEnv(env), audio: env.AUDIO }, id, sentenceEn)
+        if (card.audioKey && card.audioKey !== newKey) await env.AUDIO.delete(card.audioKey).catch(() => {})
+        await setAudioKey(db, id, newKey) // a text-only card gains audio here
+      } catch (err) {
+        console.error(`audio refresh failed for card ${id}:`, err)
+        return { audioRetried: false }
+      }
     }
     return { audioRetried: true }
   }
@@ -88,6 +87,8 @@ export async function action({ request, params, context }: Route.ActionArgs) {
 
 export default function CardDetail({ loaderData, actionData }: Route.ComponentProps) {
   const { card } = loaderData
+  const nav = useNavigation()
+  const busy = nav.state !== 'idle'
   return (
     <main className="page">
       <h1><Link to="/cards">←</Link> {card.word}</h1>
@@ -96,8 +97,8 @@ export default function CardDetail({ loaderData, actionData }: Route.ComponentPr
       ) : card.status === 'ready' ? (
         <Form method="post">
           <input type="hidden" name="intent" value="retry-audio" />
-          <button type="submit">Generate audio</button>
-          {actionData && 'audioRetried' in actionData && <span className="pending"> ⏳</span>}
+          <button type="submit" disabled={busy}>Generate audio</button>
+          {busy && <span className="pending"> ⏳</span>}
         </Form>
       ) : null}
 
@@ -117,8 +118,8 @@ export default function CardDetail({ loaderData, actionData }: Route.ComponentPr
       <Form method="post" className="quick-add">
         <input type="hidden" name="intent" value="regenerate" />
         <input name="hint" placeholder="Hint (optional): e.g. business context" />
-        <button type="submit">Regenerate</button>
-        {actionData && 'regenerating' in actionData && <span className="pending"> ⏳</span>}
+        <button type="submit" disabled={busy}>Regenerate</button>
+        {busy && <span className="pending"> ⏳</span>}
       </Form>
 
       <Form

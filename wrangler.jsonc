@@ -9,8 +9,8 @@
 	"main": "./workers/app.ts",
 	"vars": {
 		"CARD_MODEL": "anthropic/claude-sonnet-5",
-		"TTS_MODEL": "openai/gpt-4o-mini-tts",
-		"TTS_VOICE": "alloy"
+		"TTS_MODEL": "microsoft/mai-voice-2",
+		"TTS_VOICE": "en-US-Harper:MAI-Voice-2"
 	},
 	"observability": {
 		"enabled": true
