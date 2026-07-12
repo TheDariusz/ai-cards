@@ -89,6 +89,11 @@ export default function CardDetail({ loaderData, actionData }: Route.ComponentPr
   const { card } = loaderData
   const nav = useNavigation()
   const busy = nav.state !== 'idle'
+  // Remount the edit form when the editable content changes (e.g. after
+  // Regenerate) so its uncontrolled defaultValue inputs re-read fresh values.
+  // audioKey is deliberately excluded: a background audio refresh after Save
+  // must not remount the form and wipe in-progress typing.
+  const contentKey = [card.wordPl, card.explanationEn, card.sentenceEn, card.sentencePl].join('|')
   return (
     <main className="page">
       <h1><Link to="/cards">←</Link> {card.word}</h1>
@@ -102,7 +107,7 @@ export default function CardDetail({ loaderData, actionData }: Route.ComponentPr
         </Form>
       ) : null}
 
-      <Form method="post">
+      <Form method="post" key={contentKey}>
         <input type="hidden" name="intent" value="save" />
         <label>Polish word <input name="wordPl" defaultValue={card.wordPl ?? ''} /></label>
         <label>Explanation <textarea name="explanationEn" defaultValue={card.explanationEn ?? ''} /></label>
