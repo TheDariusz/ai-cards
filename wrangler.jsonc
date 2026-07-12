@@ -4,7 +4,7 @@
  */
 {
 	"$schema": "node_modules/wrangler/config-schema.json",
-	"name": "tmp-scaffold",
+	"name": "ai-cards",
 	"compatibility_date": "2026-07-09",
 	"main": "./workers/app.ts",
 	"vars": {
@@ -34,7 +34,7 @@
 		{
 			"binding": "DB",
 			"database_name": "ai-cards",
-			"database_id": "placeholder-until-task-15",
+			"database_id": "014a9fc2-a352-4601-96c7-fb9cef7f67eb",
 			"migrations_dir": "drizzle"
 		}
 	],
