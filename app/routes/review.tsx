@@ -45,9 +45,9 @@ function GradeButtons({ cardId, mode, typed }: { cardId: number; mode: string; t
       <input type="hidden" name="cardId" value={cardId} />
       <input type="hidden" name="mode" value={mode} />
       {typed !== undefined && <input type="hidden" name="typed" value={typed} />}
-      <button name="grade" value="again" className="grade-again">Again</button>
-      <button name="grade" value="good">Good</button>
-      <button name="grade" value="easy" className="grade-easy">Easy</button>
+      <button name="grade" value="again" className="grade-again" disabled={fetcher.state !== 'idle'}>Again</button>
+      <button name="grade" value="good" disabled={fetcher.state !== 'idle'}>Good</button>
+      <button name="grade" value="easy" className="grade-easy" disabled={fetcher.state !== 'idle'}>Easy</button>
       {failed && <p className="error">Didn’t reach the server — tap your grade again.</p>}
     </fetcher.Form>
   )
@@ -70,7 +70,7 @@ function FlipCard({ card }: { card: Route.ComponentProps['loaderData']['due'][nu
           <div className="card-face">
             <p lang="en"><b>{card.sentenceEn}</b></p>
             <p className="muted">{card.word} = {card.wordPl} — {card.explanationEn}</p>
-            {card.audioKey && <audio ref={audioRef} controls src={`/audio/${card.id}`} />}
+            {card.audioKey && <audio ref={audioRef} controls src={`/audio/${card.id}?v=${encodeURIComponent(card.audioKey)}`} />}
           </div>
           <GradeButtons cardId={card.id} mode="flip" />
         </>
@@ -113,7 +113,7 @@ function WriteCard({ card }: { card: Route.ComponentProps['loaderData']['due'][n
             <p className="muted">
               {Math.round(result.score * 100)}% — suggested: <b>{result.suggestedGrade}</b>
             </p>
-            {card.audioKey && <audio ref={audioRef} controls src={`/audio/${card.id}`} />}
+            {card.audioKey && <audio ref={audioRef} controls src={`/audio/${card.id}?v=${encodeURIComponent(card.audioKey)}`} />}
           </div>
           <GradeButtons cardId={card.id} mode="write" typed={typed} />
         </>

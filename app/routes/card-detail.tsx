@@ -2,7 +2,7 @@ import { Form, Link, redirect } from 'react-router'
 import type { Route } from './+types/card-detail'
 import { requireAuth } from '../lib/session'
 import { createDb, getCard, updateCardContent, deleteCard, setAudioKey } from '../db/repo'
-import { runCardPipeline } from '../lib/pipeline'
+import { runCardPipeline, generateAudio } from '../lib/pipeline'
 import { aiFromEnv } from '../lib/openrouter'
 
 export async function loader({ request, params, context }: Route.LoaderArgs) {
@@ -25,6 +25,7 @@ export async function action({ request, params, context }: Route.ActionArgs) {
 
   if (intent === 'delete') {
     await deleteCard(db, id)
+    if (card.audioKey) context.cloudflare.ctx.waitUntil(env.AUDIO.delete(card.audioKey).catch(() => {}))
     return redirect('/cards')
   }
 
@@ -39,8 +40,14 @@ export async function action({ request, params, context }: Route.ActionArgs) {
   if (intent === 'retry-audio') {
     // spec: TTS-only failure leaves a usable text-only card with a "generate audio" retry
     if (card.sentenceEn) {
-      const ai = aiFromEnv(env)
-      context.cloudflare.ctx.waitUntil(regenerateAudio(db, env, ai, id, card.sentenceEn))
+      const sentenceEn = card.sentenceEn
+      context.cloudflare.ctx.waitUntil(
+        (async () => {
+          const newKey = await generateAudio({ ai: aiFromEnv(env), audio: env.AUDIO }, id, sentenceEn)
+          if (card.audioKey && card.audioKey !== newKey) await env.AUDIO.delete(card.audioKey).catch(() => {})
+          await setAudioKey(db, id, newKey) // a text-only card gains audio here
+        })().catch((err) => console.error(`audio refresh failed for card ${id}:`, err)),
+      )
     }
     return { audioRetried: true }
   }
@@ -56,7 +63,13 @@ export async function action({ request, params, context }: Route.ActionArgs) {
     const sentenceChanged = content.sentenceEn !== card.sentenceEn
     if (sentenceChanged) {
       // sentence changed → regenerate audio to match (content is already saved)
-      context.cloudflare.ctx.waitUntil(regenerateAudio(db, env, aiFromEnv(env), id, content.sentenceEn))
+      context.cloudflare.ctx.waitUntil(
+        (async () => {
+          const newKey = await generateAudio({ ai: aiFromEnv(env), audio: env.AUDIO }, id, content.sentenceEn)
+          if (card.audioKey && card.audioKey !== newKey) await env.AUDIO.delete(card.audioKey).catch(() => {})
+          await setAudioKey(db, id, newKey)
+        })().catch((err) => console.error(`audio refresh failed for card ${id}:`, err)),
+      )
     }
     // spec: "offers to re-translate" — surface a sync hint when EN changed but PL didn't
     const staleTranslation = sentenceChanged && content.sentencePl === card.sentencePl
@@ -65,27 +78,13 @@ export async function action({ request, params, context }: Route.ActionArgs) {
   return null
 }
 
-async function regenerateAudio(
-  db: ReturnType<typeof createDb>, env: Env,
-  ai: ReturnType<typeof aiFromEnv>, id: number, sentence: string,
-) {
-  try {
-    const bytes = await ai.tts(sentence)
-    const audioKey = `audio/${id}.mp3`
-    await env.AUDIO.put(audioKey, bytes)
-    await setAudioKey(db, id, audioKey) // a text-only card gains audio here
-  } catch (err) {
-    console.error(`audio refresh failed for card ${id}:`, err)
-  }
-}
-
 export default function CardDetail({ loaderData, actionData }: Route.ComponentProps) {
   const { card } = loaderData
   return (
     <main className="page">
       <h1><Link to="/cards">←</Link> {card.word}</h1>
       {card.audioKey ? (
-        <audio controls src={`/audio/${card.id}`} />
+        <audio controls src={`/audio/${card.id}?v=${encodeURIComponent(card.audioKey ?? '')}`} />
       ) : card.status === 'ready' ? (
         <Form method="post">
           <input type="hidden" name="intent" value="retry-audio" />

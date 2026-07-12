@@ -1,0 +1,3 @@
+SESSION_SECRET=dev-secret-change-me
+APP_PASSWORD_HASH=sha256-hex-of-your-password
+OPENROUTER_API_KEY=sk-or-your-key
