@@ -17,6 +17,9 @@ jobs:
         with:
           node-version-file: .node-version
           cache: npm
+      # wrangler types reads var/secret KEYS from .dev.vars to type `Env`;
+      # placeholder values are enough for typecheck + tests (no real calls).
+      - run: cp .dev.vars.example .dev.vars
       - run: npm ci
       - run: npm run typecheck
       - run: npm test
@@ -38,6 +41,9 @@ jobs:
         with:
           node-version-file: .node-version
           cache: npm
+      # Only for `wrangler types` during build; deploy uses the worker's real
+      # secrets (set via `wrangler secret put`), never this file.
+      - run: cp .dev.vars.example .dev.vars
       - run: npm ci
       - name: Apply D1 migrations (remote)
         run: npx wrangler d1 migrations apply ai-cards --remote
