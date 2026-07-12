@@ -47,9 +47,23 @@ npm run typecheck
 
 Pure logic (scheduling, diffing, streaks, CSV) is fully unit-tested; DB tests run against in-memory SQLite with the real migrations.
 
-## Deployment
+## CI/CD
 
-Manual, via Wrangler — there is no CI/CD pipeline. One-time setup:
+GitHub Actions ([.github/workflows/ci.yml](.github/workflows/ci.yml)):
+
+- **On every push/PR to `master`** — runs `npm run typecheck` and `npm test`. No deploy.
+- **Deploy is manually gated** — the deploy job runs only via **Run workflow** (workflow_dispatch) from the repo's Actions tab. It re-runs the tests, applies remote D1 migrations, then deploys. Nothing reaches production without that explicit click.
+
+To enable the deploy job, add two repository secrets (Settings → Secrets and variables → Actions):
+
+| Secret | Value |
+|---|---|
+| `CLOUDFLARE_API_TOKEN` | A Cloudflare API token with **Workers Scripts: Edit**, **D1: Edit**, and **Workers R2 Storage: Edit** on the account |
+| `CLOUDFLARE_ACCOUNT_ID` | The Cloudflare account id |
+
+## Deployment (manual, from a workstation)
+
+You can also deploy directly with Wrangler. One-time setup:
 
 ```bash
 npx wrangler d1 create ai-cards        # put database_id into wrangler.jsonc
