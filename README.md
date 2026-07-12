@@ -1,79 +1,91 @@
-# Welcome to React Router!
+# AI Cards
 
-A modern, production-ready template for building full-stack React applications using React Router.
+A personal English-learning flashcard app for a Polish native speaker. Hear an unfamiliar word in a podcast, type just the word — AI builds a complete flashcard in the background: the Polish equivalent, a simple English explanation, an example sentence deliberately pitched slightly above B1 (the level-stretching mechanism), its Polish translation, and natural TTS audio. Review daily with spaced repetition and keep the streak alive.
+
+**Live:** https://ai-cards.thedariusz.workers.dev (single user, password-protected)
 
 ## Features
 
-- 🚀 Server-side rendering
-- ⚡️ Hot Module Replacement (HMR)
-- 📦 Asset bundling and optimization
-- 🔄 Data loading and mutations
-- 🔒 TypeScript by default
-- 🎉 TailwindCSS for styling
-- 📖 [React Router docs](https://reactrouter.com/)
+- **Instant capture** — add a word in ~3 seconds; card generation runs in the background (`ctx.waitUntil`)
+- **AI-generated cards** — Claude (via OpenRouter) writes the content; TTS audio stored in R2
+- **Spaced repetition** — simplified SM-2 scheduler; new cards become due the next day
+- **Two review modes** — classic flip (Polish → reveal English + audio → self-grade) and *write it* (type the English sentence, get a word-by-word diff with a suggested grade)
+- **Streak** — a day counts when all due cards are reviewed (or ≥10 reviews on backlog days), Europe/Warsaw timezone, month calendar on the home screen
+- **Card management** — edit any field, regenerate with a hint ("make it shorter", "business context"), delete; SRS progress survives edits
+- **Export** — CSV (Anki/spreadsheet-compatible) and JSON full backup, no import by design
+- **PWA** — "Add to Home Screen" on iPhone gives a full-screen app; online-only, no service worker
 
-## Getting Started
+## Tech stack
 
-### Installation
+React Router 8 (framework mode) on Cloudflare Workers · D1 (SQLite) + Drizzle ORM · R2 for audio · OpenRouter as the single AI gateway (model ids are config, not code) · Vitest
 
-Install the dependencies:
+## Development
+
+Prereqs: Node 24 (see `.node-version` — Node 26 breaks better-sqlite3's native binding) and npm.
 
 ```bash
 npm install
+cp .dev.vars.example .dev.vars        # then fill in real values
+npx wrangler d1 migrations apply DB --local
+npm run dev                            # http://localhost:5173
 ```
 
-### Development
+`.dev.vars` values:
 
-Start the development server with HMR:
+| Name | Purpose |
+|---|---|
+| `OPENROUTER_API_KEY` | Server-side key for card generation + TTS |
+| `SESSION_SECRET` | Signs the session cookie (`openssl rand -hex 32`) |
+| `APP_PASSWORD_HASH` | SHA-256 hex of the login password (`echo -n "pass" \| shasum -a 256`) |
+
+### Tests
 
 ```bash
-npm run dev
+npm test            # Vitest: SRS scheduler, answer diff, streak, CSV, repo, adapter, pipeline
+npm run typecheck
 ```
 
-Your application will be available at `http://localhost:5173`.
-
-## Previewing the Production Build
-
-Preview the production build locally:
-
-```bash
-npm run preview
-```
-
-## Building for Production
-
-Create a production build:
-
-```bash
-npm run build
-```
+Pure logic (scheduling, diffing, streaks, CSV) is fully unit-tested; DB tests run against in-memory SQLite with the real migrations.
 
 ## Deployment
 
-Deployment is done using the Wrangler CLI.
+Manual, via Wrangler — there is no CI/CD pipeline. One-time setup:
 
-To build and deploy directly to production:
-
-```sh
-npm run deploy
+```bash
+npx wrangler d1 create ai-cards        # put database_id into wrangler.jsonc
+npx wrangler r2 bucket create ai-cards-audio
+npx wrangler d1 migrations apply ai-cards --remote
+npx wrangler secret put OPENROUTER_API_KEY
+npx wrangler secret put SESSION_SECRET
+npx wrangler secret put APP_PASSWORD_HASH
 ```
 
-To deploy a preview URL:
+Every deploy after that:
 
-```sh
-npx wrangler versions upload
+```bash
+npm run deploy      # builds + deploys to https://ai-cards.thedariusz.workers.dev
 ```
 
-You can then promote a version to production after verification or roll it out progressively.
+New migrations must be applied remotely by hand (`npx wrangler d1 migrations apply ai-cards --remote`) before deploying code that depends on them.
 
-```sh
-npx wrangler versions deploy
-```
+### AI model configuration
 
-## Styling
+Model ids live in `wrangler.jsonc` `vars` — swap models with a config change + redeploy, no code edits:
 
-This template comes with [Tailwind CSS](https://tailwindcss.com/) already configured for a simple default starting experience. You can use whatever CSS framework you prefer.
+| Var | Current value |
+|---|---|
+| `CARD_MODEL` | `anthropic/claude-sonnet-5` |
+| `TTS_MODEL` | `microsoft/mai-voice-2` |
+| `TTS_VOICE` | `en-US-Harper:MAI-Voice-2` |
 
----
+(Heads-up: OpenRouter's TTS catalog shifts — the originally planned OpenAI TTS model was delisted. `npx wrangler tail ai-cards` shows the exact error if TTS ever starts failing again; available models: `curl "https://openrouter.ai/api/v1/models?output_modalities=speech"`.)
 
-Built with ❤️ using React Router.
+## Project docs
+
+- Design spec: [docs/superpowers/specs/2026-07-07-ai-cards-design.md](docs/superpowers/specs/2026-07-07-ai-cards-design.md)
+- Implementation plan: [docs/superpowers/plans/2026-07-07-ai-cards.md](docs/superpowers/plans/2026-07-07-ai-cards.md)
+
+## Known quirks
+
+- `workers/context.d.ts` augments a React Router internal module path to expose `context.cloudflare.env/ctx`; both `react-router` packages are exact-pinned to `8.0.0` to keep it stable. Follow-up: migrate to the official `context.get/set` API and unpin.
+- Wrangler auto-enables preview URLs for the worker; they share the same secrets and login gate. Set `"preview_urls": false` in `wrangler.jsonc` to disable.

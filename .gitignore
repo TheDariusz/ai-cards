@@ -3,6 +3,11 @@
 /node_modules/
 *.tsbuildinfo
 
+# Local tooling / IDE
+.claude/
+.idea/
+.superpowers/
+
 # React Router
 /.react-router/
 /build/
