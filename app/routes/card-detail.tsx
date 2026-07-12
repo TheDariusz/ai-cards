@@ -68,7 +68,15 @@ export async function action({ request, params, context }: Route.ActionArgs) {
           const newKey = await generateAudio({ ai: aiFromEnv(env), audio: env.AUDIO }, id, content.sentenceEn)
           if (card.audioKey && card.audioKey !== newKey) await env.AUDIO.delete(card.audioKey).catch(() => {})
           await setAudioKey(db, id, newKey)
-        })().catch((err) => console.error(`audio refresh failed for card ${id}:`, err)),
+        })().catch(async (err) => {
+          console.error(`audio refresh failed for card ${id}:`, err)
+          // TTS failed for the new sentence — the old audio (if any) no longer
+          // matches, so clear it and fall back to a text-only card with retry.
+          if (card.audioKey) {
+            await env.AUDIO.delete(card.audioKey).catch(() => {})
+            await setAudioKey(db, id, null)
+          }
+        }),
       )
     }
     // spec: "offers to re-translate" — surface a sync hint when EN changed but PL didn't

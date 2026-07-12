@@ -87,6 +87,6 @@ export async function deleteCard(db: Db, id: number): Promise<void> {
   await db.delete(cards).where(eq(cards.id, id))
 }
 
-export async function setAudioKey(db: Db, id: number, audioKey: string): Promise<void> {
+export async function setAudioKey(db: Db, id: number, audioKey: string | null): Promise<void> {
   await db.update(cards).set({ audioKey }).where(eq(cards.id, id))
 }

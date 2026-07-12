@@ -24,10 +24,11 @@ export async function runCardPipeline(
   hint?: string,
 ): Promise<void> {
   const { db, ai, audio } = deps
-  const prev = await getCard(db, cardId)
+  let prev: Awaited<ReturnType<typeof getCard>> = undefined
   try {
+    prev = await getCard(db, cardId)
     const content = await ai.generateCard(word, hint)
-    let audioKey = prev?.audioKey ?? null
+    let audioKey: string | null = prev?.audioKey ?? null
     try {
       const newKey = await generateAudio({ ai, audio }, cardId, content.sentenceEn)
       if (prev?.audioKey && prev.audioKey !== newKey) {
@@ -36,6 +37,12 @@ export async function runCardPipeline(
       audioKey = newKey
     } catch (err) {
       console.error(`TTS failed for card ${cardId}:`, err)
+      // Old audio, if any, no longer matches the newly generated sentence —
+      // the card must be text-only so the "Generate audio" retry button appears.
+      if (prev?.audioKey) {
+        await audio.delete(prev.audioKey).catch(() => {})
+      }
+      audioKey = null
     }
     await markReady(db, cardId, content, audioKey)
   } catch (err) {

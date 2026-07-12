@@ -50,7 +50,7 @@ describe('runCardPipeline', () => {
     expect((await getCard(db, id))!.status).toBe('failed')
   })
 
-  it('TTS failure still yields a ready text-only card', async () => {
+  it('TTS failure on a new card still yields a ready text-only card', async () => {
     const db = testDb()
     const id = await insertPendingCard(db, 'reluctant', NOW)
     const ai = { ...okAi, tts: async () => { throw new Error('no audio') } }
@@ -58,6 +58,23 @@ describe('runCardPipeline', () => {
     const card = await getCard(db, id)
     expect(card!.status).toBe('ready')
     expect(card!.audioKey).toBeNull()
+  })
+
+  it('TTS failure on a ready card with existing audio clears the stale audio key and deletes the old file', async () => {
+    const db = testDb()
+    const id = await insertPendingCard(db, 'reluctant', NOW)
+    const existingAudioKey = `audio/${id}-1000.mp3`
+    await markReady(db, id, CONTENT, existingAudioKey)
+    const audio = fakeAudio()
+    audio.store.set(existingAudioKey, new Uint8Array([1]).buffer)
+    const ai = { ...okAi, tts: async () => { throw new Error('no audio') } }
+    await runCardPipeline({ db, ai, audio }, id, 'reluctant')
+    const card = await getCard(db, id)
+    expect(card!.status).toBe('ready')
+    expect(card!.sentenceEn).toBe(CONTENT.sentenceEn)
+    expect(card!.audioKey).toBeNull()
+    expect(audio.deleted.has(existingAudioKey)).toBe(true)
+    expect(audio.store.has(existingAudioKey)).toBe(false)
   })
 
   it('content-generation failure on a ready card keeps it ready with existing content untouched', async () => {
