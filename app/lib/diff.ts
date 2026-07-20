@@ -25,22 +25,35 @@ function levenshtein(a: string, b: string): number {
   return dp[a.length][b.length]
 }
 
+// Edit distance has to scale with word length: 2 edits on a 3-letter word means
+// "shares one letter" ("the"/"use"), which is not a typo — it's a different word.
 function similar(a: string, b: string): boolean {
-  return a !== b && levenshtein(a, b) <= 2 && Math.min(a.length, b.length) >= 3
+  if (a === b || Math.min(a.length, b.length) < 4) return false
+  return levenshtein(a, b) <= (Math.max(a.length, b.length) >= 7 ? 2 : 1)
 }
+
+// Alignment weights: an exact pairing must outrank a fuzzy one, so a word you
+// wrote correctly is never orphaned by a lookalike sitting next to it.
+// Integers keep the dp exact — 0.9-style weights accumulate float error.
+const EXACT = 10
+const TYPO = 9
 
 export function diffAnswer(expected: string, typed: string): DiffResult {
   const exp = normalize(expected)
   const got = normalize(typed)
 
-  // LCS over words; exact match or close typo both align
+  // Weighted LCS over words; exact match or close typo both align, exact wins ties
   const n = exp.length, m = got.length
   const dp: number[][] = Array.from({ length: n + 1 }, () => Array(m + 1).fill(0))
   for (let i = n - 1; i >= 0; i--)
     for (let j = m - 1; j >= 0; j--)
-      dp[i][j] = exp[i] === got[j] || similar(exp[i], got[j])
-        ? dp[i + 1][j + 1] + 1
-        : Math.max(dp[i + 1][j], dp[i][j + 1])
+      dp[i][j] = exp[i] === got[j]
+        ? dp[i + 1][j + 1] + EXACT
+        : Math.max(
+            similar(exp[i], got[j]) ? dp[i + 1][j + 1] + TYPO : 0,
+            dp[i + 1][j],
+            dp[i][j + 1],
+          )
 
   const tokens: DiffToken[] = []
   let matches = 0, typos = 0
@@ -48,7 +61,7 @@ export function diffAnswer(expected: string, typed: string): DiffResult {
   while (i < n && j < m) {
     if (exp[i] === got[j]) {
       tokens.push({ text: exp[i], kind: 'match' }); matches++; i++; j++
-    } else if (similar(exp[i], got[j]) && dp[i][j] === dp[i + 1][j + 1] + 1) {
+    } else if (similar(exp[i], got[j]) && dp[i][j] === dp[i + 1][j + 1] + TYPO) {
       tokens.push({ text: exp[i], kind: 'typo' }); typos++; i++; j++
     } else if (dp[i + 1][j] >= dp[i][j + 1]) {
       tokens.push({ text: exp[i], kind: 'missing' }); i++
