@@ -4,6 +4,7 @@ import type { Route } from './+types/review'
 import { requireAuth } from '../lib/session'
 import { createDb, getDueCards, applyReview } from '../db/repo'
 import { diffAnswer, type DiffResult } from '../lib/diff'
+import { highlightHeadword } from '../lib/headword'
 
 export async function loader({ request, context }: Route.LoaderArgs) {
   const env = context.cloudflare.env
@@ -35,6 +36,22 @@ export async function action({ request, context }: Route.ActionArgs) {
   }
 }
 
+function Sentence({ text, headword, lang, bold }: {
+  text: string | null
+  headword: string | null
+  lang: string
+  bold?: boolean
+}) {
+  if (!text) return null
+  return (
+    <p lang={lang} className={bold ? 'answer' : undefined}>
+      {highlightHeadword(text, headword).map((s, i) =>
+        s.head ? <b className="head" key={i}>{s.text}</b> : <span key={i}>{s.text}</span>,
+      )}
+    </p>
+  )
+}
+
 // useFetcher (not a navigating Form) so a network failure keeps the revealed card
 // on screen — the grade is "held in memory" (spec) and the user just taps again.
 function GradeButtons({ cardId, mode, typed }: { cardId: number; mode: string; typed?: string }) {
@@ -62,13 +79,13 @@ function FlipCard({ card }: { card: Route.ComponentProps['loaderData']['due'][nu
 
   return (
     <>
-      <div className="card-face"><p lang="pl">{card.sentencePl}</p></div>
+      <div className="card-face"><Sentence text={card.sentencePl} headword={card.wordPl} lang="pl" /></div>
       {!revealed ? (
         <button onClick={() => setRevealed(true)}>Show answer</button>
       ) : (
         <>
           <div className="card-face">
-            <p lang="en"><b>{card.sentenceEn}</b></p>
+            <Sentence text={card.sentenceEn} headword={card.word} lang="en" bold />
             <p className="muted">{card.word} = {card.wordPl} — {card.explanationEn}</p>
             {card.audioKey && <audio ref={audioRef} controls src={`/audio/${card.id}?v=${encodeURIComponent(card.audioKey)}`} />}
           </div>
@@ -91,7 +108,7 @@ function WriteCard({ card }: { card: Route.ComponentProps['loaderData']['due'][n
 
   return (
     <>
-      <div className="card-face"><p lang="pl">{card.sentencePl}</p></div>
+      <div className="card-face"><Sentence text={card.sentencePl} headword={card.wordPl} lang="pl" /></div>
       {!result ? (
         <form onSubmit={(e) => { e.preventDefault(); check() }}>
           <textarea
@@ -111,7 +128,7 @@ function WriteCard({ card }: { card: Route.ComponentProps['loaderData']['due'][n
                 <span key={i} className={`diff-${t.kind}${t.head ? ' diff-head' : ''}`}>{t.text} </span>
               ))}
             </p>
-            <p lang="en"><b>{card.sentenceEn}</b></p>
+            <Sentence text={card.sentenceEn} headword={card.word} lang="en" bold />
             <p className="muted">
               {Math.round(result.score * 100)}% — suggested: <b>{result.suggestedGrade}</b>
             </p>
