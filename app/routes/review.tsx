@@ -6,6 +6,8 @@ import { createDb, getDueCards, applyReview } from '../db/repo'
 import { diffAnswer, type DiffResult } from '../lib/diff'
 import { highlightHeadword } from '../lib/headword'
 
+const KEY_TO_GRADE: Record<string, 'again' | 'good' | 'easy'> = { '1': 'again', '2': 'good', '3': 'easy' }
+
 export async function loader({ request, context }: Route.LoaderArgs) {
   const env = context.cloudflare.env
   await requireAuth(request, env)
@@ -57,14 +59,31 @@ function Sentence({ text, headword, lang, bold }: {
 function GradeButtons({ cardId, mode, typed }: { cardId: number; mode: string; typed?: string }) {
   const fetcher = useFetcher<typeof action>()
   const failed = fetcher.state === 'idle' && fetcher.data?.ok === false
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      if (e.metaKey || e.ctrlKey || e.altKey || e.repeat) return
+      const grade = KEY_TO_GRADE[e.key]
+      if (!grade) return
+      const el = e.target
+      if (el instanceof HTMLElement && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable)) return
+      if (fetcher.state !== 'idle') return
+      e.preventDefault()
+      fetcher.submit(
+        { cardId: String(cardId), mode, grade, ...(typed !== undefined ? { typed } : {}) },
+        { method: 'post' },
+      )
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [fetcher, cardId, mode, typed])
   return (
     <fetcher.Form method="post" className="grades">
       <input type="hidden" name="cardId" value={cardId} />
       <input type="hidden" name="mode" value={mode} />
       {typed !== undefined && <input type="hidden" name="typed" value={typed} />}
-      <button name="grade" value="again" className="grade-again" disabled={fetcher.state !== 'idle'}>Again</button>
-      <button name="grade" value="good" disabled={fetcher.state !== 'idle'}>Good</button>
-      <button name="grade" value="easy" className="grade-easy" disabled={fetcher.state !== 'idle'}>Easy</button>
+      <button name="grade" value="again" className="grade-again" disabled={fetcher.state !== 'idle'}>Again <kbd>1</kbd></button>
+      <button name="grade" value="good" disabled={fetcher.state !== 'idle'}>Good <kbd>2</kbd></button>
+      <button name="grade" value="easy" className="grade-easy" disabled={fetcher.state !== 'idle'}>Easy <kbd>3</kbd></button>
       {failed && <p className="error">Didn’t reach the server — tap your grade again.</p>}
     </fetcher.Form>
   )
@@ -75,6 +94,19 @@ function FlipCard({ card }: { card: Route.ComponentProps['loaderData']['due'][nu
   const audioRef = useRef<HTMLAudioElement>(null)
   useEffect(() => {
     if (revealed) audioRef.current?.play().catch(() => {}) // autoplay may need a tap on iOS
+  }, [revealed])
+  useEffect(() => {
+    if (revealed) return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== ' ' && e.key !== 'Enter') return
+      if (e.metaKey || e.ctrlKey || e.altKey) return
+      const el = e.target
+      if (el instanceof HTMLElement && ['BUTTON', 'A', 'INPUT', 'TEXTAREA'].includes(el.tagName)) return
+      e.preventDefault() // Space must not scroll the page
+      setRevealed(true)
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
   }, [revealed])
 
   return (
