@@ -1,36 +1,9 @@
 import type { Grade } from './srs'
+import { normalize, similar } from './headword'
 
 export type TokenKind = 'match' | 'typo' | 'missing' | 'extra'
 export interface DiffToken { text: string; kind: TokenKind }
 export interface DiffResult { tokens: DiffToken[]; score: number; suggestedGrade: Grade }
-
-function normalize(s: string): string[] {
-  return s
-    .toLowerCase()
-    .replace(/[^\p{L}\p{N}'\s]/gu, '')
-    .split(/\s+/)
-    .filter(Boolean)
-}
-
-function levenshtein(a: string, b: string): number {
-  const dp = Array.from({ length: a.length + 1 }, (_, i) => [i, ...Array(b.length).fill(0)])
-  for (let j = 0; j <= b.length; j++) dp[0][j] = j
-  for (let i = 1; i <= a.length; i++)
-    for (let j = 1; j <= b.length; j++)
-      dp[i][j] = Math.min(
-        dp[i - 1][j] + 1,
-        dp[i][j - 1] + 1,
-        dp[i - 1][j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1),
-      )
-  return dp[a.length][b.length]
-}
-
-// Edit distance has to scale with word length: 2 edits on a 3-letter word means
-// "shares one letter" ("the"/"use"), which is not a typo — it's a different word.
-function similar(a: string, b: string): boolean {
-  if (a === b || Math.min(a.length, b.length) < 4) return false
-  return levenshtein(a, b) <= (Math.max(a.length, b.length) >= 7 ? 2 : 1)
-}
 
 // Alignment weights: an exact pairing must outrank a fuzzy one, so a word you
 // wrote correctly is never orphaned by a lookalike sitting next to it.
