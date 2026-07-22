@@ -72,3 +72,66 @@ describe('diffAnswer', () => {
     ])
   })
 })
+
+describe('diffAnswer with headword', () => {
+  const EXPECTED = 'She deliberately ignored his calls after the argument.'
+
+  it('perfect answer is easy with headword match', () => {
+    const r = diffAnswer(EXPECTED, 'she deliberately ignored his calls after the argument', 'deliberately')
+    expect(r.score).toBe(1)
+    expect(r.suggestedGrade).toBe('easy')
+    expect(r.headword).toBe('match')
+  })
+
+  it('missing headword forces again even when everything else matches', () => {
+    // Unweighted this is 7/8 = 87.5% "good" — the bug from the screenshot.
+    const r = diffAnswer(EXPECTED, 'she ignored his calls after the argument', 'deliberately')
+    expect(r.headword).toBe('missing')
+    expect(r.suggestedGrade).toBe('again')
+    expect(r.score).toBe(0.7) // 7 plain matches / (8 words + 2 extra headword weight)
+  })
+
+  it('headword typo stays good in a longer sentence', () => {
+    const r = diffAnswer(EXPECTED, 'she deliberatly ignored his calls after the argument', 'deliberately')
+    expect(r.headword).toBe('typo')
+    expect(r.score).toBe(0.85) // (7 + 3·0.5) / 10
+    expect(r.suggestedGrade).toBe('good')
+  })
+
+  it('headword typo in a short sentence can still fall to again', () => {
+    // Cap-at-good is an upper bound, not a floor: (3 + 1.5) / 6 = 0.75
+    const r = diffAnswer('She deliberately left home.', 'she deliberatly left home', 'deliberately')
+    expect(r.headword).toBe('typo')
+    expect(r.score).toBe(0.75)
+    expect(r.suggestedGrade).toBe('again')
+  })
+
+  it('marks headword tokens in the diff', () => {
+    const r = diffAnswer(EXPECTED, 'she ignored his calls after the argument', 'deliberately')
+    expect(r.tokens.filter((t) => t.head).map((t) => t.text)).toEqual(['deliberately'])
+  })
+
+  it('falls back to unweighted behavior when the headword is not in the expected sentence', () => {
+    const r = diffAnswer('She left early.', 'she left early', 'deliberately')
+    expect(r).toEqual(diffAnswer('She left early.', 'she left early'))
+    expect(r.headword).toBeUndefined()
+  })
+
+  it('a phrasal headword with one word missing counts as missing', () => {
+    const r = diffAnswer('Never give up hope.', 'never give hope', 'give up')
+    expect(r.headword).toBe('missing')
+    expect(r.suggestedGrade).toBe('again')
+  })
+
+  it('headword typed correctly once is not missing when the sentence has it twice', () => {
+    const r = diffAnswer('run fast run', 'run fast', 'run')
+    expect(r.headword).toBe('match')
+  })
+
+  it('empty answer is again with headword missing', () => {
+    const r = diffAnswer(EXPECTED, '', 'deliberately')
+    expect(r.score).toBe(0)
+    expect(r.suggestedGrade).toBe('again')
+    expect(r.headword).toBe('missing')
+  })
+})

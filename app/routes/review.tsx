@@ -87,11 +87,13 @@ function WriteCard({ card }: { card: Route.ComponentProps['loaderData']['due'][n
     if (result) audioRef.current?.play().catch(() => {})
   }, [result])
 
+  const check = () => setResult(diffAnswer(card.sentenceEn ?? '', typed, card.word))
+
   return (
     <>
       <div className="card-face"><p lang="pl">{card.sentencePl}</p></div>
       {!result ? (
-        <form onSubmit={(e) => { e.preventDefault(); setResult(diffAnswer(card.sentenceEn ?? '', typed)) }}>
+        <form onSubmit={(e) => { e.preventDefault(); check() }}>
           <textarea
             value={typed}
             onChange={(e) => setTyped(e.target.value)}
@@ -106,13 +108,15 @@ function WriteCard({ card }: { card: Route.ComponentProps['loaderData']['due'][n
           <div className="card-face">
             <p>
               {result.tokens.map((t, i) => (
-                <span key={i} className={`diff-${t.kind}`}>{t.text} </span>
+                <span key={i} className={`diff-${t.kind}${t.head ? ' diff-head' : ''}`}>{t.text} </span>
               ))}
             </p>
             <p lang="en"><b>{card.sentenceEn}</b></p>
             <p className="muted">
               {Math.round(result.score * 100)}% — suggested: <b>{result.suggestedGrade}</b>
             </p>
+            {result.headword === 'missing' && <p className="error">Main word missing: <b>{card.word}</b></p>}
+            {result.headword === 'typo' && <p className="muted">Main word had a typo.</p>}
             {card.audioKey && <audio ref={audioRef} controls src={`/audio/${card.id}?v=${encodeURIComponent(card.audioKey)}`} />}
           </div>
           <GradeButtons cardId={card.id} mode="write" typed={typed} />
