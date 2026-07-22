@@ -114,6 +114,12 @@ function WriteCard({ card }: { card: Route.ComponentProps['loaderData']['due'][n
           <textarea
             value={typed}
             onChange={(e) => setTyped(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) {
+                e.preventDefault()
+                check()
+              }
+            }}
             placeholder="Write the English sentence…"
             autoFocus
             rows={3}
