@@ -42,18 +42,36 @@ export function tokenMatchesHeadword(word: string, head: string): boolean {
   return similar(word, head)
 }
 
-// All non-overlapping occurrences of the headword token sequence inside
-// `tokens`, each as the run of consecutive indices it covers.
-export function findHeadwordIndices(tokens: string[], headTokens: string[]): number[][] {
-  if (headTokens.length === 0) return []
+// A single non-overlapping scan for occurrences of `headTokens` in `tokens`,
+// using `matches` to decide whether a sentence token counts as one head token.
+function scanHeadwordIndices(
+  tokens: string[],
+  headTokens: string[],
+  matches: (word: string, head: string) => boolean,
+): number[][] {
   const out: number[][] = []
   for (let i = 0; i + headTokens.length <= tokens.length; i++) {
-    if (headTokens.every((h, k) => tokenMatchesHeadword(tokens[i + k], h))) {
+    if (headTokens.every((h, k) => matches(tokens[i + k], h))) {
       out.push(headTokens.map((_, k) => i + k))
       i += headTokens.length - 1
     }
   }
   return out
+}
+
+// All non-overlapping occurrences of the headword token sequence inside
+// `tokens`, each as the run of consecutive indices it covers.
+//
+// Exact occurrences must outrank same-root lookalikes (e.g. "help" fuzzy-
+// matching "helpful"): a fuzzy match is only ever a fallback for when the
+// headword truly isn't spelled out verbatim, never a competitor to a spot
+// where it is. So try an exact-only pass first, and only fall back to the
+// fuzzy scan when that pass finds nothing.
+export function findHeadwordIndices(tokens: string[], headTokens: string[]): number[][] {
+  if (headTokens.length === 0) return []
+  const exact = scanHeadwordIndices(tokens, headTokens, (word, head) => word === head)
+  if (exact.length > 0) return exact
+  return scanHeadwordIndices(tokens, headTokens, tokenMatchesHeadword)
 }
 
 export interface Segment { text: string; head: boolean }

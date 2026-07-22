@@ -134,4 +134,16 @@ describe('diffAnswer with headword', () => {
     expect(r.suggestedGrade).toBe('again')
     expect(r.headword).toBe('missing')
   })
+
+  it('does not let fuzzy lookalikes of the headword count as an occurrence', () => {
+    // "help" appears twice and fuzzy-matches "helpful", but only an exact
+    // occurrence of "helpful" counts — here there is none, so it's missing.
+    const r = diffAnswer(
+      'I always help my friends because their help is really helpful to me.',
+      'i always help my friends because their help is really to me',
+      'helpful',
+    )
+    expect(r.headword).toBe('missing')
+    expect(r.suggestedGrade).toBe('again')
+  })
 })

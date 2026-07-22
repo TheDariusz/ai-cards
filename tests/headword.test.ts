@@ -51,6 +51,12 @@ describe('findHeadwordIndices', () => {
   it('returns [] for an empty headword', () => {
     expect(findHeadwordIndices(['she'], [])).toEqual([])
   })
+
+  it('prefers an exact occurrence over a fuzzy lookalike', () => {
+    // "help" is a fuzzy prefix-match for "helpful", but the exact occurrence
+    // at index 3 must win — the lookalike is not an occurrence at all.
+    expect(findHeadwordIndices(['your', 'help', 'was', 'helpful'], ['helpful'])).toEqual([[3]])
+  })
 })
 
 describe('highlightHeadword', () => {
