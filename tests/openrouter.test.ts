@@ -26,6 +26,7 @@ describe('generateCard', () => {
     expect(init.headers.Authorization).toBe('Bearer k')
     const body = JSON.parse(init.body)
     expect(body.model).toBe('anthropic/claude-sonnet-5')
+    expect(body.messages[0].content).toContain('max 12 words')
     expect(body.messages.at(-1).content).toContain('reluctant')
   })
 

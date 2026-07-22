@@ -7,7 +7,7 @@ Given an English word, reply with ONLY a JSON object, no other text:
 {
   "wordPl": "<the most common Polish equivalent>",
   "explanationEn": "<one-sentence explanation of the meaning in simple English a B1 learner understands>",
-  "sentenceEn": "<one natural example sentence using the word, DELIBERATELY slightly above B1 level (B2): use richer grammar (e.g. conditionals, relative clauses, phrasal verbs) while staying comprehensible>",
+  "sentenceEn": "<one short natural example sentence using the word: max 12 words, everyday context, simple B1-level grammar — the target word must be the only challenging element. Good example for 'deliberately': 'She deliberately ignored his calls after the argument.'>",
   "sentencePl": "<natural Polish translation of that sentence>"
 }`
 
