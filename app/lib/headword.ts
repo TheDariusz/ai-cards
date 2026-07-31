@@ -59,19 +59,35 @@ function scanHeadwordIndices(
   return out
 }
 
-// All non-overlapping occurrences of the headword token sequence inside
-// `tokens`, each as the run of consecutive indices it covers.
+// A gloss often lists alternatives ("decydujący / zdecydowany") — each is its
+// own candidate headword and a hit on any of them counts. Spaces are not
+// separators: a headword can be a phrase ("give up").
+function headwordVariants(headword: string | null | undefined): string[][] {
+  if (!headword) return []
+  return headword.split(/[/,;|()]+/).map(normalize).filter((v) => v.length > 0)
+}
+
+// All non-overlapping occurrences of the headword inside `tokens`, each as the
+// run of consecutive indices it covers.
 //
 // Exact occurrences must outrank same-root lookalikes (e.g. "help" fuzzy-
 // matching "helpful"): a fuzzy match is only ever a fallback for when the
 // headword truly isn't spelled out verbatim, never a competitor to a spot
 // where it is. So try an exact-only pass first, and only fall back to the
 // fuzzy scan when that pass finds nothing.
-export function findHeadwordIndices(tokens: string[], headTokens: string[]): number[][] {
-  if (headTokens.length === 0) return []
-  const exact = scanHeadwordIndices(tokens, headTokens, (word, head) => word === head)
-  if (exact.length > 0) return exact
-  return scanHeadwordIndices(tokens, headTokens, tokenMatchesHeadword)
+export function findHeadwordIndices(
+  tokens: string[],
+  headword: string | null | undefined,
+): number[][] {
+  const variants = headwordVariants(headword)
+  const scan = (matches: (word: string, head: string) => boolean) =>
+    variants
+      .flatMap((v) => scanHeadwordIndices(tokens, v, matches))
+      .sort((a, b) => a[0] - b[0])
+      // two variants can land on the same spot ("zdecydowany / zdecydowana")
+      .filter((occ, i, all) => i === 0 || occ[0] !== all[i - 1][0])
+  const exact = scan((word, head) => word === head)
+  return exact.length > 0 ? exact : scan(tokenMatchesHeadword)
 }
 
 export interface Segment { text: string; head: boolean }
@@ -85,7 +101,7 @@ export function highlightHeadword(sentence: string, headword: string | null | un
   const words = parts
     .map((part, partIndex) => ({ partIndex, norm: normalize(part)[0] ?? '' }))
     .filter((w) => w.norm !== '')
-  const occs = findHeadwordIndices(words.map((w) => w.norm), headword ? normalize(headword) : [])
+  const occs = findHeadwordIndices(words.map((w) => w.norm), headword)
   const headParts = new Set<number>()
   for (const occ of occs) {
     const first = words[occ[0]].partIndex

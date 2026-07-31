@@ -33,29 +33,41 @@ describe('tokenMatchesHeadword', () => {
 
 describe('findHeadwordIndices', () => {
   it('finds a single word', () => {
-    expect(findHeadwordIndices(['she', 'deliberately', 'ignored'], ['deliberately'])).toEqual([[1]])
+    expect(findHeadwordIndices(['she', 'deliberately', 'ignored'], 'deliberately')).toEqual([[1]])
   })
 
   it('finds a phrasal verb as consecutive tokens', () => {
-    expect(findHeadwordIndices(['never', 'give', 'up', 'hope'], ['give', 'up'])).toEqual([[1, 2]])
+    expect(findHeadwordIndices(['never', 'give', 'up', 'hope'], 'give up')).toEqual([[1, 2]])
   })
 
   it('finds every occurrence', () => {
-    expect(findHeadwordIndices(['run', 'fast', 'run'], ['run'])).toEqual([[0], [2]])
+    expect(findHeadwordIndices(['run', 'fast', 'run'], 'run')).toEqual([[0], [2]])
   })
 
   it('returns [] when absent', () => {
-    expect(findHeadwordIndices(['she', 'ignored', 'him'], ['deliberately'])).toEqual([])
+    expect(findHeadwordIndices(['she', 'ignored', 'him'], 'deliberately')).toEqual([])
   })
 
   it('returns [] for an empty headword', () => {
-    expect(findHeadwordIndices(['she'], [])).toEqual([])
+    expect(findHeadwordIndices(['she'], '')).toEqual([])
+    expect(findHeadwordIndices(['she'], null)).toEqual([])
   })
 
   it('prefers an exact occurrence over a fuzzy lookalike', () => {
     // "help" is a fuzzy prefix-match for "helpful", but the exact occurrence
     // at index 3 must win — the lookalike is not an occurrence at all.
-    expect(findHeadwordIndices(['your', 'help', 'was', 'helpful'], ['helpful'])).toEqual([[3]])
+    expect(findHeadwordIndices(['your', 'help', 'was', 'helpful'], 'helpful')).toEqual([[3]])
+  })
+
+  it('matches any alternative in a listed gloss', () => {
+    const tokens = ['musisz', 'być', 'zdecydowany']
+    expect(findHeadwordIndices(tokens, 'decydujący / zdecydowany')).toEqual([[2]])
+    expect(findHeadwordIndices(tokens, 'zdecydowany, stanowczy')).toEqual([[2]])
+    expect(findHeadwordIndices(tokens, 'decydujący (zdecydowany)')).toEqual([[2]])
+  })
+
+  it('reports one occurrence when two alternatives hit the same spot', () => {
+    expect(findHeadwordIndices(['była', 'zdecydowana'], 'zdecydowany / zdecydowana')).toEqual([[1]])
   })
 })
 
@@ -80,6 +92,11 @@ describe('highlightHeadword', () => {
 
   it('ignores casing', () => {
     expect(heads('Deliberately, she left.', 'deliberately')).toEqual(['Deliberately,'])
+  })
+
+  it('flags the matching alternative of a listed gloss', () => {
+    expect(heads('Jeśli chcesz być dobrym liderem, musisz być zdecydowany.', 'decydujący / zdecydowany'))
+      .toEqual(['zdecydowany.'])
   })
 
   it('flags a phrasal verb as one continuous span', () => {

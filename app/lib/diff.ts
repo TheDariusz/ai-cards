@@ -24,7 +24,7 @@ const HEAD_WEIGHT = 3
 export function diffAnswer(expected: string, typed: string, headword?: string): DiffResult {
   const exp = normalize(expected)
   const got = normalize(typed)
-  const occs = headword ? findHeadwordIndices(exp, normalize(headword)) : []
+  const occs = findHeadwordIndices(exp, headword)
   const isHead = new Set(occs.flat())
 
   // Weighted LCS over words; exact match or close typo both align, exact wins ties
