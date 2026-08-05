@@ -20,10 +20,27 @@ describe('tokenMatchesHeadword', () => {
     expect(tokenMatchesHeadword('ignorowała', 'ignorować')).toBe(true)
   })
 
+  it('matches a Polish inflection that swaps the whole ending', () => {
+    // 3+ edits and no full prefix — only the shared stem gives these away
+    expect(tokenMatchesHeadword('przekaże', 'przekazać')).toBe(true)
+    expect(tokenMatchesHeadword('wykorzystałbym', 'wykorzystać')).toBe(true)
+    expect(tokenMatchesHeadword('priorytetyzować', 'priorytetyzacja')).toBe(true)
+  })
+
+  it('lets a function word grow by one letter', () => {
+    expect(tokenMatchesHeadword('ze', 'z')).toBe(true)
+  })
+
   it('keeps short headwords exact-only', () => {
     // "up" must never claim "upset"
     expect(tokenMatchesHeadword('upset', 'up')).toBe(false)
     expect(tokenMatchesHeadword('up', 'up')).toBe(true)
+  })
+
+  it('rejects words that only share a short prefix', () => {
+    // "nie-"/"prze-" are prefixes half the dictionary shares
+    expect(tokenMatchesHeadword('niezmienny', 'nieznany')).toBe(false)
+    expect(tokenMatchesHeadword('podróbka', 'podłączyć')).toBe(false)
   })
 
   it('rejects unrelated words', () => {
@@ -97,6 +114,10 @@ describe('highlightHeadword', () => {
   it('flags the matching alternative of a listed gloss', () => {
     expect(heads('Jeśli chcesz być dobrym liderem, musisz być zdecydowany.', 'decydujący / zdecydowany'))
       .toEqual(['zdecydowany.'])
+  })
+
+  it('flags a phrase whose function word inflected', () => {
+    expect(heads('Ona pracuje wraz ze swoją siostrą.', 'wraz z, obok')).toEqual(['wraz ze'])
   })
 
   it('flags a phrasal verb as one continuous span', () => {

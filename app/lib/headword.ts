@@ -29,6 +29,19 @@ export function similar(a: string, b: string): boolean {
   return levenshtein(a, b) <= (Math.max(a.length, b.length) >= 7 ? 2 : 1)
 }
 
+// Polish swaps the whole ending while keeping the stem ("przekazać" →
+// "przekaże", "priorytetyzacja" → "priorytetyzować"): too many edits for
+// similar() and no full startsWith, so a long shared stem is its own signal.
+// 6 is long enough that the common prefixes ("nie-", "prze-", "wy-") don't
+// reach it on their own.
+const STEM = 6
+
+function sharedPrefixLength(a: string, b: string): number {
+  let i = 0
+  while (i < a.length && i < b.length && a[i] === b[i]) i++
+  return i
+}
+
 // One normalized sentence token vs one normalized headword token.
 // Exact first — similar() deliberately returns false for identical words.
 export function tokenMatchesHeadword(word: string, head: string): boolean {
@@ -39,6 +52,10 @@ export function tokenMatchesHeadword(word: string, head: string): boolean {
     (word.startsWith(head) || head.startsWith(word))
   )
     return true
+  if (sharedPrefixLength(word, head) >= STEM) return true
+  // Function words inflect too ("wraz z" → "wraz ze"), but one extra letter is
+  // all the leeway they get — "up" must never claim "upset".
+  if (word.length === head.length + 1 && word.startsWith(head)) return true
   return similar(word, head)
 }
 
