@@ -28,9 +28,9 @@ jobs:
     name: Deploy to Cloudflare
     runs-on: ubuntu-latest
     needs: test
-    # Approval gate: on push to master (or manual dispatch) this job waits for a
-    # required-reviewer approval on the `production` environment before it runs.
-    # PRs never deploy. Tests above still run on every push/PR.
+    # Push to master (or manual dispatch) deploys straight through — no approval
+    # gate. PRs never deploy; `needs: test` is what actually guards production.
+    # The `production` environment is kept for the deployment log + branch policy.
     if: github.event_name != 'pull_request'
     concurrency: deploy-production
     environment: production

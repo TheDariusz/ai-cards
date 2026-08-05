@@ -51,8 +51,8 @@ Pure logic (scheduling, diffing, streaks, CSV) is fully unit-tested; DB tests ru
 
 GitHub Actions ([.github/workflows/ci.yml](.github/workflows/ci.yml)):
 
-- **On every push/PR to `master`** — runs `npm run typecheck` and `npm test`. No deploy.
-- **Deploy is manually gated** — the deploy job runs only via **Run workflow** (workflow_dispatch) from the repo's Actions tab. It re-runs the tests, applies remote D1 migrations, then deploys. Nothing reaches production without that explicit click.
+- **On every push/PR to `master`** — runs `npm run typecheck` and `npm test`.
+- **Push to `master` deploys** — once the tests pass, the deploy job applies remote D1 migrations and deploys, with no approval step. PRs never deploy. A red test suite is the only thing standing between a push and production, so keep it green.
 
 To enable the deploy job, add two repository secrets (Settings → Secrets and variables → Actions):
 

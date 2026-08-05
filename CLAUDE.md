@@ -10,7 +10,7 @@ Cloudflare Workers · D1 + Drizzle · R2 audio · OpenRouter for LLM + TTS. Prod
 - `npm run typecheck` — `wrangler types && react-router typegen && tsc -b`; **requires `.dev.vars` to exist** (keys only) or `Env` won't resolve
 - `npx drizzle-kit generate` then `npx wrangler d1 migrations apply DB --local`
 - `npx wrangler tail ai-cards` — prod logs; where LLM/TTS failures actually show up
-- Never run `npm run deploy` — deploy is CI-only, gated on `production` environment approval
+- Never run `npm run deploy` — deploy is CI-only, and every push to `master` deploys once tests pass
 
 ## Architecture
 
