@@ -4,6 +4,7 @@ import { requireAuth } from '../lib/session'
 import { createDb, getCard, updateCardContent, deleteCard, setAudioKey } from '../db/repo'
 import { runCardPipeline, generateAudio } from '../lib/pipeline'
 import { aiFromEnv } from '../lib/openrouter'
+import { decodePartsFromText, decodePartsToText } from '../lib/ai'
 
 export async function loader({ request, params, context }: Route.LoaderArgs) {
   const env = context.cloudflare.env
@@ -52,11 +53,22 @@ export async function action({ request, params, context }: Route.ActionArgs) {
   }
 
   if (intent === 'save') {
+    const sentenceEn = String(form.get('sentenceEn') ?? '')
+    let decodeParts
+    try {
+      decodeParts = decodePartsFromText(String(form.get('decodeParts') ?? ''), sentenceEn)
+    } catch (err) {
+      return { saved: false, error: err instanceof Error ? err.message : 'Invalid literal decode' }
+    }
+    if (card.firstLearnedAt === null && !decodeParts) {
+      return { saved: false, error: 'A new card needs a literal decode before first learning' }
+    }
     const content = {
       wordPl: String(form.get('wordPl') ?? ''),
       explanationEn: String(form.get('explanationEn') ?? ''),
-      sentenceEn: String(form.get('sentenceEn') ?? ''),
+      sentenceEn,
       sentencePl: String(form.get('sentencePl') ?? ''),
+      decodeParts,
     }
     await updateCardContent(db, id, content)
     const sentenceChanged = content.sentenceEn !== card.sentenceEn
@@ -93,7 +105,7 @@ export default function CardDetail({ loaderData, actionData }: Route.ComponentPr
   // Regenerate) so its uncontrolled defaultValue inputs re-read fresh values.
   // audioKey is deliberately excluded: a background audio refresh after Save
   // must not remount the form and wipe in-progress typing.
-  const contentKey = [card.wordPl, card.explanationEn, card.sentenceEn, card.sentencePl].join('|')
+  const contentKey = [card.wordPl, card.explanationEn, card.sentenceEn, card.sentencePl, JSON.stringify(card.decodeParts)].join('|')
   return (
     <main className="page">
       <h1><Link to="/cards">←</Link> {card.word}</h1>
@@ -113,8 +125,13 @@ export default function CardDetail({ loaderData, actionData }: Route.ComponentPr
         <label>Explanation <textarea name="explanationEn" defaultValue={card.explanationEn ?? ''} /></label>
         <label>English sentence <textarea name="sentenceEn" defaultValue={card.sentenceEn ?? ''} /></label>
         <label>Polish sentence <textarea name="sentencePl" defaultValue={card.sentencePl ?? ''} /></label>
+        <label>
+          Literal decode <span className="muted">(English | Polish, one fragment per line)</span>
+          <textarea name="decodeParts" rows={5} defaultValue={decodePartsToText(card.decodeParts)} />
+        </label>
         <button type="submit">Save</button>
-        {actionData && 'saved' in actionData && <span className="ok"> Saved ✓</span>}
+        {actionData && 'saved' in actionData && actionData.saved && <span className="ok"> Saved ✓</span>}
+        {actionData && 'error' in actionData && <p className="error">{actionData.error}</p>}
         {actionData && 'staleTranslation' in actionData && actionData.staleTranslation && (
           <p className="pending">English sentence changed — update the Polish translation too, or tap Regenerate.</p>
         )}

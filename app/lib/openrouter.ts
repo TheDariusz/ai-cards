@@ -1,4 +1,4 @@
-import type { AiProvider, CardContent } from './ai'
+import { validateCardContent, type AiProvider } from './ai'
 
 const BASE = 'https://openrouter.ai/api/v1'
 
@@ -8,8 +8,16 @@ Given an English word, reply with ONLY a JSON object, no other text:
   "wordPl": "<the most common Polish equivalent>",
   "explanationEn": "<one-sentence explanation of the meaning in simple English a B1 learner understands>",
   "sentenceEn": "<one short natural example sentence using the word: max 12 words, everyday context, simple B1-level grammar — the target word must be the only challenging element. Good example for 'deliberately': 'She deliberately ignored his calls after the argument.'>",
-  "sentencePl": "<natural Polish translation of that sentence>"
-}`
+  "sentencePl": "<natural Polish translation of that sentence>",
+  "decodeParts": [
+    { "en": "<first English word>", "pl": "<literal Polish equivalent>" },
+    { "en": "<next English word>", "pl": "<literal Polish equivalent preserving the English order>" }
+  ]
+}
+
+decodeParts is a literal Birkenbihl decode, not a natural translation. Decode ONE ENGLISH WORD PER ITEM by default, even when the resulting Polish sounds unnatural. Keep the English order, cover the entire English sentence exactly once, keep punctuation attached to its English word, and make joining every "en" value with one space reproduce sentenceEn exactly.
+
+For "She was reluctant to speak.", use separate items for "She", "was", "reluctant", "to", and "speak.". Group two or at most three English words only when they form one genuinely inseparable construction, phrasal verb, or proper name, for example "the most" → "najbardziej". Do not group ordinary adjacent words merely to make the Polish translation sound natural.`
 
 export function createOpenRouter(opts: {
   apiKey: string
@@ -42,11 +50,7 @@ export function createOpenRouter(opts: {
       const data = (await res.json()) as { choices: { message: { content: string } }[] }
       const raw = data.choices[0]?.message?.content ?? ''
       const json = raw.slice(raw.indexOf('{'), raw.lastIndexOf('}') + 1) // tolerate stray text
-      const parsed = JSON.parse(json) as Partial<CardContent>
-      for (const key of ['wordPl', 'explanationEn', 'sentenceEn', 'sentencePl'] as const) {
-        if (typeof parsed[key] !== 'string' || !parsed[key]) throw new Error(`card content missing ${key}`)
-      }
-      return parsed as CardContent
+      return validateCardContent(JSON.parse(json))
     },
 
     async tts(text) {

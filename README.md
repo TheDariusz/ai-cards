@@ -8,7 +8,8 @@ A personal English-learning flashcard app for a Polish native speaker. Hear an u
 
 - **Instant capture** — add a word in ~3 seconds; card generation runs in the background (`ctx.waitUntil`)
 - **AI-generated cards** — Claude (via OpenRouter) writes the content; TTS audio stored in R2
-- **Spaced repetition** — simplified SM-2 scheduler; new cards become due the next day
+- **Birkenbihl first learning** — each new card gets an ordered literal EN–PL decode and a one-time guided introduction before it enters SRS
+- **Spaced repetition** — simplified SM-2 scheduler; newly introduced cards become due the day after first learning
 - **Two review modes** — classic flip (Polish → reveal English + audio → self-grade) and *write it* (type the English sentence, get a word-by-word diff with a suggested grade)
 - **Streak** — a day counts when all due cards are reviewed (or ≥10 reviews on backlog days), Europe/Warsaw timezone, month calendar on the home screen
 - **Card management** — edit any field, regenerate with a hint ("make it shorter", "business context"), delete; SRS progress survives edits
@@ -46,6 +47,12 @@ npm run typecheck
 ```
 
 Pure logic (scheduling, diffing, streaks, CSV) is fully unit-tested; DB tests run against in-memory SQLite with the real migrations.
+
+### First-learning flow
+
+Ready cards that have not been introduced appear on the home screen under **New to learn**. The short flow shows the literal decode, asks the learner to listen with help, confirm understanding without the decode, and speak once with the audio. Finishing marks the card as learned and schedules its first Flip/Write it review for the next day. Existing cards are backfilled as already learned, so this queue only contains cards created after the migration.
+
+The natural `sentencePl` remains the review translation. The literal decode is stored separately as ordered `{ en, pl }` fragments: one English word per fragment by default, with short groups only for inseparable expressions such as `the most`. It is included in the full JSON backup; CSV intentionally keeps its existing five simple columns.
 
 ## CI/CD
 

@@ -1,4 +1,5 @@
 import { sqliteTable, integer, text, real } from 'drizzle-orm/sqlite-core'
+import type { DecodePart } from '../lib/ai'
 
 export const cards = sqliteTable('cards', {
   id: integer('id').primaryKey({ autoIncrement: true }),
@@ -7,12 +8,14 @@ export const cards = sqliteTable('cards', {
   explanationEn: text('explanation_en'),
   sentenceEn: text('sentence_en'),
   sentencePl: text('sentence_pl'),
+  decodeParts: text('decode_parts', { mode: 'json' }).$type<DecodePart[]>(),
   audioKey: text('audio_key'),
   status: text('status', { enum: ['pending', 'ready', 'failed'] }).notNull().default('pending'),
   dueAt: integer('due_at').notNull(),
   intervalDays: real('interval_days').notNull(),
   ease: real('ease').notNull(),
   createdAt: integer('created_at').notNull(),
+  firstLearnedAt: integer('first_learned_at'),
 })
 
 export const reviewLog = sqliteTable('review_log', {

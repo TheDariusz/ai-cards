@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { testDb } from './helpers/db'
 import { eq } from 'drizzle-orm'
-import { insertPendingCard, getDueCards, countDue, getCard, listCards, markReady, applyReview, completedDays, updateCardContent, deleteCard } from '../app/db/repo'
+import { insertPendingCard, getDueCards, countDue, getCard, listCards, markReady, applyReview, completedDays, updateCardContent, deleteCard, getNewCards, completeFirstLearning } from '../app/db/repo'
 import { reviewLog } from '../app/db/schema'
 import { dayKey } from '../app/lib/streak'
 
@@ -10,6 +10,7 @@ const DAY = 86_400_000
 
 const CONTENT = {
   wordPl: 'x', explanationEn: 'x', sentenceEn: 'x', sentencePl: 'x',
+  decodeParts: [{ en: 'x', pl: 'x' }],
 }
 
 describe('repo', () => {
@@ -21,6 +22,7 @@ describe('repo', () => {
     expect(card!.word).toBe('reluctant')
     expect(card!.dueAt).toBe(NOW + DAY)
     expect(card!.ease).toBe(2.5)
+    expect(card!.firstLearnedAt).toBeNull()
   })
 
   it('due list contains only ready cards whose dueAt has passed', async () => {
@@ -32,10 +34,17 @@ describe('repo', () => {
       explanationEn: 'not wanting to do something',
       sentenceEn: 'She was reluctant to speak.',
       sentencePl: 'Była niechętna do mówienia.',
+      decodeParts: [{ en: 'She was reluctant to speak.', pl: 'Ona była niechętna żeby mówić.' }],
     }, 'audio/1.mp3')
-    expect(await getDueCards(db, NOW)).toHaveLength(0)          // not due yet
-    expect(await getDueCards(db, NOW + 2 * DAY)).toHaveLength(1)
-    expect(await countDue(db, NOW + 2 * DAY)).toBe(1)
+    expect(await getNewCards(db)).toHaveLength(1)
+    expect(await getDueCards(db, NOW + 2 * DAY)).toHaveLength(0) // first learning still pending
+    expect(await completeFirstLearning(db, id, NOW + 2 * DAY)).toBe(true)
+    expect(await completeFirstLearning(db, id, NOW + 2 * DAY + 1000)).toBe(false)
+    expect(await getNewCards(db)).toHaveLength(0)
+    expect((await getCard(db, id))!.dueAt).toBe(NOW + 3 * DAY)
+    expect(await getDueCards(db, NOW + 2 * DAY)).toHaveLength(0) // first review is tomorrow
+    expect(await getDueCards(db, NOW + 3 * DAY)).toHaveLength(1)
+    expect(await countDue(db, NOW + 3 * DAY)).toBe(1)
   })
 
   it('lists cards newest first', async () => {
@@ -48,10 +57,20 @@ describe('repo', () => {
 })
 
 describe('applyReview', () => {
+  it('does not allow an unlearned card to bypass first learning', async () => {
+    const db = testDb()
+    const id = await insertPendingCard(db, 'reluctant', NOW)
+    await markReady(db, id, CONTENT, null)
+    await applyReview(db, id, 'good', 'flip', null, NOW + 2 * DAY)
+    expect(await getNewCards(db)).toHaveLength(1)
+    expect(await db.select().from(reviewLog)).toHaveLength(0)
+  })
+
   it('reschedules, logs, and completes the day when no cards remain due', async () => {
     const db = testDb()
     const id = await insertPendingCard(db, 'reluctant', NOW)
     await markReady(db, id, CONTENT, null)
+    await completeFirstLearning(db, id, NOW)
     const later = NOW + 2 * DAY
     await applyReview(db, id, 'good', 'flip', null, later)
     const card = await getCard(db, id)
@@ -66,6 +85,8 @@ describe('applyReview', () => {
     const b = await insertPendingCard(db, 'b', NOW)
     await markReady(db, a, CONTENT, null)
     await markReady(db, b, CONTENT, null)
+    await completeFirstLearning(db, a, NOW)
+    await completeFirstLearning(db, b, NOW)
     const later = NOW + 2 * DAY
     await applyReview(db, a, 'good', 'flip', null, later)
     expect(await completedDays(db)).toEqual([])
@@ -77,6 +98,7 @@ describe('updateCardContent / deleteCard', () => {
     const db = testDb()
     const id = await insertPendingCard(db, 'reluctant', NOW)
     await markReady(db, id, CONTENT, null)
+    await completeFirstLearning(db, id, NOW)
     const before = await getCard(db, id)
     await updateCardContent(db, id, { ...CONTENT, sentenceEn: 'He is reluctant to go.' })
     const after = await getCard(db, id)
@@ -90,6 +112,7 @@ describe('updateCardContent / deleteCard', () => {
     const db = testDb()
     const id = await insertPendingCard(db, 'reluctant', NOW)
     await markReady(db, id, CONTENT, null)
+    await completeFirstLearning(db, id, NOW)
     await applyReview(db, id, 'good', 'flip', null, NOW + 2 * DAY)
     await deleteCard(db, id)
     expect(await getCard(db, id)).toBeUndefined()

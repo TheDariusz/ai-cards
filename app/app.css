@@ -6,6 +6,7 @@ h1 { font-size: 1.4rem; }
 input, button, textarea { font: inherit; border-radius: 8px; border: 1px solid #2a3540; padding: 0.6rem 0.8rem; }
 input, textarea { background: #1a2027; color: var(--fg); width: 100%; }
 button { background: var(--accent); color: #04141f; border: none; cursor: pointer; font-weight: 600; }
+button:focus-visible, input:focus-visible, textarea:focus-visible, a:focus-visible { outline: 3px solid #9dceff; outline-offset: 3px; }
 .quick-add { display: flex; gap: 0.5rem; }
 .nav { display: flex; gap: 1rem; margin-top: 2rem; }
 .nav a { color: var(--accent); }
@@ -33,5 +34,34 @@ button { background: var(--accent); color: #04141f; border: none; cursor: pointe
 .card-row { display: block; padding: 0.6rem 0; border-bottom: 1px solid #2a3540; color: inherit; text-decoration: none; }
 .head { color: var(--accent); font-weight: 700; }
 .answer { font-weight: 700; }
+.new-queue { display: flex; justify-content: space-between; gap: 1rem; align-items: center; background: #1a2027; border: 1px solid #2a3540; border-radius: 12px; padding: 1rem; margin: 1rem 0; }
+.new-queue p { margin: 0.2rem 0 0; }
+.step-progress { color: var(--accent); font-weight: 700; }
+.learning-card audio { width: 100%; }
+.decode-grid { display: flex; flex-wrap: wrap; gap: 0.65rem; margin: 1rem 0; }
+.decode-pair { display: grid; min-width: 5rem; text-align: center; background: #101418; border-radius: 8px; padding: 0.45rem 0.6rem; }
+.decode-pair span:first-child { font-weight: 700; }
+.decode-pair span:last-child { color: var(--muted); font-size: 0.9rem; border-top: 1px solid #2a3540; }
+.understanding-list { display: grid; gap: 0.5rem; }
+.understanding-item { background: #101418; border-radius: 8px; padding: 0.55rem; }
+.understanding-row { display: flex; align-items: center; justify-content: space-between; gap: 0.75rem; }
+.understanding-row label, .spoken-check { display: flex; align-items: center; gap: 0.65rem; min-width: 0; }
+.understanding-list input, .spoken-check input { width: auto; }
+.hint-button, .explanation-toggle, .secondary-button { background: transparent; color: var(--accent); border: 1px solid #36516b; }
+.hint-button { flex: 0 0 auto; padding: 0.35rem 0.55rem; font-size: 0.82rem; }
+.word-hint { margin: 0.4rem 0 0 1.55rem; color: var(--ok); }
+.explanation-toggle { width: 100%; margin-top: 0.8rem; }
+.explanation-help { margin-top: 0.8rem; padding-top: 0.8rem; border-top: 1px solid #2a3540; }
+.explanation-help > p { margin: 0.35rem 0; }
+.learning-actions { display: flex; align-items: stretch; gap: 0.6rem; }
+.learning-actions > .primary-wide, .finish-form { flex: 1; }
+.finish-form button { height: 100%; }
+.secondary-button { flex: 0 1 auto; }
+.primary-wide { width: 100%; }
+button:disabled { opacity: 0.45; cursor: not-allowed; }
 .grades kbd { font-size: 0.75em; background: rgba(255, 255, 255, 0.18); border-radius: 4px; padding: 0.05em 0.35em; margin-left: 0.35em; }
 @media (hover: none) { .grades kbd { display: none; } }
+@media (max-width: 420px) {
+  .learning-actions { flex-direction: column-reverse; }
+  .learning-actions button { width: 100%; }
+}

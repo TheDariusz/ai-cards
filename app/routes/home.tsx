@@ -2,7 +2,7 @@ import { Form, Link, useRevalidator } from 'react-router'
 import { useEffect } from 'react'
 import type { Route } from './+types/home'
 import { requireAuth } from '../lib/session'
-import { createDb, insertPendingCard, getCard, listCards, countDue, completedDays } from '../db/repo'
+import { createDb, insertPendingCard, getCard, listCards, countDue, completedDays, getNewCards } from '../db/repo'
 import { runCardPipeline } from '../lib/pipeline'
 import { aiFromEnv } from '../lib/openrouter'
 import { computeStreak, dayKey } from '../lib/streak'
@@ -14,12 +14,14 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   const all = await listCards(db)
   const now = Date.now()
   const days = await completedDays(db)
+  const newCards = await getNewCards(db)
   const today = dayKey(now)
   return {
     pending: all.filter((c) => c.status === 'pending').map((c) => ({ id: c.id, word: c.word })),
     failed: all.filter((c) => c.status === 'failed').map((c) => ({ id: c.id, word: c.word })),
     total: all.length,
     due: await countDue(db, now),
+    newCards: newCards.map((c) => ({ id: c.id, word: c.word })),
     streak: computeStreak(days, today),
     completed: days.filter((d) => d.startsWith(today.slice(0, 7))), // this month
     today,
@@ -57,7 +59,7 @@ export async function action({ request, context }: Route.ActionArgs) {
 }
 
 export default function Home({ loaderData, actionData }: Route.ComponentProps) {
-  const { pending, failed, total, due, streak, completed, today } = loaderData
+  const { pending, failed, total, due, newCards, streak, completed, today } = loaderData
   const revalidator = useRevalidator()
 
   // light polling while cards are generating
@@ -94,6 +96,15 @@ export default function Home({ loaderData, actionData }: Route.ComponentProps) {
         <div className="stat"><b>{due}</b> due today</div>
         <div className="stat"><b>🔥 {streak}</b> day streak</div>
       </div>
+      {newCards.length > 0 && (
+        <section className="new-queue">
+          <div>
+            <b>{newCards.length} New to learn</b>
+            <p className="muted">Start with {newCards[0].word}, then it joins tomorrow’s reviews.</p>
+          </div>
+          <Link to="/learn"><button>Learn now</button></Link>
+        </section>
+      )}
       {due > 0 && <Link to="/review"><button style={{ width: '100%' }}>Start review</button></Link>}
       <div className="calendar">
         {Array.from({ length: Number(today.slice(8, 10)) }, (_, i) => {

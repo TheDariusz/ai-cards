@@ -9,6 +9,13 @@ const CONTENT = {
   explanationEn: 'not wanting to do something',
   sentenceEn: 'She was reluctant to speak.',
   sentencePl: 'Była niechętna do mówienia.',
+  decodeParts: [
+    { en: 'She', pl: 'Ona' },
+    { en: 'was', pl: 'była' },
+    { en: 'reluctant', pl: 'niechętna' },
+    { en: 'to', pl: 'żeby' },
+    { en: 'speak.', pl: 'mówić.' },
+  ],
 }
 
 afterEach(() => vi.unstubAllGlobals())
@@ -27,6 +34,8 @@ describe('generateCard', () => {
     const body = JSON.parse(init.body)
     expect(body.model).toBe('anthropic/claude-sonnet-5')
     expect(body.messages[0].content).toContain('max 12 words')
+    expect(body.messages[0].content).toContain('literal Birkenbihl decode')
+    expect(body.messages[0].content).toContain('ONE ENGLISH WORD PER ITEM')
     expect(body.messages.at(-1).content).toContain('reluctant')
   })
 
@@ -44,6 +53,55 @@ describe('generateCard', () => {
       new Response(JSON.stringify({ choices: [{ message: { content: '{"wordPl":"x"}' } }] })),
     ))
     await expect(provider().generateCard('reluctant')).rejects.toThrow(/missing/i)
+  })
+
+  it('rejects a decode that does not cover sentenceEn in order', async () => {
+    const invalid = { ...CONTENT, decodeParts: [{ en: 'Different sentence.', pl: 'Inne zdanie.' }] }
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ choices: [{ message: { content: JSON.stringify(invalid) } }] })),
+    ))
+    await expect(provider().generateCard('reluctant')).rejects.toThrow(/reproduce sentenceEn/i)
+  })
+
+  it('rejects empty literal translations', async () => {
+    const invalid = { ...CONTENT, decodeParts: [{ en: CONTENT.sentenceEn, pl: ' ' }] }
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ choices: [{ message: { content: JSON.stringify(invalid) } }] })),
+    ))
+    await expect(provider().generateCard('reluctant')).rejects.toThrow(/non-empty en and pl/i)
+  })
+
+  it('rejects a decode that groups most of the sentence into phrases', async () => {
+    const invalid = {
+      ...CONTENT,
+      decodeParts: [
+        { en: 'She was', pl: 'Ona była' },
+        { en: 'reluctant to speak.', pl: 'niechętna żeby mówić.' },
+      ],
+    }
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ choices: [{ message: { content: JSON.stringify(invalid) } }] })),
+    ))
+    await expect(provider().generateCard('reluctant')).rejects.toThrow(/too broadly grouped/i)
+  })
+
+  it('allows a short inseparable expression among word-level parts', async () => {
+    const content = {
+      ...CONTENT,
+      sentenceEn: 'It is the most famous race.',
+      sentencePl: 'To jest najsłynniejszy wyścig.',
+      decodeParts: [
+        { en: 'It', pl: 'To' },
+        { en: 'is', pl: 'jest' },
+        { en: 'the most', pl: 'najbardziej' },
+        { en: 'famous', pl: 'sławny' },
+        { en: 'race.', pl: 'wyścig.' },
+      ],
+    }
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ choices: [{ message: { content: JSON.stringify(content) } }] })),
+    ))
+    await expect(provider().generateCard('famous')).resolves.toEqual(content)
   })
 
   it('throws on non-2xx', async () => {

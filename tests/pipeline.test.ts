@@ -8,6 +8,7 @@ const NOW = 1_750_000_000_000
 const CONTENT = {
   wordPl: 'niechętny', explanationEn: 'not wanting to',
   sentenceEn: 'She was reluctant.', sentencePl: 'Była niechętna.',
+  decodeParts: [{ en: 'She was reluctant.', pl: 'Ona była niechętna.' }],
 }
 
 function fakeAudio() {

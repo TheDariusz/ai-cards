@@ -6,6 +6,7 @@ export default [
   route('cards', 'routes/cards.tsx'),
   route('cards/:id', 'routes/card-detail.tsx'),
   route('review', 'routes/review.tsx'),
+  route('learn', 'routes/learn.tsx'),
   route('audio/:id', 'routes/audio.ts'),
   route('export/:format', 'routes/export.ts'),
 ] satisfies RouteConfig

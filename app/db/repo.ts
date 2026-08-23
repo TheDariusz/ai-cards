@@ -1,10 +1,10 @@
 import { drizzle } from 'drizzle-orm/d1'
-import { eq, lte, and, desc, asc, count } from 'drizzle-orm'
+import { eq, lte, and, desc, asc, count, isNull, isNotNull } from 'drizzle-orm'
 import * as schema from './schema'
 import { cards, reviewLog, dayLog, type Card } from './schema'
 import { newCardSrs, schedule, type Grade } from '../lib/srs'
 import { dayKey } from '../lib/streak'
-import type { CardContent } from '../lib/ai'
+import type { CardContent, DecodePart } from '../lib/ai'
 
 export function createDb(d1: D1Database) {
   return drizzle(d1, { schema })
@@ -41,7 +41,7 @@ export async function getDueCards(db: Db, now: number): Promise<Card[]> {
   return db
     .select()
     .from(cards)
-    .where(and(eq(cards.status, 'ready'), lte(cards.dueAt, now)))
+    .where(and(eq(cards.status, 'ready'), isNotNull(cards.firstLearnedAt), lte(cards.dueAt, now)))
     .orderBy(asc(cards.dueAt))
 }
 
@@ -49,8 +49,25 @@ export async function countDue(db: Db, now: number): Promise<number> {
   const [row] = await db
     .select({ n: count() })
     .from(cards)
-    .where(and(eq(cards.status, 'ready'), lte(cards.dueAt, now)))
+    .where(and(eq(cards.status, 'ready'), isNotNull(cards.firstLearnedAt), lte(cards.dueAt, now)))
   return row.n
+}
+
+export async function getNewCards(db: Db): Promise<Card[]> {
+  return db
+    .select()
+    .from(cards)
+    .where(and(eq(cards.status, 'ready'), isNull(cards.firstLearnedAt), isNotNull(cards.decodeParts)))
+    .orderBy(asc(cards.createdAt))
+}
+
+export async function completeFirstLearning(db: Db, cardId: number, now: number): Promise<boolean> {
+  const updated = await db
+    .update(cards)
+    .set({ firstLearnedAt: now, ...newCardSrs(now) })
+    .where(and(eq(cards.id, cardId), eq(cards.status, 'ready'), isNull(cards.firstLearnedAt), isNotNull(cards.decodeParts)))
+    .returning({ id: cards.id })
+  return updated.length === 1
 }
 
 export async function applyReview(
@@ -58,7 +75,7 @@ export async function applyReview(
   mode: 'flip' | 'write', typed: string | null, now: number,
 ): Promise<void> {
   const card = await getCard(db, cardId)
-  if (!card || card.status !== 'ready') return
+  if (!card || card.status !== 'ready' || card.firstLearnedAt === null) return
   const next = schedule({ dueAt: card.dueAt, intervalDays: card.intervalDays, ease: card.ease }, grade, now)
   await db.update(cards).set(next).where(eq(cards.id, cardId))
   await db.insert(reviewLog).values({ cardId, reviewedAt: now, mode, grade, typed })
@@ -78,7 +95,11 @@ export async function completedDays(db: Db): Promise<string[]> {
   return (await db.select().from(dayLog)).map((r) => r.date).sort()
 }
 
-export async function updateCardContent(db: Db, id: number, content: CardContent): Promise<void> {
+export async function updateCardContent(
+  db: Db,
+  id: number,
+  content: Omit<CardContent, 'decodeParts'> & { decodeParts: DecodePart[] | null },
+): Promise<void> {
   await db.update(cards).set(content).where(eq(cards.id, id))
 }
 
