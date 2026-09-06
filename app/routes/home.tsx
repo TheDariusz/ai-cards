@@ -7,6 +7,12 @@ import { runCardPipeline } from '../lib/pipeline'
 import { aiFromEnv } from '../lib/openrouter'
 import { computeStreak, dayKey } from '../lib/streak'
 
+// A pipeline killed mid-flight (isolate reclaimed) never reaches markFailed, so
+// the row is stranded in `pending`. Past this age, treat it as failed and offer Retry.
+const STALE_PENDING_MS = 5 * 60_000
+const isStuck = (c: { status: string; createdAt: number }, now: number) =>
+  c.status === 'pending' && now - c.createdAt > STALE_PENDING_MS
+
 export async function loader({ request, context }: Route.LoaderArgs) {
   const env = context.cloudflare.env
   await requireAuth(request, env)
@@ -17,8 +23,8 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   const newCards = await getNewCards(db)
   const today = dayKey(now)
   return {
-    pending: all.filter((c) => c.status === 'pending').map((c) => ({ id: c.id, word: c.word })),
-    failed: all.filter((c) => c.status === 'failed').map((c) => ({ id: c.id, word: c.word })),
+    pending: all.filter((c) => c.status === 'pending' && !isStuck(c, now)).map((c) => ({ id: c.id, word: c.word })),
+    failed: all.filter((c) => c.status === 'failed' || isStuck(c, now)).map((c) => ({ id: c.id, word: c.word })),
     total: all.length,
     due: await countDue(db, now),
     newCards: newCards.map((c) => ({ id: c.id, word: c.word })),
@@ -48,7 +54,7 @@ export async function action({ request, context }: Route.ActionArgs) {
   if (intent === 'retry') {
     const id = Number(form.get('cardId'))
     const card = await getCard(db, id)
-    if (card?.status === 'failed') {
+    if (card && (card.status === 'failed' || isStuck(card, Date.now()))) {
       context.cloudflare.ctx.waitUntil(
         runCardPipeline({ db, ai: aiFromEnv(env), audio: env.AUDIO }, id, card.word),
       )

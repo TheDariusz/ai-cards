@@ -1,6 +1,9 @@
 import { validateCardContent, type AiProvider } from './ai'
 
 const BASE = 'https://openrouter.ai/api/v1'
+// Without this a stalled response hangs the waitUntil promise forever: it never
+// settles, the isolate is reclaimed, and the card is stranded in `pending`.
+const TIMEOUT_MS = 60_000
 
 const SYSTEM_PROMPT = `You create English flashcards for a Polish native speaker at B1 level who wants to reach B2.
 Given an English word, reply with ONLY a JSON object, no other text:
@@ -45,6 +48,7 @@ export function createOpenRouter(opts: {
             { role: 'user', content: user },
           ],
         }),
+        signal: AbortSignal.timeout(TIMEOUT_MS),
       })
       if (!res.ok) throw new Error(`OpenRouter chat failed: ${res.status} ${await res.text()}`)
       const data = (await res.json()) as { choices: { message: { content: string } }[] }
@@ -58,6 +62,7 @@ export function createOpenRouter(opts: {
         method: 'POST',
         headers,
         body: JSON.stringify({ model: opts.ttsModel, input: text, voice: opts.voice, response_format: 'mp3' }),
+        signal: AbortSignal.timeout(TIMEOUT_MS),
       })
       if (!res.ok) throw new Error(`OpenRouter TTS failed: ${res.status} ${await res.text()}`)
       return res.arrayBuffer()
