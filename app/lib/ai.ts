@@ -11,6 +11,48 @@ export interface CardContent {
   decodeParts: DecodePart[]
 }
 
+export type AnswerVerdict = 'correct' | 'minor' | 'wrong'
+
+export interface AnswerEvaluation {
+  verdict: AnswerVerdict
+  summaryPl: string
+  corrected: string
+  notesPl: string[]
+}
+
+export interface AnswerToEvaluate {
+  word: string
+  wordPl: string | null
+  sentencePl: string
+  sentenceEn: string
+  typed: string
+}
+
+const VERDICTS: readonly AnswerVerdict[] = ['correct', 'minor', 'wrong']
+const MAX_NOTES = 3
+
+export function validateAnswerEvaluation(value: unknown, typed: string): AnswerEvaluation {
+  if (!value || typeof value !== 'object') throw new Error('answer evaluation must be an object')
+  const parsed = value as Partial<Record<keyof AnswerEvaluation, unknown>>
+  if (!VERDICTS.includes(parsed.verdict as AnswerVerdict)) {
+    throw new Error(`answer evaluation has invalid verdict: ${String(parsed.verdict)}`)
+  }
+  if (typeof parsed.summaryPl !== 'string' || !parsed.summaryPl.trim()) {
+    throw new Error('answer evaluation missing summaryPl')
+  }
+  const corrected = typeof parsed.corrected === 'string' ? parsed.corrected.trim() : ''
+  const notes = Array.isArray(parsed.notesPl) ? parsed.notesPl : []
+  return {
+    verdict: parsed.verdict as AnswerVerdict,
+    summaryPl: parsed.summaryPl.trim(),
+    corrected: corrected || typed,
+    notesPl: notes
+      .filter((note): note is string => typeof note === 'string' && note.trim() !== '')
+      .map((note) => note.trim())
+      .slice(0, MAX_NOTES),
+  }
+}
+
 export interface AiProvider {
   generateCard(word: string, hint?: string): Promise<CardContent>
   tts(text: string): Promise<ArrayBuffer>
