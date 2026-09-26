@@ -27,7 +27,7 @@ always gets `again`; the learner sees a corrected version and 1–3 short Polish
 | AI failure | Fall back to today's local diff + suggested grade; review never blocks |
 | Persistence | None — no schema change; feedback is not stored in `review_log` |
 | Model | Existing `CARD_MODEL` var; no new config |
-| Delivery | Separate resource route called with `useFetcher`; no streaming |
+| Delivery | Separate resource route called with plain `fetch` (a network error must reach the diff fallback, not the ErrorBoundary; no loader revalidation); no streaming |
 
 ## Architecture
 
@@ -134,9 +134,9 @@ so the headword check is instant and identical whether AI succeeds or not.
 ### UI — `WriteCard` in `app/routes/review.tsx`
 
 - On Check (button or Enter): compute `diffAnswer(...)` (fallback) and `headwordInAnswer(typed, card.word)`
-  locally, then `fetcher.submit({ cardId, typed }, { method: 'post', action: '/review/check' })`.
+  locally, then `fetch('/review/check', { method: 'POST', body: FormData{ cardId, typed } })`; a rejected fetch or non-2xx is treated as `ok: false`.
   Check is disabled while `typed.trim()` is empty.
-- While the fetcher is busy: the typed sentence and a "Checking…" state; grade buttons not shown yet.
+- While the request is in flight: the typed sentence and a "Checking…" state; grade buttons not shown yet.
 - `ok: true`: verdict line (`summaryPl`), corrected sentence (headword highlighted with `highlightHeadword`),
   notes list, then the stored sentence labelled "Another correct version", the headword-missing / typo
   message as today, audio, and `GradeButtons` with the suggestion from `suggestGrade`.

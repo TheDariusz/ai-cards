@@ -7,7 +7,7 @@ import { diffAnswer, type DiffResult, type HeadwordStatus } from '../lib/diff'
 import { headwordInAnswer, suggestGrade } from '../lib/evaluate'
 import { highlightHeadword } from '../lib/headword'
 import type { Grade } from '../lib/srs'
-import type { action as checkAction } from './review-check'
+import type { CheckResult } from './review-check'
 
 const KEY_TO_GRADE: Record<string, 'again' | 'good' | 'easy'> = { '1': 'again', '2': 'good', '3': 'easy' }
 
@@ -135,23 +135,31 @@ function WriteCard({ card }: { card: Route.ComponentProps['loaderData']['due'][n
   const [typed, setTyped] = useState('')
   // Computed on Check: instant, and the fallback when AI feedback is unavailable
   const [local, setLocal] = useState<{ diff: DiffResult; headword: HeadwordStatus } | null>(null)
-  const fetcher = useFetcher<typeof checkAction>()
-  const done = local !== null && fetcher.state === 'idle' && fetcher.data !== undefined
+  const [checked, setChecked] = useState<CheckResult | null>(null)
+  const done = local !== null && checked !== null
   const audioRef = useRef<HTMLAudioElement>(null)
   useEffect(() => {
     if (done) audioRef.current?.play().catch(() => {})
   }, [done])
 
-  const check = () => {
-    if (!typed.trim() || fetcher.state !== 'idle' || local) return
+  const check = async () => {
+    if (!typed.trim() || local) return
     setLocal({
       diff: diffAnswer(card.sentenceEn ?? '', typed, card.word),
       headword: headwordInAnswer(typed, card.word),
     })
-    fetcher.submit({ cardId: String(card.id), typed }, { method: 'post', action: '/review/check' })
+    const body = new FormData()
+    body.set('cardId', String(card.id))
+    body.set('typed', typed)
+    try {
+      const res = await fetch('/review/check', { method: 'POST', body })
+      setChecked(res.ok ? ((await res.json()) as CheckResult) : { ok: false })
+    } catch {
+      setChecked({ ok: false }) // offline / dropped connection → local diff
+    }
   }
 
-  const evaluation = fetcher.data?.ok ? fetcher.data.evaluation : null
+  const evaluation = checked?.ok ? checked.evaluation : null
   const suggested: Grade | null = !local
     ? null
     : evaluation
