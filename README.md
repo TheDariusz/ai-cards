@@ -10,7 +10,7 @@ A personal English-learning flashcard app for a Polish native speaker. Hear an u
 - **AI-generated cards** — Claude (via OpenRouter) writes the content; TTS audio stored in R2
 - **Birkenbihl first learning** — each new card gets an ordered literal EN–PL decode and a one-time guided introduction before it enters SRS
 - **Spaced repetition** — simplified SM-2 scheduler; newly introduced cards become due the day after first learning
-- **Two review modes** — *write it* (default: type the English sentence, get a word-by-word diff with a suggested grade) and classic flip (Polish → reveal English + audio → self-grade)
+- **Two review modes** — *write it* (default: translate the Polish sentence in your own words; AI judges meaning, grammar and naturalness, shows a corrected version with short Polish notes and suggests a grade — the tested word must appear or the grade is *again*; falls back to a word-by-word diff when AI is unavailable) and classic flip (Polish → reveal English + audio → self-grade)
 - **Streak** — a day counts when all due cards are reviewed (or ≥10 reviews on backlog days), Europe/Warsaw timezone, month calendar on the home screen
 - **Card management** — edit any field, regenerate with a hint ("make it shorter", "business context"), delete; SRS progress survives edits
 - **Export** — CSV (Anki/spreadsheet-compatible) and JSON full backup, no import by design
