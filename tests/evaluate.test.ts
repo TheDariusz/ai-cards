@@ -11,10 +11,26 @@ describe('headwordInAnswer', () => {
   it('reports a typo', () => {
     expect(headwordInAnswer('She delibrately ignored him.', 'deliberately')).toBe('typo')
   })
-  it('treats a late typo on a long shared stem as a match (inflection leniency)', () => {
-    // tokenMatchesHeadword accepts a ≥6-letter shared stem — it cannot tell
-    // "deliberatly" from an inflection; the AI notes still flag the spelling
-    expect(headwordInAnswer('She deliberatly ignored him.', 'deliberately')).toBe('match')
+  it('reports a dropped letter as a typo, not a match', () => {
+    expect(headwordInAnswer('She deliberatly ignored him.', 'deliberately')).toBe('typo')
+  })
+  it('does not accept a shorter word that merely prefixes the headword', () => {
+    expect(headwordInAnswer('I waited for him.', 'forget')).toBe('missing')
+    expect(headwordInAnswer("I don't care.", 'careful')).toBe('missing')
+    expect(headwordInAnswer('She is in the room.', 'into')).toBe('missing')
+    expect(headwordInAnswer('He went off.', 'offer')).toBe('missing')
+    expect(headwordInAnswer('I agree with you.', 'within')).toBe('missing')
+  })
+  it('treats a word one edit away as a typo — indistinguishable from a real one', () => {
+    expect(headwordInAnswer('Please sit.', 'pleased')).toBe('typo')
+  })
+  it('accepts regular English inflections', () => {
+    expect(headwordInAnswer('She kept ignoring me.', 'ignore')).toBe('match')
+    expect(headwordInAnswer('He tried again.', 'try')).toBe('match')
+    expect(headwordInAnswer('It stopped.', 'stop')).toBe('match')
+    expect(headwordInAnswer('She carried it.', 'carry')).toBe('match')
+    expect(headwordInAnswer('He relies on her.', 'rely')).toBe('match')
+    expect(headwordInAnswer('It happens.', 'happen')).toBe('match')
   })
   it('reports a missing headword', () => {
     expect(headwordInAnswer('She ignored him on purpose.', 'deliberately')).toBe('missing')

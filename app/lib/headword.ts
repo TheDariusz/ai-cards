@@ -42,9 +42,9 @@ function sharedPrefixLength(a: string, b: string): number {
   return i
 }
 
-// One normalized sentence token vs one normalized headword token: the same
-// word, possibly inflected. Typos are not inflections — see tokenMatchesHeadword.
-export function tokenInflectsHeadword(word: string, head: string): boolean {
+// One normalized sentence token vs one normalized headword token.
+// Exact first — similar() deliberately returns false for identical words.
+export function tokenMatchesHeadword(word: string, head: string): boolean {
   if (word === head) return true
   if (
     head.length >= 4 &&
@@ -55,13 +55,8 @@ export function tokenInflectsHeadword(word: string, head: string): boolean {
   if (sharedPrefixLength(word, head) >= STEM) return true
   // Function words inflect too ("wraz z" → "wraz ze"), but one extra letter is
   // all the leeway they get — "up" must never claim "upset".
-  return word.length === head.length + 1 && word.startsWith(head)
-}
-
-// Inflection or a typo. Exact is handled first — similar() deliberately
-// returns false for identical words.
-export function tokenMatchesHeadword(word: string, head: string): boolean {
-  return tokenInflectsHeadword(word, head) || similar(word, head)
+  if (word.length === head.length + 1 && word.startsWith(head)) return true
+  return similar(word, head)
 }
 
 // A single non-overlapping scan for occurrences of `headTokens` in `tokens`,
