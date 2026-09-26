@@ -95,10 +95,12 @@ export function suggestGrade(verdict: AnswerVerdict, headword: HeadwordStatus): 
 
 `headwordInAnswer` scans all tokens of the typed sentence, not an alignment against the reference —
 reordering must not produce a false "missing" (the alignment-based status in `diffAnswer` would).
-- `match`: `findHeadwordIndices(normalize(typed), headword)` finds an occurrence (exact, prefix/fuzzy
-  inflection — e.g. *ignored* for *ignore*)
-- `typo`: otherwise, some token is `similar()` to a single-word headword, or, for a phrase headword,
-  every head token is exact-or-`similar` to a consecutive run of typed tokens
+- `match`: some gloss variant appears as a consecutive run where every token passes
+  `tokenInflectsHeadword` (exact or inflection — e.g. *ignored* for *ignore*; a late typo on a ≥6-letter
+  shared stem is indistinguishable from an inflection and also counts as `match`)
+- `typo`: otherwise, a run where every token passes `tokenInflectsHeadword` or `similar()`
+  (`tokenInflectsHeadword` is today's `tokenMatchesHeadword` minus its final `similar()` fallback — split
+  out so a typo is not silently a match)
 - `missing`: otherwise
 
 `suggestGrade`:
