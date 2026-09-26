@@ -183,7 +183,7 @@ function WriteCard({ card }: { card: Route.ComponentProps['loaderData']['due'][n
 
 export default function Review({ loaderData }: Route.ComponentProps) {
   const [params, setParams] = useSearchParams()
-  const mode = params.get('mode') === 'write' ? 'write' : 'flip'
+  const mode = params.get('mode') === 'flip' ? 'flip' : 'write'
   const card = loaderData.due[0] // action revalidates the loader → next card appears
 
   if (!card) {
