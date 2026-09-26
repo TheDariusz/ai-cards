@@ -65,3 +65,12 @@ button:disabled { opacity: 0.45; cursor: not-allowed; }
   .learning-actions { flex-direction: column-reverse; }
   .learning-actions button { width: 100%; }
 }
+.typed-answer { margin-top: 0; }
+.feedback { margin-bottom: 0.2rem; }
+.verdict { font-weight: 700; }
+.verdict-correct { color: var(--ok); }
+.verdict-minor { color: #ffc94d; }
+.verdict-wrong { color: var(--bad); }
+.feedback-notes { margin: 0.4rem 0; padding-left: 1.2rem; color: var(--fg); font-size: 0.95rem; }
+.feedback-notes li + li { margin-top: 0.25rem; }
+.alt-label { margin: 0.8rem 0 0; color: var(--muted); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; }

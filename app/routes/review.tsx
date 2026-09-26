@@ -3,8 +3,11 @@ import { useEffect, useRef, useState } from 'react'
 import type { Route } from './+types/review'
 import { requireAuth } from '../lib/session'
 import { createDb, getDueCards, applyReview } from '../db/repo'
-import { diffAnswer, type DiffResult } from '../lib/diff'
+import { diffAnswer, type DiffResult, type HeadwordStatus } from '../lib/diff'
+import { headwordInAnswer, suggestGrade } from '../lib/evaluate'
 import { highlightHeadword } from '../lib/headword'
+import type { Grade } from '../lib/srs'
+import type { action as checkAction } from './review-check'
 
 const KEY_TO_GRADE: Record<string, 'again' | 'good' | 'easy'> = { '1': 'again', '2': 'good', '3': 'easy' }
 
@@ -130,18 +133,35 @@ function FlipCard({ card }: { card: Route.ComponentProps['loaderData']['due'][nu
 
 function WriteCard({ card }: { card: Route.ComponentProps['loaderData']['due'][number] }) {
   const [typed, setTyped] = useState('')
-  const [result, setResult] = useState<DiffResult | null>(null)
+  // Computed on Check: instant, and the fallback when AI feedback is unavailable
+  const [local, setLocal] = useState<{ diff: DiffResult; headword: HeadwordStatus } | null>(null)
+  const fetcher = useFetcher<typeof checkAction>()
+  const done = local !== null && fetcher.state === 'idle' && fetcher.data !== undefined
   const audioRef = useRef<HTMLAudioElement>(null)
   useEffect(() => {
-    if (result) audioRef.current?.play().catch(() => {})
-  }, [result])
+    if (done) audioRef.current?.play().catch(() => {})
+  }, [done])
 
-  const check = () => setResult(diffAnswer(card.sentenceEn ?? '', typed, card.word))
+  const check = () => {
+    if (!typed.trim() || fetcher.state !== 'idle' || local) return
+    setLocal({
+      diff: diffAnswer(card.sentenceEn ?? '', typed, card.word),
+      headword: headwordInAnswer(typed, card.word),
+    })
+    fetcher.submit({ cardId: String(card.id), typed }, { method: 'post', action: '/review/check' })
+  }
+
+  const evaluation = fetcher.data?.ok ? fetcher.data.evaluation : null
+  const suggested: Grade | null = !local
+    ? null
+    : evaluation
+      ? suggestGrade(evaluation.verdict, local.headword)
+      : local.headword === 'missing' ? 'again' : local.diff.suggestedGrade
 
   return (
     <>
       <div className="card-face"><Sentence text={card.sentencePl} headword={card.wordPl} lang="pl" /></div>
-      {!result ? (
+      {!local ? (
         <form onSubmit={(e) => { e.preventDefault(); check() }}>
           <textarea
             value={typed}
@@ -156,22 +176,44 @@ function WriteCard({ card }: { card: Route.ComponentProps['loaderData']['due'][n
             autoFocus
             rows={3}
           />
-          <button type="submit">Check</button>
+          <button type="submit" disabled={!typed.trim()}>Check</button>
         </form>
+      ) : !done ? (
+        <div className="card-face">
+          <p lang="en" className="typed-answer">{typed}</p>
+          <p className="muted">Checking…</p>
+        </div>
       ) : (
         <>
           <div className="card-face">
-            <p>
-              {result.tokens.map((t, i) => (
-                <span key={i} className={`diff-${t.kind}${t.head ? ' diff-head' : ''}`}>{t.text} </span>
-              ))}
-            </p>
+            {evaluation ? (
+              <div className="feedback">
+                <p lang="en" className="typed-answer">{typed}</p>
+                <p lang="pl" className={`verdict verdict-${evaluation.verdict}`}>{evaluation.summaryPl}</p>
+                {evaluation.corrected !== typed.trim() && (
+                  <Sentence text={evaluation.corrected} headword={card.word} lang="en" />
+                )}
+                {evaluation.notesPl.length > 0 && (
+                  <ul lang="pl" className="feedback-notes">
+                    {evaluation.notesPl.map((note, i) => <li key={i}>{note}</li>)}
+                  </ul>
+                )}
+                <p className="alt-label">Another correct version</p>
+              </div>
+            ) : (
+              <p>
+                {local.diff.tokens.map((t, i) => (
+                  <span key={i} className={`diff-${t.kind}${t.head ? ' diff-head' : ''}`}>{t.text} </span>
+                ))}
+              </p>
+            )}
             <Sentence text={card.sentenceEn} headword={card.word} lang="en" bold />
             <p className="muted">
-              {Math.round(result.score * 100)}% — suggested: <b>{result.suggestedGrade}</b>
+              {!evaluation && `${Math.round(local.diff.score * 100)}% — `}suggested: <b>{suggested}</b>
             </p>
-            {result.headword === 'missing' && <p className="error">Main word missing: <b>{card.word}</b></p>}
-            {result.headword === 'typo' && <p className="muted">Main word had a typo.</p>}
+            {!evaluation && <p className="muted">AI feedback unavailable</p>}
+            {local.headword === 'missing' && <p className="error">Main word missing: <b>{card.word}</b></p>}
+            {local.headword === 'typo' && <p className="muted">Main word had a typo.</p>}
             {card.audioKey && <audio ref={audioRef} controls src={`/audio/${card.id}?v=${encodeURIComponent(card.audioKey)}`} />}
           </div>
           <GradeButtons cardId={card.id} mode="write" typed={typed} />
