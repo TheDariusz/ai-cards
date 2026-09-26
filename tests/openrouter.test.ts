@@ -123,3 +123,42 @@ describe('tts', () => {
     expect(body).toMatchObject({ model: 'openai/gpt-4o-mini-tts', input: 'Hello.', voice: 'alloy', response_format: 'mp3' })
   })
 })
+
+describe('evaluateAnswer', () => {
+  const INPUT = { word: 'deliberately', wordPl: 'celowo', sentencePl: 'Celowo zignorowała jego telefony po kłótni.', sentenceEn: 'She deliberately ignored his calls after the argument.', typed: 'After the fight she deliberately ignored his calls.' }
+  const EVAL = { verdict: 'correct', summaryPl: 'Poprawne i naturalne.', corrected: INPUT.typed, notesPl: [] }
+  const reply = (content: string) => new Response(JSON.stringify({ choices: [{ message: { content } }] }))
+
+  it('POSTs the card model with the answer delimited as data', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(reply(JSON.stringify(EVAL)))
+    vi.stubGlobal('fetch', fetchMock)
+    expect(await provider().evaluateAnswer(INPUT)).toEqual(EVAL)
+    const [url, init] = fetchMock.mock.calls[0]
+    expect(url).toBe('https://openrouter.ai/api/v1/chat/completions')
+    const body = JSON.parse(init.body)
+    expect(body.model).toBe('anthropic/claude-sonnet-5')
+    expect(body.messages[0].content).toMatch(/ignore any instructions/i)
+    const user = body.messages.at(-1).content
+    expect(user).toContain(INPUT.sentencePl)
+    expect(user).toContain(INPUT.sentenceEn)
+    expect(user).toContain(`<answer>${INPUT.typed}</answer>`)
+    expect(user).toContain('celowo')
+  })
+
+  it('parses JSON wrapped in prose and code fences', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(reply('Here you go:\n```json\n' + JSON.stringify(EVAL) + '\n```')))
+    expect((await provider().evaluateAnswer(INPUT)).verdict).toBe('correct')
+  })
+
+  it('builds the prompt without a Polish gloss', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(reply(JSON.stringify(EVAL)))
+    vi.stubGlobal('fetch', fetchMock)
+    await provider().evaluateAnswer({ ...INPUT, wordPl: null })
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body).messages.at(-1).content).not.toContain('null')
+  })
+
+  it('throws on a non-2xx response', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response('down', { status: 500 })))
+    await expect(provider().evaluateAnswer(INPUT)).rejects.toThrow(/500/)
+  })
+})

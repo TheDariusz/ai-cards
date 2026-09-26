@@ -27,6 +27,7 @@ function fakeAudio() {
 
 const okAi: AiProvider = {
   generateCard: async () => CONTENT,
+  evaluateAnswer: async () => { throw new Error('unused') },
   tts: async () => new Uint8Array([9]).buffer,
 }
 

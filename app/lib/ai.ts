@@ -55,6 +55,7 @@ export function validateAnswerEvaluation(value: unknown, typed: string): AnswerE
 
 export interface AiProvider {
   generateCard(word: string, hint?: string): Promise<CardContent>
+  evaluateAnswer(input: AnswerToEvaluate): Promise<AnswerEvaluation>
   tts(text: string): Promise<ArrayBuffer>
 }
 
