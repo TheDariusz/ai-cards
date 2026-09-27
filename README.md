@@ -40,8 +40,8 @@ npm run dev                            # http://localhost:5173
 | `OPENROUTER_API_KEY` | Server-side key for card generation + TTS |
 | `SESSION_SECRET` | Signs the session cookie (`openssl rand -hex 32`) |
 | `APP_PASSWORD_HASH` | SHA-256 hex of the login password (`echo -n "pass" \| shasum -a 256`) |
-| `REMINDER_FROM` | Sender of the reminder email, an address on a domain onboarded to Cloudflare Email Service |
-| `REMINDER_TO` | Recipient, a verified Email Routing destination address |
+| `RESEND_API_KEY` | Resend API key for the daily reminder email |
+| `REMINDER_TO` | Recipient of the reminder — must be the Resend account's own address |
 
 ### Tests
 
@@ -83,7 +83,7 @@ npx wrangler d1 migrations apply ai-cards --remote
 npx wrangler secret put OPENROUTER_API_KEY
 npx wrangler secret put SESSION_SECRET
 npx wrangler secret put APP_PASSWORD_HASH
-npx wrangler secret put REMINDER_FROM
+npx wrangler secret put RESEND_API_KEY
 npx wrangler secret put REMINDER_TO
 ```
 
@@ -99,19 +99,20 @@ New migrations must be applied remotely by hand (`npx wrangler d1 migrations app
 
 Two Cron Triggers (`0 17 * * *` and `0 18 * * *` UTC) run `scheduled` in `workers/app.ts`; only the one that is
 19:00 in Warsaw (CEST or CET) goes on. It emails once a day when today has no completed review day and there are
-due or new cards, unless switched off on the home screen. Sending uses the Cloudflare `send_email` binding
-(`EMAIL`), which needs a domain on Cloudflare DNS — `*.workers.dev` alone cannot send.
+due or new cards, unless switched off on the home screen. Mail goes through [Resend](https://resend.com)'s
+free plan (3,000/month, 100/day) from `AI Cards <onboarding@resend.dev>` (`REMINDER_FROM` in `wrangler.jsonc`).
+Without an own domain, that shared sender only delivers to the Resend account owner's address.
 
-One-time setup, **before** the first deploy with the binding:
+One-time setup, **before** merging to `master`:
 
-1. Cloudflare dashboard, on a domain already on Cloudflare DNS (e.g. `thedariusz.com`): Compute → Email Service →
-   Email Sending → **Onboard Domain**; then in Email Routing add and verify the destination address.
-2. `npx wrangler secret put REMINDER_FROM` (e.g. `cards@thedariusz.com`) and `npx wrangler secret put REMINDER_TO`.
+1. Create a Resend account with your own email address and create an API key.
+2. `npx wrangler secret put RESEND_API_KEY` and `npx wrangler secret put REMINDER_TO` (the same address as the
+   Resend account).
 3. Merge to `master`; CI deploys and applies migration `0002` (`settings` table).
 4. On production, press **Send test** on the home screen to confirm the setup.
 
-Failures show up in `npx wrangler tail ai-cards` as `reminder: …` lines. Locally, `npm run dev` prints the path of
-each sent email's text and HTML; fire the cron by hand with:
+Failures show up in `npx wrangler tail ai-cards` as `reminder: …` lines (`Resend <status>: <body>`). Locally the
+mail is really sent via Resend, so put a real `RESEND_API_KEY` in `.dev.vars` to try it; fire the cron by hand with:
 
 ```bash
 curl "http://localhost:5173/cdn-cgi/handler/scheduled?cron=0+17+*+*+*&time=$(date -d 2026-09-28T17:00:00Z +%s)000"

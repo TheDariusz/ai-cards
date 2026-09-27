@@ -188,3 +188,13 @@ describe('isReminderHour', () => {
 - [ ] **Step 3:** Render the HTML of the `.eml` from Task 5 (and one new-only variant from `buildReminder`) in Chromium, publish as an Artifact for the learner's review.
 - [ ] **Step 4:** `npm test` and `npm run typecheck` → clean; `git status` shows no `.dev.vars`.
 - [ ] **Step 5:** Commit `docs: describe email reminders setup`.
+
+## Provider change: Resend
+
+After implementation, Cloudflare refused Email Sending on the free plan ("Email Sending is currently only
+available with the Workers Paid plan"). The adapter was swapped for Resend without touching the `Mailer` port:
+`app/lib/cf-email.ts` → `app/lib/resend.ts` (`createResendMailer({ apiKey, from, to })`, `fetch` with a 15 s
+timeout, non-2xx throws with status and body), `tests/cf-email.test.ts` → `tests/resend.test.ts` (stubbed
+`fetch`). `wrangler.jsonc` drops the `send_email` binding and sets `REMINDER_FROM` to
+`AI Cards <onboarding@resend.dev>` in `vars`; the secrets are now `RESEND_API_KEY` and `REMINDER_TO`. The
+missing-config message is `RESEND_API_KEY/REMINDER_TO not configured`. The spec's Rollout section is updated.

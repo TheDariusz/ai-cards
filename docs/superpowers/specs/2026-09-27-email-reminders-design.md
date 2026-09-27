@@ -17,11 +17,11 @@ switched off from the app; a failure to send never breaks the Worker and is visi
 | When to send | Only if today (Europe/Warsaw) has no `day_log` row **and** there are due or new cards |
 | Schedule | Once a day at 19:00 Europe/Warsaw |
 | Scheduler | Two Cron Triggers, `0 17 * * *` and `0 18 * * *` (UTC), plus a Warsaw-hour guard in code — exactly one of them is 19:00 local on any day, CET or CEST |
-| Provider | Cloudflare Email (`send_email` binding, Email Routing to a verified destination address) |
-| Addresses | Secrets `REMINDER_FROM` and `REMINDER_TO`; only placeholder keys in the public repo |
+| Provider | Resend free plan (`POST https://api.resend.com/emails`, 3,000 emails/month, 100/day). Cloudflare Email Sending was the first choice but requires the Workers Paid plan |
+| Addresses | Sender `AI Cards <onboarding@resend.dev>` in `vars` (`REMINDER_FROM`) — no own domain; Resend's shared test domain only delivers to the Resend account owner's address. Secrets `RESEND_API_KEY` and `REMINDER_TO` (that owner address); only placeholder keys in the public repo |
 | Off switch | On/Off toggle on home, stored in a new D1 `settings` table; default **on** |
 | Content | Short Polish email, `text/plain` + simple inline-styled HTML |
-| Verification | Vitest for logic, adapter, repo and orchestration; local Miniflare `.eml` output; a "Send test" button in the app |
+| Verification | Vitest for logic, adapter (stubbed `fetch`), repo and orchestration; `buildReminder` HTML rendered in Chromium; a "Send test" button in the app |
 
 Out of scope (YAGNI): changing the hour in the UI, pause-until-date, multiple recipients, retrying a failed
 send, a sentence teaser in the email, a "sent today" dedup beyond `reminderLastSent`.
@@ -33,20 +33,20 @@ Ports & adapters, like `ai.ts` / `openrouter.ts`. Every unit has one job:
 | File | Role | Depends on |
 |---|---|---|
 | `app/lib/mailer.ts` | **Port.** `interface Mailer { send(msg: MailMessage): Promise<void> }`, `MailMessage = { subject: string; text: string; html: string }`. Addresses are adapter configuration, not part of the port. | — |
-| `app/lib/cf-email.ts` | **Adapter.** `createCfMailer(binding: SendEmail, from: string, to: string): Mailer` calls `binding.send({ from, to, subject, text, html })` (the runtime's builder form, no raw MIME) and lets any rejection propagate. The only file that knows Cloudflare Email. | `SendEmail` type |
+| `app/lib/resend.ts` | **Adapter.** `createResendMailer({ apiKey, from, to }): Mailer` POSTs `{ from, to, subject, text, html }` to `https://api.resend.com/emails` with `Authorization: Bearer <apiKey>` and `AbortSignal.timeout(15_000)`; a non-2xx response throws `Error('Resend <status>: <body>')`. The only file that knows Resend. | `fetch` |
 | `app/lib/reminder.ts` | **Pure logic, no I/O.** `isReminderHour(nowMs, hour = 19)`, `shouldRemind(state)`, `pluralKarty(n)`, `buildReminder({ due, fresh, streak, appUrl })` → `MailMessage`. | `streak.ts` |
 | `app/lib/reminder-job.ts` | **Orchestration.** `runReminder(deps, now, opts?)` with `deps = { db, mailer, appUrl }` (same `deps` pattern as `pipeline`). Reads state via repo, asks `shouldRemind`, sends, records `reminderLastSent`. | repo, reminder, Mailer |
 | `app/db/schema.ts` + `drizzle/0002_*.sql` | New table `settings (key TEXT PRIMARY KEY, value TEXT NOT NULL)`. Keys used: `reminderEnabled` (`'true'`/`'false'`), `reminderLastSent` (`YYYY-MM-DD`). Generated with `npx drizzle-kit generate`. | — |
 | `app/db/repo.ts` | `getSetting(db, key)` → `string \| null`, `setSetting(db, key, value)` (upsert), `isDayDone(db, day)`, `countNew(db)` (same condition as `getNewCards`: `ready`, not learned, has `decodeParts`). Still the only file that touches Drizzle. | Drizzle |
-| `workers/app.ts` | Gains `scheduled(controller, env, ctx)`. It only assembles deps and calls `runReminder`. **Why touch a template file:** a Worker has one export per event type and React Router cannot receive cron events; the change is a few lines and leaves `fetch` untouched. Keeps template style. | reminder-job, cf-email |
-| `app/routes/reminder.ts` + `app/routes.ts` | `POST /reminder` action: `intent = on \| off \| test`. Starts with `requireAuth`. | repo, reminder-job, cf-email |
+| `workers/app.ts` | Gains `scheduled(controller, env, ctx)`. It only assembles deps and calls `runReminder`. **Why touch a template file:** a Worker has one export per event type and React Router cannot receive cron events; the change is a few lines and leaves `fetch` untouched. Keeps template style. | reminder-job, resend |
+| `app/routes/reminder.ts` + `app/routes.ts` | `POST /reminder` action: `intent = on \| off \| test`. Starts with `requireAuth`. | repo, reminder-job, resend |
 | `app/routes/home.tsx` + `app/app.css` | A reminder row under the theme switcher; loader adds `reminderEnabled`. | — |
-| `wrangler.jsonc` | `"send_email": [{ "name": "EMAIL" }]` (no fixed address), `"triggers": { "crons": ["0 17 * * *", "0 18 * * *"] }` with a CET/CEST comment, `APP_URL` in `vars` (the public workers.dev URL, already in README). | — |
-| `.dev.vars.example` | `REMINDER_FROM=` / `REMINDER_TO=` placeholders so `Env` types them in CI. | — |
+| `wrangler.jsonc` | `"triggers": { "crons": ["0 17 * * *", "0 18 * * *"] }` with a CET/CEST comment, `APP_URL` and `REMINDER_FROM` (`AI Cards <onboarding@resend.dev>`) in `vars`. | — |
+| `.dev.vars.example` | `RESEND_API_KEY=` / `REMINDER_TO=` placeholders so `Env` types them in CI. | — |
 
-Building the mailer from `env` (check secrets, `createCfMailer(env.EMAIL, env.REMINDER_FROM, env.REMINDER_TO)`)
+Building the mailer from `env` (check config, `createResendMailer({ apiKey: env.RESEND_API_KEY, from: env.REMINDER_FROM, to: env.REMINDER_TO })`)
 is needed by both the cron handler and the route, so it lives in one helper,
-`mailerFromEnv(env): Mailer | null` in `app/lib/cf-email.ts`, returning `null` when either secret is empty.
+`mailerFromEnv(env): Mailer | null` in `app/lib/resend.ts`, returning `null` when any of the three is empty.
 
 ## Data flow
 
@@ -54,7 +54,7 @@ is needed by both the cron handler and the route, so it lives in one helper,
 
 1. `scheduled` takes `t = controller.scheduledTime` (not `Date.now()`), so start-up delay cannot shift the decision.
 2. If `!isReminderHour(t)` — Warsaw hour is not 19 — return. On every day one of the two crons stops here.
-3. `mailer = mailerFromEnv(env)`; if `null`, log `reminder: missing REMINDER_FROM/TO, skipping` and return.
+3. `mailer = mailerFromEnv(env)`; if `null`, log `reminder: RESEND_API_KEY/REMINDER_TO not configured, skipping` and return.
 4. `ctx.waitUntil(runReminder({ db: createDb(env.DB), mailer, appUrl: env.APP_URL }, t).then(log, logError))`.
 
 **`runReminder(deps, now, { force = false } = {})`:**
@@ -106,10 +106,10 @@ The cron never throws out of the Worker; every failure is one log line in `wrang
 
 | Situation | Behavior |
 |---|---|
-| `REMINDER_FROM` / `REMINDER_TO` missing | Cron logs `reminder: missing REMINDER_FROM/TO, skipping`. The route returns `{ reminderError: 'REMINDER_FROM/TO not configured' }`. |
-| `binding.send` rejects (unverified address, limit, outage) | Adapter propagates; `runReminder` does not write `lastSent`; the cron logs `reminder: send failed <message>`. No automatic retry — the other cron that day is cut off by the hour guard, so the next attempt is tomorrow. |
+| `RESEND_API_KEY` / `REMINDER_TO` missing | Cron logs `reminder: RESEND_API_KEY/REMINDER_TO not configured, skipping`. The route returns `{ reminderError: 'RESEND_API_KEY/REMINDER_TO not configured' }`. |
+| Resend answers non-2xx (bad key 401, recipient is not the account owner 403, daily limit 429, outage 5xx) or times out after 15 s | Adapter throws `Resend <status>: <body>`; `runReminder` does not write `lastSent`; the cron logs `reminder: send failed <message>`. No automatic retry — the other cron that day is cut off by the hour guard, so the next attempt is tomorrow. |
 | D1 error | Same: caught in the cron, one log line. |
-| "Send test" fails | The action catches and returns `{ reminderError: message }`, shown in the reminder row (e.g. "destination address not verified"). |
+| "Send test" fails | The action catches and returns `{ reminderError: message }`, shown in the reminder row (e.g. `Resend 403: … only send testing emails to your own email address`). |
 | Forged or odd POST | `requireAuth` first; `intent` outside `on \| off \| test` → `400`. |
 
 ## UI
@@ -137,15 +137,16 @@ Vitest, no UI test infra:
 | File | Covers |
 |---|---|
 | `tests/reminder.test.ts` | `isReminderHour`: 17:00 UTC in July → true, 18:00 UTC in July → false, 18:00 UTC in January → true, 17:00 UTC in January → false, and the 2026 switch days (29 March, 25 October). `shouldRemind`: each of the four skip reasons and the send case, including order (disabled wins over day-done). `pluralKarty`: 1, 2, 4, 5, 12, 14, 21, 22, 25. `buildReminder`: due + streak subject, new-only subject, no streak suffix at 0, `/learn` link when `due === 0`, HTML escaping of `appUrl`, trailing-slash trim. |
-| `tests/cf-email.test.ts` | A stub binding receives exactly `{ from, to, subject, text, html }`; a rejection propagates; `mailerFromEnv` returns `null` when a secret is empty. |
+| `tests/resend.test.ts` | With `vi.stubGlobal('fetch', …)`: URL, `POST`, Bearer header, exact JSON body `{ from, to, subject, text, html }`; 403 and 500 throw with the status in the message; `mailerFromEnv` returns `null` when a value is empty or missing. |
 | `tests/repo.test.ts` (extended) | `getSetting` / `setSetting` including upsert, `isDayDone`, `countNew`. The in-memory helper replays migration `0002`. |
 | `tests/reminder-job.test.ts` | In-memory DB + fake Mailer: sends and writes `lastSent`; second run the same day → `already-sent`; `disabled`; `day-done`; `nothing-to-do`; failing `send` leaves `lastSent` unset; `force` sends despite `day-done`, prefixes `[Test] `, and does not write `lastSent`. |
 
 The `scheduled` handler stays thin and has no unit test, per project convention. Manual verification:
 
 - `npm run dev`, then hit the local scheduled endpoint (`/cdn-cgi/handler/scheduled?cron=0+17+*+*+*&time=<epoch of 19:00 Warsaw>`;
-  fall back to `wrangler dev --test-scheduled` on a build if the Vite dev server does not expose it). Miniflare
-  writes the `.eml` locally; render its HTML in Chromium and publish it as an Artifact for review.
+  fall back to `wrangler dev --test-scheduled` on a build if the Vite dev server does not expose it). With a
+  placeholder `RESEND_API_KEY` the send fails with `Resend 401`, which proves the path; render `buildReminder`'s HTML
+  in Chromium and publish it as an Artifact for review.
 - Same with a `time` at another hour: nothing is sent.
 - Screenshots of the reminder row on home in both themes (Chromium, 390×844).
 - `npm test` and `npm run typecheck` green.
@@ -154,13 +155,10 @@ The `scheduled` handler stays thin and has no unit test, per project convention.
 
 The learner's steps, **before** merging to `master` (every push to `master` deploys):
 
-1. Cloudflare dashboard, on one of the learner's domains already on Cloudflare DNS (e.g. `thedariusz.com`):
-   Compute → Email Service → Email Sending → **Onboard Domain**; then in Email Routing add and verify the
-   destination address (the Gmail inbox). Sending to a verified destination works on the free plan; `*.workers.dev`
-   alone cannot send (Email Service requires a Cloudflare-DNS domain — checked 2026-09-27).
-2. `npx wrangler secret put REMINDER_FROM` (an address on that domain, e.g. `cards@thedariusz.com`) and `npx wrangler secret put REMINDER_TO`.
+1. Create a Resend account at resend.com with the learner's Gmail address and create an API key
+   (sending access is enough). No domain setup: `onboarding@resend.dev` only delivers to that account's address.
+2. `npx wrangler secret put RESEND_API_KEY` and `npx wrangler secret put REMINDER_TO` (the same address as the Resend account).
 3. Merge to `master`; CI deploys and applies migration `0002`.
 4. On production, press "Send test" to confirm the setup.
 
-Steps 1–2 come first because deploying a `send_email` binding without Email Routing on the account may be
-rejected. README gains an "Email reminders" section with these steps.
+Without steps 1–2 the deploy still succeeds; the cron logs "not configured" and "Send test" shows the error.
