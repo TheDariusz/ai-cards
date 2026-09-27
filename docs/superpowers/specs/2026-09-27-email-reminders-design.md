@@ -1,7 +1,7 @@
 # Email Review Reminders — Design
 
 **Date:** 2026-09-27
-**Status:** Approved in chat; awaiting written-spec review
+**Status:** Approved
 
 ## Purpose
 
@@ -154,10 +154,13 @@ The `scheduled` handler stays thin and has no unit test, per project convention.
 
 The learner's steps, **before** merging to `master` (every push to `master` deploys):
 
-1. Cloudflare dashboard: enable Email Routing on the domain and add + verify the destination address (the Gmail inbox).
-2. `npx wrangler secret put REMINDER_FROM` (an address on that domain, e.g. `cards@<domain>`) and `npx wrangler secret put REMINDER_TO`.
+1. Cloudflare dashboard, on one of the learner's domains already on Cloudflare DNS (e.g. `thedariusz.com`):
+   Compute → Email Service → Email Sending → **Onboard Domain**; then in Email Routing add and verify the
+   destination address (the Gmail inbox). Sending to a verified destination works on the free plan; `*.workers.dev`
+   alone cannot send (Email Service requires a Cloudflare-DNS domain — checked 2026-09-27).
+2. `npx wrangler secret put REMINDER_FROM` (an address on that domain, e.g. `cards@thedariusz.com`) and `npx wrangler secret put REMINDER_TO`.
 3. Merge to `master`; CI deploys and applies migration `0002`.
 4. On production, press "Send test" to confirm the setup.
 
 Steps 1–2 come first because deploying a `send_email` binding without Email Routing on the account may be
-rejected; the plan confirms this against Cloudflare docs. README gains an "Email reminders" section with these steps.
+rejected. README gains an "Email reminders" section with these steps.
