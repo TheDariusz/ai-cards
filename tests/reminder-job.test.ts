@@ -73,6 +73,24 @@ describe('runReminder', () => {
     expect(mailer.sent).toHaveLength(0)
   })
 
+  it('counts cards that come due later tonight', async () => {
+    const db = testDb()
+    const mailer = fakeMailer()
+    await addDueCard(db)
+    // due at 21:30 Warsaw, after the 19:00 run but before midnight
+    await db.update(cards).set({ dueAt: NOW + 2.5 * 3_600_000 })
+    expect(await runReminder(deps(db, mailer), NOW)).toEqual({ send: true, due: 1, fresh: 0, streak: 0 })
+  })
+
+  it('ignores cards due after midnight', async () => {
+    const db = testDb()
+    const mailer = fakeMailer()
+    await addDueCard(db)
+    // 00:30 Warsaw tomorrow
+    await db.update(cards).set({ dueAt: NOW + 5.5 * 3_600_000 })
+    expect(await runReminder(deps(db, mailer), NOW)).toEqual({ send: false, reason: 'nothing-to-do' })
+  })
+
   it('includes the streak from previous days', async () => {
     const db = testDb()
     const mailer = fakeMailer()

@@ -1,7 +1,7 @@
 import { completedDays, countDue, countNew, getSetting, isDayDone, setSetting, type Db } from '../db/repo'
 import type { Mailer } from './mailer'
 import { buildReminder, shouldRemind, type SkipReason } from './reminder'
-import { computeStreak, dayKey } from './streak'
+import { computeStreak, dayKey, endOfDay } from './streak'
 
 export type ReminderDeps = { db: Db; mailer: Mailer; appUrl: string }
 export type ReminderResult =
@@ -16,7 +16,8 @@ export async function runReminder(
   const enabled = (await getSetting(db, 'reminderEnabled')) !== 'false'
   const lastSent = await getSetting(db, 'reminderLastSent')
   const dayDone = await isDayDone(db, today)
-  const due = await countDue(db, now)
+  // cards that come due later tonight still count: the day is only lost at midnight
+  const due = await countDue(db, endOfDay(now))
   const fresh = await countNew(db)
 
   if (!force) {

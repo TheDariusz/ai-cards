@@ -61,7 +61,7 @@ is needed by both the cron handler and the route, so it lives in one helper,
 
 1. `today = dayKey(now)`.
 2. Read `enabled = getSetting('reminderEnabled') !== 'false'`, `lastSent = getSetting('reminderLastSent')`,
-   `dayDone = isDayDone(today)`, `due = countDue(now)`, `fresh = countNew()`.
+   `dayDone = isDayDone(today)`, `due = countDue(endOfDay(now))` (cards that come due later tonight count too — the day is only lost at midnight), `fresh = countNew()`.
 3. Unless `force`: `shouldRemind({ enabled, today, lastSent, dayDone, due, fresh })`, checked in this order:
    - `!enabled` → `{ send: false, reason: 'disabled' }`
    - `lastSent === today` → `'already-sent'`
