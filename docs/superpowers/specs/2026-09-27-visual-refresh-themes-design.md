@@ -108,6 +108,8 @@ the active one has `aria-pressed="true"` and the selected style. Works without J
 - Calendar: days on `--accent-soft` with `--muted` text; `.done` on `--ok` with `--on-accent` text.
 - Diff/verdict/feedback classes keep their names and move to `--ok` / `--warn` / `--bad` / `--muted`.
 - `kbd` in grade buttons: translucent `currentColor` background (works on any fill).
+- Card detail's Delete button (today styled via `grade-again`) gets `.danger-button` (`--bad` fill) so it stays
+  visibly destructive after the grade fills are removed.
 - The inline `style={{ width: '100%' }}` on home's Start review becomes `className="primary-wide"`.
 
 ## Layout additions
