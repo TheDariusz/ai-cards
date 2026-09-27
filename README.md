@@ -41,7 +41,7 @@ npm run dev                            # http://localhost:5173
 | `SESSION_SECRET` | Signs the session cookie (`openssl rand -hex 32`) |
 | `APP_PASSWORD_HASH` | SHA-256 hex of the login password (`echo -n "pass" \| shasum -a 256`) |
 | `RESEND_API_KEY` | Resend API key for the daily reminder email |
-| `REMINDER_TO` | Recipient of the reminder — must be the Resend account's own address |
+| `REMINDER_TO` | Recipient of the reminder — any address of yours |
 
 ### Tests
 
@@ -100,14 +100,13 @@ New migrations must be applied remotely by hand (`npx wrangler d1 migrations app
 Two Cron Triggers (`0 17 * * *` and `0 18 * * *` UTC) run `scheduled` in `workers/app.ts`; only the one that is
 19:00 in Warsaw (CEST or CET) goes on. It emails once a day when today has no completed review day and there are
 due or new cards, unless switched off on the home screen. Mail goes through [Resend](https://resend.com)'s
-free plan (3,000/month, 100/day) from `AI Cards <onboarding@resend.dev>` (`REMINDER_FROM` in `wrangler.jsonc`).
-Without an own domain, that shared sender only delivers to the Resend account owner's address.
+free plan (3,000/month, 100/day) from `AI Cards <cards@2doai.app>` (`REMINDER_FROM` in `wrangler.jsonc`), an
+address in the `2doai.app` domain verified in Resend, so `REMINDER_TO` can be any address of yours.
 
 One-time setup, **before** merging to `master`:
 
-1. Create a Resend account with your own email address and create an API key.
-2. `npx wrangler secret put RESEND_API_KEY` and `npx wrangler secret put REMINDER_TO` (the same address as the
-   Resend account).
+1. In Resend, verify the `2doai.app` domain and create an API key with sending access restricted to it.
+2. `npx wrangler secret put RESEND_API_KEY` and `npx wrangler secret put REMINDER_TO` (the recipient address).
 3. Merge to `master`; CI deploys and applies migration `0002` (`settings` table).
 4. On production, press **Send test** on the home screen to confirm the setup.
 

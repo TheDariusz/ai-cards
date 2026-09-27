@@ -198,3 +198,5 @@ timeout, non-2xx throws with status and body), `tests/cf-email.test.ts` → `tes
 `fetch`). `wrangler.jsonc` drops the `send_email` binding and sets `REMINDER_FROM` to
 `AI Cards <onboarding@resend.dev>` in `vars`; the secrets are now `RESEND_API_KEY` and `REMINDER_TO`. The
 missing-config message is `RESEND_API_KEY/REMINDER_TO not configured`. The spec's Rollout section is updated.
+Later the sender moved to `AI Cards <cards@2doai.app>`, an address in the learner's domain verified in Resend,
+so `REMINDER_TO` can be any address instead of only the Resend account owner's.

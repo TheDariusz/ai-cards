@@ -18,7 +18,7 @@ switched off from the app; a failure to send never breaks the Worker and is visi
 | Schedule | Once a day at 19:00 Europe/Warsaw |
 | Scheduler | Two Cron Triggers, `0 17 * * *` and `0 18 * * *` (UTC), plus a Warsaw-hour guard in code — exactly one of them is 19:00 local on any day, CET or CEST |
 | Provider | Resend free plan (`POST https://api.resend.com/emails`, 3,000 emails/month, 100/day). Cloudflare Email Sending was the first choice but requires the Workers Paid plan |
-| Addresses | Sender `AI Cards <onboarding@resend.dev>` in `vars` (`REMINDER_FROM`) — no own domain; Resend's shared test domain only delivers to the Resend account owner's address. Secrets `RESEND_API_KEY` and `REMINDER_TO` (that owner address); only placeholder keys in the public repo |
+| Addresses | Sender `AI Cards <cards@2doai.app>` in `vars` (`REMINDER_FROM`) — an address in the learner's `2doai.app` domain, verified in Resend. Secrets `RESEND_API_KEY` and `REMINDER_TO` (any of the learner's addresses); only placeholder keys in the public repo |
 | Off switch | On/Off toggle on home, stored in a new D1 `settings` table; default **on** |
 | Content | Short Polish email, `text/plain` + simple inline-styled HTML |
 | Verification | Vitest for logic, adapter (stubbed `fetch`), repo and orchestration; `buildReminder` HTML rendered in Chromium; a "Send test" button in the app |
@@ -41,7 +41,7 @@ Ports & adapters, like `ai.ts` / `openrouter.ts`. Every unit has one job:
 | `workers/app.ts` | Gains `scheduled(controller, env, ctx)`. It only assembles deps and calls `runReminder`. **Why touch a template file:** a Worker has one export per event type and React Router cannot receive cron events; the change is a few lines and leaves `fetch` untouched. Keeps template style. | reminder-job, resend |
 | `app/routes/reminder.ts` + `app/routes.ts` | `POST /reminder` action: `intent = on \| off \| test`. Starts with `requireAuth`. | repo, reminder-job, resend |
 | `app/routes/home.tsx` + `app/app.css` | A reminder row under the theme switcher; loader adds `reminderEnabled`. | — |
-| `wrangler.jsonc` | `"triggers": { "crons": ["0 17 * * *", "0 18 * * *"] }` with a CET/CEST comment, `APP_URL` and `REMINDER_FROM` (`AI Cards <onboarding@resend.dev>`) in `vars`. | — |
+| `wrangler.jsonc` | `"triggers": { "crons": ["0 17 * * *", "0 18 * * *"] }` with a CET/CEST comment, `APP_URL` and `REMINDER_FROM` (`AI Cards <cards@2doai.app>`) in `vars`. | — |
 | `.dev.vars.example` | `RESEND_API_KEY=` / `REMINDER_TO=` placeholders so `Env` types them in CI. | — |
 
 Building the mailer from `env` (check config, `createResendMailer({ apiKey: env.RESEND_API_KEY, from: env.REMINDER_FROM, to: env.REMINDER_TO })`)
@@ -107,9 +107,9 @@ The cron never throws out of the Worker; every failure is one log line in `wrang
 | Situation | Behavior |
 |---|---|
 | `RESEND_API_KEY` / `REMINDER_TO` missing | Cron logs `reminder: RESEND_API_KEY/REMINDER_TO not configured, skipping`. The route returns `{ reminderError: 'RESEND_API_KEY/REMINDER_TO not configured' }`. |
-| Resend answers non-2xx (bad key 401, recipient is not the account owner 403, daily limit 429, outage 5xx) or times out after 15 s | Adapter throws `Resend <status>: <body>`; `runReminder` does not write `lastSent`; the cron logs `reminder: send failed <message>`. No automatic retry — the other cron that day is cut off by the hour guard, so the next attempt is tomorrow. |
+| Resend answers non-2xx (bad key 401, sender domain not verified 403, daily limit 429, outage 5xx) or times out after 15 s | Adapter throws `Resend <status>: <body>`; `runReminder` does not write `lastSent`; the cron logs `reminder: send failed <message>`. No automatic retry — the other cron that day is cut off by the hour guard, so the next attempt is tomorrow. |
 | D1 error | Same: caught in the cron, one log line. |
-| "Send test" fails | The action catches and returns `{ reminderError: message }`, shown in the reminder row (e.g. `Resend 403: … only send testing emails to your own email address`). |
+| "Send test" fails | The action catches and returns `{ reminderError: message }`, shown in the reminder row (e.g. `Resend 403: …` when the sender domain is not verified). |
 | Forged or odd POST | `requireAuth` first; `intent` outside `on \| off \| test` → `400`. |
 
 ## UI
@@ -155,9 +155,9 @@ The `scheduled` handler stays thin and has no unit test, per project convention.
 
 The learner's steps, **before** merging to `master` (every push to `master` deploys):
 
-1. Create a Resend account at resend.com with the learner's Gmail address and create an API key
-   (sending access is enough). No domain setup: `onboarding@resend.dev` only delivers to that account's address.
-2. `npx wrangler secret put RESEND_API_KEY` and `npx wrangler secret put REMINDER_TO` (the same address as the Resend account).
+1. In Resend, verify the `2doai.app` domain (the sender is `cards@2doai.app`) and create an API key with
+   sending access restricted to that domain.
+2. `npx wrangler secret put RESEND_API_KEY` and `npx wrangler secret put REMINDER_TO` (any of the learner's addresses).
 3. Merge to `master`; CI deploys and applies migration `0002`.
 4. On production, press "Send test" to confirm the setup.
 
