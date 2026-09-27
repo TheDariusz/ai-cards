@@ -65,9 +65,13 @@ form > input:not([type="hidden"]) + button, form > textarea + button { margin-to
 .calendar .day { aspect-ratio: 1; border-radius: 8px; background: var(--accent-soft); display: grid; place-items: center; font-size: 0.75rem; color: var(--muted); }
 .calendar .done { background: var(--ok); color: var(--on-accent); }
 .nav { display: flex; flex-wrap: wrap; gap: 0.5rem 1rem; margin-top: 2rem; }
-.theme-switch { display: inline-flex; gap: 2px; margin-top: 1rem; padding: 3px; border-radius: 14px; background: var(--accent-soft); }
-.theme-switch button { background: transparent; color: var(--text); border-radius: 11px; padding: 0.35rem 0.9rem; font-size: 0.9rem; }
-.theme-switch button[aria-pressed="true"] { background: var(--surface); color: var(--accent); }
+.theme-switch, .reminder-segment { display: inline-flex; gap: 2px; padding: 3px; border-radius: 14px; background: var(--accent-soft); }
+.theme-switch { margin-top: 1rem; }
+.theme-switch button, .reminder-segment button { background: transparent; color: var(--text); border-radius: 11px; padding: 0.35rem 0.9rem; font-size: 0.9rem; }
+.theme-switch button[aria-pressed="true"], .reminder-segment button[aria-pressed="true"] { background: var(--surface); color: var(--accent); }
+.reminder-switch { display: flex; flex-wrap: wrap; align-items: center; gap: 0.6rem; margin-top: 0.75rem; font-size: 0.9rem; }
+.link-button { background: transparent; color: var(--accent); padding: 0.35rem 0.2rem; font-size: 0.9rem; text-decoration: underline; }
+.link-button:disabled { opacity: 0.6; }
 
 /* Cards */
 .card-face { background: var(--surface); border: 1px solid var(--edge); border-radius: 18px; padding: 16px; margin: 1rem 0; }

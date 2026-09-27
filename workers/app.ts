@@ -1,4 +1,8 @@
 import { createRequestHandler, RouterContextProvider } from "react-router";
+import { createDb } from "../app/db/repo";
+import { mailerFromEnv } from "../app/lib/cf-email";
+import { isReminderHour } from "../app/lib/reminder";
+import { runReminder } from "../app/lib/reminder-job";
 
 // `./context.d.ts` augments `RouterContextProvider` with `cloudflare`; it is
 // an ambient type-only file picked up via tsconfig's "include", not imported.
@@ -13,5 +17,23 @@ export default {
     const context = new RouterContextProvider();
     context.cloudflare = { env, ctx };
     return requestHandler(request, context);
+  },
+
+  // Daily review reminder. Two crons (17:00 and 18:00 UTC) cover CEST and CET;
+  // the hour guard keeps only the one that is 19:00 in Warsaw.
+  async scheduled(controller, env, ctx) {
+    const t = controller.scheduledTime;
+    if (!isReminderHour(t)) return;
+    const mailer = mailerFromEnv(env);
+    if (!mailer) {
+      console.log("reminder: missing REMINDER_FROM/TO, skipping");
+      return;
+    }
+    ctx.waitUntil(
+      runReminder({ db: createDb(env.DB), mailer, appUrl: env.APP_URL }, t).then(
+        (result) => console.log(`reminder: ${JSON.stringify(result)}`),
+        (err) => console.error(`reminder: send failed ${err instanceof Error ? err.message : String(err)}`),
+      ),
+    );
   },
 } satisfies ExportedHandler<Env>;

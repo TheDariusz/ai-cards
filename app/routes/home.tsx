@@ -1,13 +1,14 @@
-import { Form, Link, useLocation, useRevalidator, useRouteLoaderData } from 'react-router'
+import { Form, Link, useFetcher, useLocation, useRevalidator, useRouteLoaderData } from 'react-router'
 import { useEffect } from 'react'
 import type { Route } from './+types/home'
 import { requireAuth } from '../lib/session'
-import { createDb, insertPendingCard, getCard, listCards, countDue, completedDays, getNewCards } from '../db/repo'
+import { createDb, insertPendingCard, getCard, listCards, countDue, completedDays, getNewCards, getSetting } from '../db/repo'
 import { runCardPipeline } from '../lib/pipeline'
 import { aiFromEnv } from '../lib/openrouter'
 import { computeStreak, dayKey } from '../lib/streak'
 import type { ThemePref } from '../lib/theme'
 import type { loader as rootLoader } from '../root'
+import type { action as reminderAction } from './reminder'
 
 // A pipeline killed mid-flight (isolate reclaimed) never reaches markFailed, so
 // the row is stranded in `pending`. Past this age, treat it as failed and offer Retry.
@@ -33,6 +34,7 @@ export async function loader({ request, context }: Route.LoaderArgs) {
     streak: computeStreak(days, today),
     completed: days.filter((d) => d.startsWith(today.slice(0, 7))), // this month
     today,
+    reminderEnabled: (await getSetting(db, 'reminderEnabled')) !== 'false',
   }
 }
 
@@ -67,10 +69,12 @@ export async function action({ request, context }: Route.ActionArgs) {
 }
 
 export default function Home({ loaderData, actionData }: Route.ComponentProps) {
-  const { pending, failed, total, due, newCards, streak, completed, today } = loaderData
+  const { pending, failed, total, due, newCards, streak, completed, today, reminderEnabled } = loaderData
   const revalidator = useRevalidator()
   const location = useLocation()
   const theme = useRouteLoaderData<typeof rootLoader>('root')?.theme ?? 'auto'
+  const reminder = useFetcher<typeof reminderAction>()
+  const sendingTest = reminder.state !== 'idle' && reminder.formData?.get('intent') === 'test'
 
   // light polling while cards are generating
   useEffect(() => {
@@ -137,6 +141,20 @@ export default function Home({ loaderData, actionData }: Route.ComponentProps) {
           </button>
         ))}
       </Form>
+      <reminder.Form method="post" action="/reminder" className="reminder-switch">
+        <span>Reminder at 19:00</span>
+        <span className="reminder-segment">
+          <button type="submit" name="intent" value="on" aria-pressed={reminderEnabled}>On</button>
+          <button type="submit" name="intent" value="off" aria-pressed={!reminderEnabled}>Off</button>
+        </span>
+        <button type="submit" name="intent" value="test" className="link-button" disabled={sendingTest}>
+          {sendingTest ? 'Sending…' : 'Send test'}
+        </button>
+      </reminder.Form>
+      {reminder.state === 'idle' && reminder.data && 'reminderSent' in reminder.data && <p className="ok">Sent ✓</p>}
+      {reminder.state === 'idle' && reminder.data && 'reminderError' in reminder.data && (
+        <p className="error">⚠ {reminder.data.reminderError}</p>
+      )}
     </main>
   )
 }
