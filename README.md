@@ -14,6 +14,7 @@ A personal English-learning flashcard app for a Polish native speaker. Hear an u
 - **Streak** — a day counts when all due cards are reviewed (or ≥10 reviews on backlog days), Europe/Warsaw timezone, month calendar on the home screen
 - **Card management** — edit any field, regenerate with a hint ("make it shorter", "business context"), delete; SRS progress survives edits
 - **Export** — CSV (Anki/spreadsheet-compatible) and JSON full backup, no import by design
+- **Light and dark themes** — calm, study-focused look (Instrument Sans UI, Literata for study sentences); *Auto* follows the phone, or pin *Light* / *Dark* from the home footer — remembered in a cookie and rendered on the server, so there is no wrong-theme flash; review shows a progress bar for today, the streak, and highlights the suggested grade
 - **PWA** — "Add to Home Screen" on iPhone gives a full-screen app; online-only, no service worker
 
 ## Tech stack
