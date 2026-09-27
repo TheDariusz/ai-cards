@@ -44,6 +44,9 @@ export function pluralNowa(n: number): 'nowa' | 'nowe' | 'nowych' {
 
 const karty = (n: number) => `${n} ${pluralKarty(n)}`
 const noweKarty = (n: number) => `${n} ${pluralNowa(n)} ${pluralKarty(n)}`
+// after "Masz" the noun is accusative; only the singular differs from the plural forms
+const kartyAcc = (n: number) => (n === 1 ? '1 kartę' : karty(n))
+const noweKartyAcc = (n: number) => (n === 1 ? '1 nową kartę' : noweKarty(n))
 const dni = (n: number) => `${n} ${n === 1 ? 'dzień' : 'dni'}`
 
 function escapeHtml(s: string): string {
@@ -60,12 +63,12 @@ export function buildReminder(input: { due: number; fresh: number; streak: numbe
   if (due > 0) {
     subject = `${karty(due)} do powtórki` + (streak >= 1 ? ` · streak ${dni(streak)}` : '')
     status = fresh > 0
-      ? `Masz dziś ${karty(due)} do powtórki i ${noweKarty(fresh)} do nauki.`
-      : `Masz dziś ${karty(due)} do powtórki.`
+      ? `Masz dziś ${kartyAcc(due)} do powtórki i ${noweKartyAcc(fresh)} do nauki.`
+      : `Masz dziś ${kartyAcc(due)} do powtórki.`
     button = { label: 'Zacznij review', url: `${base}/review` }
   } else if (fresh > 0) {
     subject = `${noweKarty(fresh)} ${plForm(fresh) === 'few' ? 'czekają' : 'czeka'} na naukę`
-    status = `Masz dziś ${noweKarty(fresh)} do nauki.`
+    status = `Masz dziś ${noweKartyAcc(fresh)} do nauki.`
     button = { label: 'Zacznij naukę', url: `${base}/learn` }
   } else {
     subject = 'Brak kart na dziś'

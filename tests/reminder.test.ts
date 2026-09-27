@@ -53,6 +53,12 @@ describe('buildReminder', () => {
     expect(m.subject).toBe('2 karty do powtórki · streak 1 dzień')
     expect(m.text).toContain('Masz dziś 2 karty do powtórki i 3 nowe karty do nauki.')
   })
+  it('uses the accusative for exactly one card in the body', () => {
+    expect(buildReminder({ due: 1, fresh: 0, streak: 0, appUrl: url }).text).toContain('Masz dziś 1 kartę do powtórki.')
+    expect(buildReminder({ due: 0, fresh: 1, streak: 0, appUrl: url }).text).toContain('Masz dziś 1 nową kartę do nauki.')
+    expect(buildReminder({ due: 2, fresh: 1, streak: 0, appUrl: url }).text).toContain('Masz dziś 2 karty do powtórki i 1 nową kartę do nauki.')
+    expect(buildReminder({ due: 21, fresh: 0, streak: 0, appUrl: url }).text).toContain('Masz dziś 21 kart do powtórki.')
+  })
   it('no streak suffix at 0', () => {
     const m = buildReminder({ due: 5, fresh: 0, streak: 0, appUrl: url })
     expect(m.subject).toBe('5 kart do powtórki')
