@@ -5,10 +5,17 @@ import {
   Outlet,
   Scripts,
   ScrollRestoration,
+  useRouteLoaderData,
 } from "react-router";
 
 import type { Route } from "./+types/root";
+import { parseTheme, THEME_BG } from "./lib/theme";
 import "./app.css";
+
+// No requireAuth: this also runs for /login and returns only a non-sensitive preference
+export async function loader({ request }: Route.LoaderArgs) {
+  return { theme: parseTheme(request.headers.get("Cookie")) };
+}
 
 export const links: Route.LinksFunction = () => [
   { rel: "preconnect", href: "https://fonts.googleapis.com" },
@@ -19,15 +26,17 @@ export const links: Route.LinksFunction = () => [
   },
   {
     rel: "stylesheet",
-    href: "https://fonts.googleapis.com/css2?family=Inter:ital,opsz,wght@0,14..32,100..900;1,14..32,100..900&display=swap",
+    href: "https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=Literata:opsz,wght@7..72,400;7..72,600&display=swap",
   },
   { rel: "manifest", href: "/manifest.webmanifest" },
   { rel: "apple-touch-icon", href: "/icons/apple-touch-icon.png" },
 ];
 
 export function Layout({ children }: { children: React.ReactNode }) {
+  // undefined on error renders → auto
+  const theme = useRouteLoaderData<typeof loader>("root")?.theme ?? "auto";
   return (
-    <html lang="en">
+    <html lang="en" data-theme={theme === "auto" ? undefined : theme}>
       <head>
         <meta charSet="utf-8" />
         <meta
@@ -35,7 +44,14 @@ export function Layout({ children }: { children: React.ReactNode }) {
           content="width=device-width, initial-scale=1, viewport-fit=cover"
         />
         <meta name="apple-mobile-web-app-capable" content="yes" />
-        <meta name="theme-color" content="#101418" />
+        {theme === "auto" ? (
+          <>
+            <meta name="theme-color" media="(prefers-color-scheme: light)" content={THEME_BG.light} />
+            <meta name="theme-color" media="(prefers-color-scheme: dark)" content={THEME_BG.dark} />
+          </>
+        ) : (
+          <meta name="theme-color" content={THEME_BG[theme]} />
+        )}
         <Meta />
         <Links />
       </head>

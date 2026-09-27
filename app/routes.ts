@@ -10,4 +10,5 @@ export default [
   route('learn', 'routes/learn.tsx'),
   route('audio/:id', 'routes/audio.ts'),
   route('export/:format', 'routes/export.ts'),
+  route('theme', 'routes/theme.ts'),
 ] satisfies RouteConfig

@@ -1,4 +1,4 @@
-import { Form, Link, useRevalidator } from 'react-router'
+import { Form, Link, useLocation, useRevalidator, useRouteLoaderData } from 'react-router'
 import { useEffect } from 'react'
 import type { Route } from './+types/home'
 import { requireAuth } from '../lib/session'
@@ -6,6 +6,8 @@ import { createDb, insertPendingCard, getCard, listCards, countDue, completedDay
 import { runCardPipeline } from '../lib/pipeline'
 import { aiFromEnv } from '../lib/openrouter'
 import { computeStreak, dayKey } from '../lib/streak'
+import type { ThemePref } from '../lib/theme'
+import type { loader as rootLoader } from '../root'
 
 // A pipeline killed mid-flight (isolate reclaimed) never reaches markFailed, so
 // the row is stranded in `pending`. Past this age, treat it as failed and offer Retry.
@@ -67,6 +69,8 @@ export async function action({ request, context }: Route.ActionArgs) {
 export default function Home({ loaderData, actionData }: Route.ComponentProps) {
   const { pending, failed, total, due, newCards, streak, completed, today } = loaderData
   const revalidator = useRevalidator()
+  const location = useLocation()
+  const theme = useRouteLoaderData<typeof rootLoader>('root')?.theme ?? 'auto'
 
   // light polling while cards are generating
   useEffect(() => {
@@ -125,6 +129,14 @@ export default function Home({ loaderData, actionData }: Route.ComponentProps) {
         <a href="/export/csv" download>Export CSV</a>
         <a href="/export/json" download>Backup JSON</a>
       </nav>
+      <Form method="post" action="/theme" className="theme-switch">
+        <input type="hidden" name="redirectTo" value={location.pathname + location.search} />
+        {(['auto', 'light', 'dark'] as ThemePref[]).map((value) => (
+          <button key={value} type="submit" name="theme" value={value} aria-pressed={theme === value}>
+            {value[0].toUpperCase() + value.slice(1)}
+          </button>
+        ))}
+      </Form>
     </main>
   )
 }
