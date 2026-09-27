@@ -15,6 +15,7 @@ A personal English-learning flashcard app for a Polish native speaker. Hear an u
 - **Card management** — edit any field, regenerate with a hint ("make it shorter", "business context"), delete; SRS progress survives edits
 - **Export** — CSV (Anki/spreadsheet-compatible) and JSON full backup, no import by design
 - **Light and dark themes** — calm, study-focused look (Instrument Sans UI, Literata for study sentences); *Auto* follows the phone, or pin *Light* / *Dark* from the home footer — remembered in a cookie and rendered on the server, so there is no wrong-theme flash; review shows a progress bar for today, the streak, and highlights the suggested grade
+- **Email reminder** — at 19:00 Europe/Warsaw, a short Polish email if the day is not done yet and cards are due or new; On/Off and *Send test* on the home screen
 - **PWA** — "Add to Home Screen" on iPhone gives a full-screen app; online-only, no service worker
 
 ## Tech stack
@@ -39,6 +40,8 @@ npm run dev                            # http://localhost:5173
 | `OPENROUTER_API_KEY` | Server-side key for card generation + TTS |
 | `SESSION_SECRET` | Signs the session cookie (`openssl rand -hex 32`) |
 | `APP_PASSWORD_HASH` | SHA-256 hex of the login password (`echo -n "pass" \| shasum -a 256`) |
+| `REMINDER_FROM` | Sender of the reminder email, an address on a domain onboarded to Cloudflare Email Service |
+| `REMINDER_TO` | Recipient, a verified Email Routing destination address |
 
 ### Tests
 
@@ -80,6 +83,8 @@ npx wrangler d1 migrations apply ai-cards --remote
 npx wrangler secret put OPENROUTER_API_KEY
 npx wrangler secret put SESSION_SECRET
 npx wrangler secret put APP_PASSWORD_HASH
+npx wrangler secret put REMINDER_FROM
+npx wrangler secret put REMINDER_TO
 ```
 
 Every deploy after that:
@@ -89,6 +94,28 @@ npm run deploy      # builds + deploys to https://ai-cards.thedariusz.workers.de
 ```
 
 New migrations must be applied remotely by hand (`npx wrangler d1 migrations apply ai-cards --remote`) before deploying code that depends on them.
+
+### Email reminders
+
+Two Cron Triggers (`0 17 * * *` and `0 18 * * *` UTC) run `scheduled` in `workers/app.ts`; only the one that is
+19:00 in Warsaw (CEST or CET) goes on. It emails once a day when today has no completed review day and there are
+due or new cards, unless switched off on the home screen. Sending uses the Cloudflare `send_email` binding
+(`EMAIL`), which needs a domain on Cloudflare DNS — `*.workers.dev` alone cannot send.
+
+One-time setup, **before** the first deploy with the binding:
+
+1. Cloudflare dashboard, on a domain already on Cloudflare DNS (e.g. `thedariusz.com`): Compute → Email Service →
+   Email Sending → **Onboard Domain**; then in Email Routing add and verify the destination address.
+2. `npx wrangler secret put REMINDER_FROM` (e.g. `cards@thedariusz.com`) and `npx wrangler secret put REMINDER_TO`.
+3. Merge to `master`; CI deploys and applies migration `0002` (`settings` table).
+4. On production, press **Send test** on the home screen to confirm the setup.
+
+Failures show up in `npx wrangler tail ai-cards` as `reminder: …` lines. Locally, `npm run dev` prints the path of
+each sent email's text and HTML; fire the cron by hand with:
+
+```bash
+curl "http://localhost:5173/cdn-cgi/handler/scheduled?cron=0+17+*+*+*&time=$(date -d 2026-09-28T17:00:00Z +%s)000"
+```
 
 ### AI model configuration
 

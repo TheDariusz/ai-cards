@@ -15,6 +15,7 @@ Cloudflare Workers · D1 + Drizzle · R2 audio · OpenRouter for LLM + TTS. Prod
 ## Architecture
 
 - Ports & adapters: `app/lib/ai.ts` is the port (`AiProvider`), `app/lib/openrouter.ts` the only adapter. `pipeline`/`repo` take a `deps` object — that's what makes them testable; keep it.
+- Mail follows the same pattern: `app/lib/mailer.ts` is the port, `app/lib/cf-email.ts` the only adapter. The daily reminder cron is `scheduled` in `workers/app.ts` — the one intentional edit to that template file.
 - `app/db/repo.ts` is the only file that touches Drizzle. Routes call repo functions, never build queries.
 - Generation is fire-and-forget: `context.cloudflare.ctx.waitUntil(runCardPipeline(...))`. Cards go `pending → ready | failed`; home polls every 3s while pending.
 - Every loader/action starts with `await requireAuth(request, env)`.
