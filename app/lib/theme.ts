@@ -19,8 +19,11 @@ export function themeCookie(pref: ThemePref): string {
   return `theme=${pref}; Path=/; Max-Age=31536000; SameSite=Lax; Secure`
 }
 
-// Only same-origin paths: '//host' and '/\host' are treated as absolute by browsers
+// Only same-origin paths. Resolve the way a browser would ('//host', '/\host' and
+// '/<tab>/host' all become absolute), and keep it only if the origin didn't change.
 export function safeRedirect(to: FormDataEntryValue | null): string {
-  if (typeof to !== 'string' || !to.startsWith('/') || to.startsWith('//') || to.startsWith('/\\')) return '/'
-  return to
+  if (typeof to !== 'string' || !to.startsWith('/')) return '/'
+  const base = 'http://app.invalid'
+  const url = new URL(to, base)
+  return url.origin === base ? url.pathname + url.search + url.hash : '/'
 }

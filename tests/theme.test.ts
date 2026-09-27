@@ -24,7 +24,7 @@ describe('themeCookie', () => {
 
 describe('safeRedirect', () => {
   it('keeps an in-app path with its query', () => expect(safeRedirect('/review?mode=flip')).toBe('/review?mode=flip'))
-  it.each([null, '', 'https://x.com', '//x.com', '/\\x.com', 'review'])('rejects %s', (to) => {
+  it.each([null, '', 'https://x.com', '//x.com', '/\\x.com', 'review', '/\t/x.com', '/\n/x.com', '/\t\\x.com'])('rejects %s', (to) => {
     expect(safeRedirect(to)).toBe('/')
   })
 })
