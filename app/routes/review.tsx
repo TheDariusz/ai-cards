@@ -2,11 +2,12 @@ import { Link, useFetcher, useSearchParams } from 'react-router'
 import { useEffect, useRef, useState } from 'react'
 import type { Route } from './+types/review'
 import { requireAuth } from '../lib/session'
-import { createDb, getDueCards, applyReview } from '../db/repo'
+import { createDb, getDueCards, applyReview, completedDays, countReviewsOn } from '../db/repo'
 import { diffAnswer, type DiffResult, type HeadwordStatus } from '../lib/diff'
 import { headwordInAnswer, suggestGrade } from '../lib/evaluate'
 import { highlightHeadword } from '../lib/headword'
 import type { Grade } from '../lib/srs'
+import { computeStreak, dayKey } from '../lib/streak'
 import type { CheckResult } from './review-check'
 
 const KEY_TO_GRADE: Record<string, 'again' | 'good' | 'easy'> = { '1': 'again', '2': 'good', '3': 'easy' }
@@ -14,8 +15,14 @@ const KEY_TO_GRADE: Record<string, 'again' | 'good' | 'easy'> = { '1': 'again', 
 export async function loader({ request, context }: Route.LoaderArgs) {
   const env = context.cloudflare.env
   await requireAuth(request, env)
-  const due = await getDueCards(createDb(env.DB), Date.now())
-  return { due }
+  const db = createDb(env.DB)
+  const now = Date.now()
+  const today = dayKey(now)
+  return {
+    due: await getDueCards(db, now),
+    streak: computeStreak(await completedDays(db), today),
+    doneToday: await countReviewsOn(db, today),
+  }
 }
 
 export async function action({ request, context }: Route.ActionArgs) {
@@ -59,7 +66,7 @@ function Sentence({ text, headword, lang, bold }: {
 
 // useFetcher (not a navigating Form) so a network failure keeps the revealed card
 // on screen — the grade is "held in memory" (spec) and the user just taps again.
-function GradeButtons({ cardId, mode, typed }: { cardId: number; mode: string; typed?: string }) {
+function GradeButtons({ cardId, mode, typed, suggested }: { cardId: number; mode: string; typed?: string; suggested?: Grade }) {
   const fetcher = useFetcher<typeof action>()
   const failed = fetcher.state === 'idle' && fetcher.data?.ok === false
   useEffect(() => {
@@ -84,9 +91,17 @@ function GradeButtons({ cardId, mode, typed }: { cardId: number; mode: string; t
       <input type="hidden" name="cardId" value={cardId} />
       <input type="hidden" name="mode" value={mode} />
       {typed !== undefined && <input type="hidden" name="typed" value={typed} />}
-      <button name="grade" value="again" className="grade-again" disabled={fetcher.state !== 'idle'}>Again <kbd>1</kbd></button>
-      <button name="grade" value="good" disabled={fetcher.state !== 'idle'}>Good <kbd>2</kbd></button>
-      <button name="grade" value="easy" className="grade-easy" disabled={fetcher.state !== 'idle'}>Easy <kbd>3</kbd></button>
+      {(['again', 'good', 'easy'] as const).map((grade, i) => (
+        <button
+          key={grade}
+          name="grade"
+          value={grade}
+          className={grade === suggested ? 'grade-suggested' : undefined}
+          disabled={fetcher.state !== 'idle'}
+        >
+          {grade[0].toUpperCase() + grade.slice(1)} <kbd>{i + 1}</kbd>
+        </button>
+      ))}
       {failed && <p className="error">Didn’t reach the server — tap your grade again.</p>}
     </fetcher.Form>
   )
@@ -224,7 +239,7 @@ function WriteCard({ card }: { card: Route.ComponentProps['loaderData']['due'][n
             {local.headword === 'typo' && <p className="muted">Main word had a typo.</p>}
             {card.audioKey && <audio ref={audioRef} controls src={`/audio/${card.id}?v=${encodeURIComponent(card.audioKey)}`} />}
           </div>
-          <GradeButtons cardId={card.id} mode="write" typed={typed} />
+          <GradeButtons cardId={card.id} mode="write" typed={typed} suggested={suggested ?? undefined} />
         </>
       )}
     </>
@@ -245,9 +260,26 @@ export default function Review({ loaderData }: Route.ComponentProps) {
     )
   }
 
+  const { streak, doneToday } = loaderData
+  const left = loaderData.due.length
+  // an Again-graded card stays due, so doneToday can grow while left doesn't drop
+  const pct = Math.min(100, Math.round((doneToday / (doneToday + left)) * 100))
+
   return (
     <main className="page">
-      <h1><Link to="/">←</Link> Review <span className="muted">({loaderData.due.length} left)</span></h1>
+      <h1 className="review-head">
+        <Link to="/">←</Link> Review <span className="muted">· {left} left{streak > 0 ? ` · 🔥 ${streak}` : ''}</span>
+      </h1>
+      <div
+        className="progress"
+        role="progressbar"
+        aria-label="Today's reviews"
+        aria-valuemin={0}
+        aria-valuemax={doneToday + left}
+        aria-valuenow={doneToday}
+      >
+        <span style={{ width: `${pct}%` }} />
+      </div>
       <button
         className="muted-toggle"
         onClick={() => setParams({ mode: mode === 'flip' ? 'write' : 'flip' })}
