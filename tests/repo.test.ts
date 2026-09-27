@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { testDb } from './helpers/db'
 import { eq } from 'drizzle-orm'
-import { insertPendingCard, getDueCards, countDue, getCard, listCards, markReady, applyReview, completedDays, updateCardContent, deleteCard, getNewCards, completeFirstLearning } from '../app/db/repo'
+import { insertPendingCard, getDueCards, countDue, getCard, listCards, markReady, applyReview, completedDays, updateCardContent, deleteCard, getNewCards, completeFirstLearning, countReviewsOn } from '../app/db/repo'
 import { reviewLog } from '../app/db/schema'
 import { dayKey } from '../app/lib/streak'
 
@@ -118,5 +118,23 @@ describe('updateCardContent / deleteCard', () => {
     expect(await getCard(db, id)).toBeUndefined()
     const orphans = await db.select().from(reviewLog).where(eq(reviewLog.cardId, id))
     expect(orphans).toHaveLength(0)
+  })
+})
+
+describe('countReviewsOn', () => {
+  it('counts only reviews on the given Warsaw day', async () => {
+    const db = testDb()
+    const id = await insertPendingCard(db, 'reluctant', NOW)
+    const day = dayKey(NOW)
+    // Warsaw midnight at the start of `day`, found by stepping back from NOW
+    let midnight = NOW
+    while (dayKey(midnight - 60_000) === day) midnight -= 60_000
+    await db.insert(reviewLog).values([
+      { cardId: id, reviewedAt: midnight - 60_000, mode: 'flip', grade: 'good', typed: null }, // previous day
+      { cardId: id, reviewedAt: midnight, mode: 'flip', grade: 'good', typed: null },
+      { cardId: id, reviewedAt: NOW, mode: 'write', grade: 'again', typed: 'x' },
+    ])
+    expect(await countReviewsOn(db, day)).toBe(2)
+    expect(await countReviewsOn(db, dayKey(midnight - 60_000))).toBe(1)
   })
 })

@@ -82,13 +82,15 @@ export async function applyReview(
 
   const today = dayKey(now)
   const dueLeft = await countDue(db, now)
-  // single-user volumes: reading the log and filtering by Warsaw day is fine
-  const reviewsToday = (await db.select().from(reviewLog)).filter(
-    (r) => dayKey(r.reviewedAt) === today,
-  ).length
+  const reviewsToday = await countReviewsOn(db, today)
   if (dueLeft === 0 || reviewsToday >= 10) {
     await db.insert(dayLog).values({ date: today }).onConflictDoNothing()
   }
+}
+
+export async function countReviewsOn(db: Db, day: string): Promise<number> {
+  // single-user volumes: reading the log and filtering by Warsaw day is fine
+  return (await db.select().from(reviewLog)).filter((r) => dayKey(r.reviewedAt) === day).length
 }
 
 export async function completedDays(db: Db): Promise<string[]> {
