@@ -15,6 +15,13 @@
       "when": 1787514005674,
       "tag": "0001_great_professor_monster",
       "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "6",
+      "when": 1790503555050,
+      "tag": "0002_steep_doctor_faustus",
+      "breakpoints": true
     }
   ]
 }

@@ -1,7 +1,7 @@
 import { drizzle } from 'drizzle-orm/d1'
 import { eq, lte, and, desc, asc, count, isNull, isNotNull } from 'drizzle-orm'
 import * as schema from './schema'
-import { cards, reviewLog, dayLog, type Card } from './schema'
+import { cards, reviewLog, dayLog, settings, type Card } from './schema'
 import { newCardSrs, schedule, type Grade } from '../lib/srs'
 import { dayKey } from '../lib/streak'
 import type { CardContent, DecodePart } from '../lib/ai'
@@ -53,12 +53,15 @@ export async function countDue(db: Db, now: number): Promise<number> {
   return row.n
 }
 
+const newCardCondition = and(eq(cards.status, 'ready'), isNull(cards.firstLearnedAt), isNotNull(cards.decodeParts))
+
 export async function getNewCards(db: Db): Promise<Card[]> {
-  return db
-    .select()
-    .from(cards)
-    .where(and(eq(cards.status, 'ready'), isNull(cards.firstLearnedAt), isNotNull(cards.decodeParts)))
-    .orderBy(asc(cards.createdAt))
+  return db.select().from(cards).where(newCardCondition).orderBy(asc(cards.createdAt))
+}
+
+export async function countNew(db: Db): Promise<number> {
+  const [row] = await db.select({ n: count() }).from(cards).where(newCardCondition)
+  return row.n
 }
 
 export async function completeFirstLearning(db: Db, cardId: number, now: number): Promise<boolean> {
@@ -95,6 +98,19 @@ export async function countReviewsOn(db: Db, day: string): Promise<number> {
 
 export async function completedDays(db: Db): Promise<string[]> {
   return (await db.select().from(dayLog)).map((r) => r.date).sort()
+}
+
+export async function isDayDone(db: Db, day: string): Promise<boolean> {
+  return (await db.select().from(dayLog).where(eq(dayLog.date, day))).length > 0
+}
+
+export async function getSetting(db: Db, key: string): Promise<string | null> {
+  const [row] = await db.select().from(settings).where(eq(settings.key, key))
+  return row?.value ?? null
+}
+
+export async function setSetting(db: Db, key: string, value: string): Promise<void> {
+  await db.insert(settings).values({ key, value }).onConflictDoUpdate({ target: settings.key, set: { value } })
 }
 
 export async function updateCardContent(

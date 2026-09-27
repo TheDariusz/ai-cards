@@ -32,3 +32,8 @@ export const dayLog = sqliteTable('day_log', {
 })
 
 export type Card = typeof cards.$inferSelect
+
+export const settings = sqliteTable('settings', {
+  key: text('key').primaryKey(),
+  value: text('value').notNull(),
+})

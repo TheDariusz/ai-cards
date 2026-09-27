@@ -1,8 +1,8 @@
 import { describe, it, expect } from 'vitest'
 import { testDb } from './helpers/db'
 import { eq } from 'drizzle-orm'
-import { insertPendingCard, getDueCards, countDue, getCard, listCards, markReady, applyReview, completedDays, updateCardContent, deleteCard, getNewCards, completeFirstLearning, countReviewsOn } from '../app/db/repo'
-import { reviewLog } from '../app/db/schema'
+import { insertPendingCard, getDueCards, countDue, getCard, listCards, markReady, applyReview, completedDays, updateCardContent, deleteCard, getNewCards, completeFirstLearning, countReviewsOn, getSetting, setSetting, isDayDone, countNew } from '../app/db/repo'
+import { reviewLog, dayLog } from '../app/db/schema'
 import { dayKey } from '../app/lib/streak'
 
 const NOW = 1_750_000_000_000
@@ -136,5 +136,47 @@ describe('countReviewsOn', () => {
     ])
     expect(await countReviewsOn(db, day)).toBe(2)
     expect(await countReviewsOn(db, dayKey(midnight - 60_000))).toBe(1)
+  })
+})
+
+describe('settings', () => {
+  it('returns null for a missing key and upserts values', async () => {
+    const db = testDb()
+    expect(await getSetting(db, 'reminderEnabled')).toBeNull()
+    await setSetting(db, 'reminderEnabled', 'false')
+    expect(await getSetting(db, 'reminderEnabled')).toBe('false')
+    await setSetting(db, 'reminderEnabled', 'true')
+    expect(await getSetting(db, 'reminderEnabled')).toBe('true')
+  })
+})
+
+describe('isDayDone', () => {
+  it('reads day_log for the given day only', async () => {
+    const db = testDb()
+    expect(await isDayDone(db, dayKey(NOW))).toBe(false)
+    await db.insert(dayLog).values({ date: dayKey(NOW) })
+    expect(await isDayDone(db, dayKey(NOW))).toBe(true)
+    expect(await isDayDone(db, dayKey(NOW + DAY))).toBe(false)
+  })
+})
+
+describe('countNew', () => {
+  it('counts exactly what getNewCards returns', async () => {
+    const db = testDb()
+    const agree = async () => expect(await countNew(db)).toBe((await getNewCards(db)).length)
+    const id = await insertPendingCard(db, 'reluctant', NOW)
+    expect(await countNew(db)).toBe(0)
+    await agree()
+    await markReady(db, id, CONTENT, null)
+    expect(await countNew(db)).toBe(1)
+    await agree()
+    const noDecode = await insertPendingCard(db, 'eager', NOW)
+    await markReady(db, noDecode, CONTENT, null)
+    await updateCardContent(db, noDecode, { ...CONTENT, decodeParts: null })
+    expect(await countNew(db)).toBe(1)
+    await agree()
+    await completeFirstLearning(db, id, NOW)
+    expect(await countNew(db)).toBe(0)
+    await agree()
   })
 })
