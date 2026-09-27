@@ -81,7 +81,7 @@ export default function Home({ loaderData, actionData }: Route.ComponentProps) {
 
   return (
     <main className="page">
-      <h1>AI Cards</h1>
+      <h1 className="home-head">AI Cards {streak > 0 && <span className="streak-chip">🔥 {streak}</span>}</h1>
       <Form method="post" className="quick-add">
         <input type="hidden" name="intent" value="add" />
         <input name="word" placeholder="New word…" autoComplete="off" autoFocus />
@@ -115,7 +115,7 @@ export default function Home({ loaderData, actionData }: Route.ComponentProps) {
           <Link to="/learn"><button>Learn now</button></Link>
         </section>
       )}
-      {due > 0 && <Link to="/review"><button style={{ width: '100%' }}>Start review</button></Link>}
+      {due > 0 && <Link to="/review"><button className="primary-wide">Start review</button></Link>}
       <div className="calendar">
         {Array.from({ length: Number(today.slice(8, 10)) }, (_, i) => {
           const d = `${today.slice(0, 8)}${String(i + 1).padStart(2, '0')}`

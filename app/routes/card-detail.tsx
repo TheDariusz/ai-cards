@@ -123,8 +123,8 @@ export default function CardDetail({ loaderData, actionData }: Route.ComponentPr
         <input type="hidden" name="intent" value="save" />
         <label>Polish word <input name="wordPl" defaultValue={card.wordPl ?? ''} /></label>
         <label>Explanation <textarea name="explanationEn" defaultValue={card.explanationEn ?? ''} /></label>
-        <label>English sentence <textarea name="sentenceEn" defaultValue={card.sentenceEn ?? ''} /></label>
-        <label>Polish sentence <textarea name="sentencePl" defaultValue={card.sentencePl ?? ''} /></label>
+        <label>English sentence <textarea name="sentenceEn" className="study" defaultValue={card.sentenceEn ?? ''} /></label>
+        <label>Polish sentence <textarea name="sentencePl" className="study" defaultValue={card.sentencePl ?? ''} /></label>
         <label>
           Literal decode <span className="muted">(English | Polish, one fragment per line)</span>
           <textarea name="decodeParts" rows={5} defaultValue={decodePartsToText(card.decodeParts)} />
@@ -149,7 +149,7 @@ export default function CardDetail({ loaderData, actionData }: Route.ComponentPr
         onSubmit={(e) => { if (!confirm('Delete this card?')) e.preventDefault() }}
       >
         <input type="hidden" name="intent" value="delete" />
-        <button type="submit" className="grade-again">Delete</button>
+        <button type="submit" className="danger-button">Delete</button>
       </Form>
     </main>
   )

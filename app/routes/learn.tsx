@@ -28,7 +28,7 @@ function Decode({ parts }: { parts: DecodePart[] }) {
     <div className="decode-grid">
       {parts.map((part, index) => (
         <div className="decode-pair" key={`${index}-${part.en}`}>
-          <span lang="en">{part.en}</span>
+          <span lang="en" className="study">{part.en}</span>
           <span lang="pl">{part.pl}</span>
         </div>
       ))}
@@ -70,7 +70,7 @@ function LearningCard({ card }: { card: NonNullable<Route.ComponentProps['loader
     <>
       <p className="step-progress">Step {step + 1} of {STEPS.length} · {STEPS[step]}</p>
       <div className="card-face learning-card">
-        <p className="answer" lang="en">{card.sentenceEn}</p>
+        <p className="study answer" lang="en">{card.sentenceEn}</p>
 
         {step === 0 && (
           <>
@@ -103,7 +103,7 @@ function LearningCard({ card }: { card: NonNullable<Route.ComponentProps['loader
                         checked={understood.has(index)}
                         onChange={() => toggleUnderstood(index)}
                       />
-                      <span lang="en">{part.en}</span>
+                      <span lang="en" className="study">{part.en}</span>
                     </label>
                     <button
                       type="button"

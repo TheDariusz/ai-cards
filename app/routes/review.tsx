@@ -49,7 +49,7 @@ function Sentence({ text, headword, lang, bold }: {
 }) {
   if (!text) return null
   return (
-    <p lang={lang} className={bold ? 'answer' : undefined}>
+    <p lang={lang} className={bold ? 'study answer' : 'study'}>
       {highlightHeadword(text, headword).map((s, i) =>
         s.head ? <b className="head" key={i}>{s.text}</b> : <span key={i}>{s.text}</span>,
       )}
