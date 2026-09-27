@@ -11,15 +11,13 @@
 		"CARD_MODEL": "anthropic/claude-sonnet-5",
 		"TTS_MODEL": "microsoft/mai-voice-2",
 		"TTS_VOICE": "en-US-Harper:MAI-Voice-2",
-		"APP_URL": "https://ai-cards.thedariusz.workers.dev"
+		"APP_URL": "https://ai-cards.thedariusz.workers.dev",
+		"REMINDER_FROM": "AI Cards <onboarding@resend.dev>"
 	},
 	// 19:00 Europe/Warsaw is 17:00 UTC in CEST and 18:00 UTC in CET; isReminderHour() drops the other one
 	"triggers": {
 		"crons": ["0 17 * * *", "0 18 * * *"]
 	},
-	"send_email": [
-		{ "name": "EMAIL" }
-	],
 	"observability": {
 		"enabled": true
 	},

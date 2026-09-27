@@ -1,7 +1,7 @@
 import type { Route } from './+types/reminder'
 import { requireAuth } from '../lib/session'
 import { createDb, setSetting } from '../db/repo'
-import { mailerFromEnv } from '../lib/cf-email'
+import { mailerFromEnv } from '../lib/resend'
 import { runReminder } from '../lib/reminder-job'
 
 export async function action({ request, context }: Route.ActionArgs) {
@@ -16,7 +16,7 @@ export async function action({ request, context }: Route.ActionArgs) {
   }
   if (intent === 'test') {
     const mailer = mailerFromEnv(env)
-    if (!mailer) return { reminderError: 'REMINDER_FROM/TO not configured' }
+    if (!mailer) return { reminderError: 'RESEND_API_KEY/REMINDER_TO not configured' }
     try {
       await runReminder({ db, mailer, appUrl: env.APP_URL }, Date.now(), { force: true })
       return { reminderSent: true as const }

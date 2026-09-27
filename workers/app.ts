@@ -1,6 +1,6 @@
 import { createRequestHandler, RouterContextProvider } from "react-router";
 import { createDb } from "../app/db/repo";
-import { mailerFromEnv } from "../app/lib/cf-email";
+import { mailerFromEnv } from "../app/lib/resend";
 import { isReminderHour } from "../app/lib/reminder";
 import { runReminder } from "../app/lib/reminder-job";
 
@@ -26,7 +26,7 @@ export default {
     if (!isReminderHour(t)) return;
     const mailer = mailerFromEnv(env);
     if (!mailer) {
-      console.log("reminder: missing REMINDER_FROM/TO, skipping");
+      console.log("reminder: RESEND_API_KEY/REMINDER_TO not configured, skipping");
       return;
     }
     ctx.waitUntil(
