@@ -4,9 +4,9 @@
 
 **Goal:** Send one Polish reminder email at 19:00 Europe/Warsaw on days that are not yet done and have due/new cards, with an On/Off switch and a "Send test" button on home.
 
-**Architecture:** Port `Mailer` (`app/lib/mailer.ts`) with one adapter over the Cloudflare `send_email` binding (`app/lib/cf-email.ts`). Pure copy/decision logic in `app/lib/reminder.ts`, orchestration in `app/lib/reminder-job.ts` with a `deps` object like `pipeline`. Two UTC crons call a thin `scheduled` handler in `workers/app.ts`; a `/reminder` action serves the home switch. Settings live in a new D1 `settings` key/value table.
+**Architecture:** Port `Mailer` (`app/lib/mailer.ts`) with one adapter over the Resend HTTP API (`app/lib/resend.ts`; originally a Cloudflare `send_email` adapter — see "Provider change: Resend" at the end). Pure copy/decision logic in `app/lib/reminder.ts`, orchestration in `app/lib/reminder-job.ts` with a `deps` object like `pipeline`. Two UTC crons call a thin `scheduled` handler in `workers/app.ts`; a `/reminder` action serves the home switch. Settings live in a new D1 `settings` key/value table.
 
-**Tech Stack:** Cloudflare Workers (Cron Triggers, `send_email` binding), D1 + Drizzle, React Router 8 framework mode, TypeScript, Vitest 4.
+**Tech Stack:** Cloudflare Workers (Cron Triggers), Resend, D1 + Drizzle, React Router 8 framework mode, TypeScript, Vitest 4.
 
 **Spec:** `docs/superpowers/specs/2026-09-27-email-reminders-design.md`
 
@@ -17,7 +17,7 @@
 - No Tailwind utilities, no new dependencies, no UI test infra. Keep `react-router` / `@react-router/dev` at exactly `8.0.0`.
 - Settings keys: `reminderEnabled` (`'true'` / `'false'`, missing = on) and `reminderLastSent` (`YYYY-MM-DD`, Warsaw).
 - Crons exactly `"0 17 * * *"` and `"0 18 * * *"`; send only when the Warsaw hour of `controller.scheduledTime` is 19.
-- Secrets `REMINDER_FROM`, `REMINDER_TO` (placeholders only in `.dev.vars.example`); var `APP_URL` = `https://ai-cards.thedariusz.workers.dev`; binding `EMAIL`.
+- Secrets `REMINDER_FROM`, `REMINDER_TO` (placeholders only in `.dev.vars.example`); var `APP_URL` = `https://ai-cards.thedariusz.workers.dev`; binding `EMAIL`. *(Superseded: now secrets `RESEND_API_KEY`, `REMINDER_TO`, var `REMINDER_FROM`, no binding — see "Provider change: Resend".)*
 - Log lines start with `reminder:`; nothing thrown out of `scheduled`.
 - Email copy Polish, UI copy English (`Reminder at 19:00`, `On`, `Off`, `Send test`, `Sent ✓`).
 - HTML palette: bg `#f6f7fb`, card `#ffffff`, text `#1d2233`, button `#4b5bdc` with white text; inline styles only, system fonts.
@@ -117,6 +117,8 @@ describe('isReminderHour', () => {
 - [ ] **Step 5:** Commit `feat: add settings table and reminder repo queries`.
 
 ### Task 3: Cloudflare Email adapter and Worker config
+
+> Superseded by "Provider change: Resend" at the end; kept as the record of what was built first.
 
 **Files:**
 - Create: `app/lib/cf-email.ts`
