@@ -1,5 +1,5 @@
 import { drizzle } from 'drizzle-orm/d1'
-import { eq, lte, and, desc, asc, count, isNull, isNotNull } from 'drizzle-orm'
+import { eq, lte, and, desc, asc, count, isNull, isNotNull, gt, min } from 'drizzle-orm'
 import * as schema from './schema'
 import { cards, reviewLog, dayLog, settings, type Card } from './schema'
 import { newCardSrs, schedule, type Grade } from '../lib/srs'
@@ -51,6 +51,14 @@ export async function countDue(db: Db, now: number): Promise<number> {
     .from(cards)
     .where(and(eq(cards.status, 'ready'), isNotNull(cards.firstLearnedAt), lte(cards.dueAt, now)))
   return row.n
+}
+
+export async function nextDueAt(db: Db, after: number): Promise<number | null> {
+  const [row] = await db
+    .select({ at: min(cards.dueAt) })
+    .from(cards)
+    .where(and(eq(cards.status, 'ready'), isNotNull(cards.firstLearnedAt), gt(cards.dueAt, after)))
+  return row.at ?? null
 }
 
 const newCardCondition = and(eq(cards.status, 'ready'), isNull(cards.firstLearnedAt), isNotNull(cards.decodeParts))

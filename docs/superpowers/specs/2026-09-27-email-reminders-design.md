@@ -62,6 +62,8 @@ is needed by both the cron handler and the route, so it lives in one helper,
 1. `today = dayKey(now)`.
 2. Read `enabled = getSetting('reminderEnabled') !== 'false'`, `lastSent = getSetting('reminderLastSent')`,
    `dayDone = isDayDone(today)`, `due = countDue(endOfDay(now))` (cards that come due later tonight count too — the day is only lost at midnight), `fresh = countNew()`.
+   `/review` and home only show cards due *now*, so the job also passes `later = { count: due − countDue(now), from: nextDueAt(now) }`
+   to `buildReminder`, which tells the learner when those cards become ready.
 3. Unless `force`: `shouldRemind({ enabled, today, lastSent, dayDone, due, fresh })`, checked in this order:
    - `!enabled` → `{ send: false, reason: 'disabled' }`
    - `lastSent === today` → `'already-sent'`
@@ -92,7 +94,11 @@ The adjective "nowa" follows the same pattern (`nowa` / `nowe` / `nowych`).
 - **Subject, only new cards:** `3 nowe karty czekają na naukę`.
 - **Body:**
   - one status sentence covering due and new counts;
-  - when `streak ≥ 1`: `Masz serię 7 dni — nie przerywaj jej dziś.`;
+  - when some due cards only become ready later tonight, a timing sentence in Warsaw time: `Będzie gotowa o 21:30.` /
+    `Pierwsza będzie gotowa o 21:30.` (none ready now), `Teraz możesz powtórzyć 2, pozostałe będą gotowe od 21:30.` /
+    `…, ostatnia będzie gotowa o 21:30.` (some ready now);
+  - when `due > 0` and `streak ≥ 1`: `Twoja seria: 7 dni — nie przerywaj jej dziś.` Not on new-cards-only days: only
+    reviews complete a day, so learning cannot save the streak;
   - a button `Zacznij review` → `${appUrl}/review`, or `Zacznij naukę` → `${appUrl}/learn` when `due === 0`;
   - footer `Przypomnienia wyłączysz na stronie głównej aplikacji.` linking `${appUrl}/`. Home requires login, so no unsubscribe token is needed.
 - **HTML:** a single table with inline styles (mail clients drop `<style>`), light Calm Study palette

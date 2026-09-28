@@ -77,6 +77,34 @@ describe('buildReminder', () => {
     expect(m.subject).toBe('Brak kart na dziś')
     expect(m.html).toContain('href="https://x.dev/"')
   })
+  it('no streak line on new-cards-only days: learning cannot complete the day', () => {
+    const m = buildReminder({ due: 0, fresh: 3, streak: 7, appUrl: url })
+    expect(m.text).not.toContain('seria')
+    expect(m.html).not.toContain('seria')
+  })
+  it('streak line appears in HTML only when due and streak', () => {
+    expect(buildReminder({ due: 2, fresh: 0, streak: 7, appUrl: url }).html).toContain('Twoja seria: 7 dni')
+    expect(buildReminder({ due: 2, fresh: 0, streak: 0, appUrl: url }).html).not.toContain('seria')
+  })
+  // 19:30 UTC = 21:30 Warsaw (CEST)
+  const at2130 = Date.parse('2026-09-27T19:30:00Z')
+  it('says when a card due later tonight becomes ready', () => {
+    const one = buildReminder({ due: 1, fresh: 0, streak: 0, appUrl: url, later: { count: 1, from: at2130 } })
+    expect(one.text).toContain('Masz dziś 1 kartę do powtórki. Będzie gotowa o 21:30.')
+    expect(one.html).toContain('Będzie gotowa o 21:30.')
+    const many = buildReminder({ due: 3, fresh: 0, streak: 0, appUrl: url, later: { count: 3, from: at2130 } })
+    expect(many.text).toContain('Pierwsza będzie gotowa o 21:30.')
+  })
+  it('splits cards ready now from those ready later tonight', () => {
+    expect(buildReminder({ due: 5, fresh: 0, streak: 0, appUrl: url, later: { count: 3, from: at2130 } }).text)
+      .toContain('Teraz możesz powtórzyć 2, pozostałe będą gotowe od 21:30.')
+    expect(buildReminder({ due: 5, fresh: 0, streak: 0, appUrl: url, later: { count: 1, from: at2130 } }).text)
+      .toContain('Teraz możesz powtórzyć 4, ostatnia będzie gotowa o 21:30.')
+  })
+  it('no timing line when every card is ready now', () => {
+    const m = buildReminder({ due: 5, fresh: 0, streak: 0, appUrl: url, later: { count: 0, from: at2130 } })
+    expect(m.text).not.toContain('gotow')
+  })
   it('trims a trailing slash', () => {
     const m = buildReminder({ due: 1, fresh: 0, streak: 0, appUrl: 'https://x.dev/' })
     expect(m.text).toContain('https://x.dev/review')

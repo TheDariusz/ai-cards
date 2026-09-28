@@ -80,6 +80,19 @@ describe('runReminder', () => {
     // due at 21:30 Warsaw, after the 19:00 run but before midnight
     await db.update(cards).set({ dueAt: NOW + 2.5 * 3_600_000 })
     expect(await runReminder(deps(db, mailer), NOW)).toEqual({ send: true, due: 1, fresh: 0, streak: 0 })
+    // /review shows nothing yet, so the mail must say when the card is ready
+    expect(mailer.sent[0].text).toContain('Będzie gotowa o 21:30.')
+  })
+
+  it('tells apart cards due now and later tonight', async () => {
+    const db = testDb()
+    const mailer = fakeMailer()
+    await addDueCard(db)
+    await addDueCard(db)
+    const [, second] = await db.select().from(cards)
+    await db.update(cards).set({ dueAt: NOW + 3 * 3_600_000 }).where(eq(cards.id, second.id))
+    await runReminder(deps(db, mailer), NOW)
+    expect(mailer.sent[0].text).toContain('Teraz możesz powtórzyć 1, ostatnia będzie gotowa o 22:00.')
   })
 
   it('ignores cards due after midnight', async () => {

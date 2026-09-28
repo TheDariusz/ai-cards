@@ -1,4 +1,4 @@
-import { completedDays, countDue, countNew, getSetting, isDayDone, setSetting, type Db } from '../db/repo'
+import { completedDays, countDue, countNew, getSetting, isDayDone, nextDueAt, setSetting, type Db } from '../db/repo'
 import type { Mailer } from './mailer'
 import { buildReminder, shouldRemind, type SkipReason } from './reminder'
 import { computeStreak, dayKey, endOfDay } from './streak'
@@ -18,6 +18,8 @@ export async function runReminder(
   const dayDone = await isDayDone(db, today)
   // cards that come due later tonight still count: the day is only lost at midnight
   const due = await countDue(db, endOfDay(now))
+  const laterCount = due - (await countDue(db, now))
+  const later = laterCount > 0 ? { count: laterCount, from: (await nextDueAt(db, now))! } : undefined
   const fresh = await countNew(db)
 
   if (!force) {
@@ -26,7 +28,7 @@ export async function runReminder(
   }
 
   const streak = computeStreak(await completedDays(db), today)
-  const msg = buildReminder({ due, fresh, streak, appUrl })
+  const msg = buildReminder({ due, fresh, streak, appUrl, later })
   if (force) msg.subject = `[Test] ${msg.subject}`
   // send first, then record: a failed send never blocks a later attempt
   await mailer.send(msg)

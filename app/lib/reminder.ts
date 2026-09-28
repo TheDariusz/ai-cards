@@ -53,7 +53,25 @@ function escapeHtml(s: string): string {
   return s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!)
 }
 
-export function buildReminder(input: { due: number; fresh: number; streak: number; appUrl: string }): MailMessage {
+function warsawTime(ms: number): string {
+  return new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Europe/Warsaw', hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
+  }).format(new Date(ms))
+}
+
+// `later` = the part of `due` that is not in /review yet, and when the first of it gets there
+function timingLine(due: number, later: { count: number; from: number }): string | null {
+  if (later.count <= 0) return null
+  const t = warsawTime(later.from)
+  if (later.count >= due) return due === 1 ? `Będzie gotowa o ${t}.` : `Pierwsza będzie gotowa o ${t}.`
+  return later.count === 1
+    ? `Teraz możesz powtórzyć ${due - 1}, ostatnia będzie gotowa o ${t}.`
+    : `Teraz możesz powtórzyć ${due - later.count}, pozostałe będą gotowe od ${t}.`
+}
+
+export function buildReminder(input: {
+  due: number; fresh: number; streak: number; appUrl: string; later?: { count: number; from: number }
+}): MailMessage {
   const { due, fresh, streak } = input
   const base = input.appUrl.replace(/\/$/, '')
 
@@ -65,6 +83,8 @@ export function buildReminder(input: { due: number; fresh: number; streak: numbe
     status = fresh > 0
       ? `Masz dziś ${kartyAcc(due)} do powtórki i ${noweKartyAcc(fresh)} do nauki.`
       : `Masz dziś ${kartyAcc(due)} do powtórki.`
+    const timing = input.later ? timingLine(due, input.later) : null
+    if (timing) status += ` ${timing}`
     button = { label: 'Zacznij review', url: `${base}/review` }
   } else if (fresh > 0) {
     subject = `${noweKarty(fresh)} ${plForm(fresh) === 'few' ? 'czekają' : 'czeka'} na naukę`
@@ -75,7 +95,8 @@ export function buildReminder(input: { due: number; fresh: number; streak: numbe
     status = 'Nie masz dziś kart do powtórki ani nowych kart.'
     button = { label: 'Otwórz aplikację', url: `${base}/` }
   }
-  const streakLine = streak >= 1 ? `Twoja seria: ${dni(streak)} — nie przerywaj jej dziś.` : null
+  // only reviews complete a day, so the streak is at stake only when cards are due
+  const streakLine = due > 0 && streak >= 1 ? `Twoja seria: ${dni(streak)} — nie przerywaj jej dziś.` : null
   const footer = 'Przypomnienia wyłączysz na stronie głównej aplikacji.'
   const homeUrl = `${base}/`
 
