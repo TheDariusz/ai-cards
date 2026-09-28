@@ -10,7 +10,7 @@ describe('createResendMailer', () => {
   it('POSTs the message to the Resend emails endpoint with a Bearer key', async () => {
     const fetchMock = ok()
     vi.stubGlobal('fetch', fetchMock)
-    await createResendMailer({ apiKey: 're_k', from: 'AI Cards <onboarding@resend.dev>', to: 'b@y.com' }).send(msg)
+    await createResendMailer({ apiKey: 're_k', from: 'AI Cards <cards@2doai.app>', to: 'b@y.com' }).send(msg)
     expect(fetchMock).toHaveBeenCalledTimes(1)
     const [url, init] = fetchMock.mock.calls[0]
     expect(url).toBe('https://api.resend.com/emails')
@@ -19,7 +19,7 @@ describe('createResendMailer', () => {
     expect(init.headers['Content-Type']).toBe('application/json')
     expect(init.signal).toBeInstanceOf(AbortSignal)
     expect(JSON.parse(init.body)).toEqual({
-      from: 'AI Cards <onboarding@resend.dev>',
+      from: 'AI Cards <cards@2doai.app>',
       to: 'b@y.com',
       subject: 's',
       text: 't',
