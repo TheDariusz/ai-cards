@@ -14,6 +14,9 @@ export function createResendMailer(opts: { apiKey: string; from: string; to: str
         signal: AbortSignal.timeout(TIMEOUT_MS),
       })
       if (!res.ok) throw new Error(`Resend ${res.status}: ${(await res.text()).slice(0, 300)}`)
+      // the id is what the Resend dashboard (Emails) shows, to follow delivery past the API
+      const { id } = await res.json<{ id?: string }>().catch(() => ({ id: undefined }))
+      console.log(`resend: accepted "${subject}" to ${opts.to} (id ${id ?? '?'})`)
     },
   }
 }

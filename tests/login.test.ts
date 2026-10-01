@@ -86,6 +86,13 @@ describe('magic link login', () => {
     expect(sent.map((m) => m.to)).toEqual(['new@example.com'])
   })
 
+  it('reports a missing OWNER_EMAIL instead of silently dropping the request', async () => {
+    const { sent, deps } = await setup()
+    const noOwner = { ...deps, config: loginConfigFromEnv({ OWNER_EMAIL: '"owner@example.com" <x' }) }
+    expect(await requestLoginLink(noOwner, 'someone@example.com', ORIGIN, NOW)).toBe('no-owner')
+    expect(sent).toHaveLength(0)
+  })
+
   it('drops new requests while too many are undecided', async () => {
     const { sent, deps } = await setup()
     for (let i = 0; i < MAX_PENDING_REQUESTS; i++) await requestLoginLink(deps, `s${i}@example.com`, ORIGIN, NOW)
