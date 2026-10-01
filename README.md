@@ -16,7 +16,7 @@ A personal English-learning flashcard app for a Polish native speaker. Hear an u
 - **Export** — CSV (Anki/spreadsheet-compatible) and JSON full backup, no import by design
 - **Light and dark themes** — calm, study-focused look (Instrument Sans UI, Literata for study sentences); *Auto* follows the phone, or pin *Light* / *Dark* from the home footer — remembered in a cookie and rendered on the server, so there is no wrong-theme flash; review shows a progress bar for today, the streak, and highlights the suggested grade
 - **Email reminder** — at 19:00 Europe/Warsaw, a short Polish email if the day is not done yet and cards are due or new; On/Off and *Send test* on the home screen
-- **Accounts** — log in with a one-time link mailed via Resend (15 min, single use); only addresses in `OWNER_EMAIL`/`ALLOWED_EMAILS` get one, and every user's cards, streak and settings are separate
+- **Accounts** — log in with a one-time link mailed via Resend (15 min, single use); anyone else asks for access on the login page and the owner approves them under *Access requests*; every user's cards, streak and settings are separate
 - **PWA** — "Add to Home Screen" on iPhone gives a full-screen app; online-only, no service worker
 
 ## Tech stack
@@ -41,7 +41,6 @@ npm run dev                            # http://localhost:5173
 | `OPENROUTER_API_KEY` | Server-side key for card generation + TTS |
 | `SESSION_SECRET` | Signs the session cookie (`openssl rand -hex 32`) |
 | `OWNER_EMAIL` | Your address; its first login takes over the original single-user account and data |
-| `ALLOWED_EMAILS` | Other addresses that may log in, comma-separated (empty = owner only) |
 | `RESEND_API_KEY` | Resend API key for the daily reminder email |
 | `REMINDER_TO` | Recipient of the reminder — any address of yours |
 
@@ -87,7 +86,6 @@ npx wrangler d1 migrations apply ai-cards --remote
 npx wrangler secret put OPENROUTER_API_KEY
 npx wrangler secret put SESSION_SECRET
 npx wrangler secret put OWNER_EMAIL
-npx wrangler secret put ALLOWED_EMAILS
 npx wrangler secret put RESEND_API_KEY
 npx wrangler secret put REMINDER_TO
 ```
@@ -102,15 +100,20 @@ New migrations must be applied remotely by hand (`npx wrangler d1 migrations app
 
 ### Login
 
-`/login` asks for an email. An allowed address gets a one-time link to `/login/verify` (valid 15 minutes,
-at most 3 per address per 15 minutes); everything else gets the same "check your inbox" answer and no mail.
-The link opens a page with a **Log in** button rather than logging in on GET, so mail scanners that prefetch
-links can't use up the token. Only a hash of the token is stored (`login_tokens`). Login mail is sent from
-`REMINDER_FROM` through the same Resend key as the reminder. Removing an address from `ALLOWED_EMAILS` stops
-new logins, not existing 90-day sessions — rotate `SESSION_SECRET` to log everyone out.
+`/login` asks for an email. `OWNER_EMAIL` and approved addresses get a one-time link to `/login/verify` (valid
+15 minutes, at most 3 per address per 15 minutes). Any other address files an access request and the owner gets
+an email; the visitor sees the same message either way, so nobody can probe who has an account. The owner
+approves, rejects or revokes on `/admin` (linked from the home footer as *Access requests*), and an approved
+person is emailed a login link to the app. Repeat requests don't re-notify, and new requests are dropped while
+20 are still undecided.
 
-Moving off the old shared password: set `OWNER_EMAIL` and `ALLOWED_EMAILS` **before** merging; sessions from
-the password era keep working as the owner. Afterwards `npx wrangler secret delete APP_PASSWORD_HASH`.
+The link opens a page with a **Log in** button rather than logging in on GET, so mail scanners that prefetch
+links can't use up the token. Only a hash of the token is stored (`login_tokens`). All login mail is sent from
+`REMINDER_FROM` through the same Resend key as the reminder. Revoking stops new logins, not existing 90-day
+sessions — rotate `SESSION_SECRET` to log everyone out.
+
+Moving off the old shared password: set `OWNER_EMAIL` **before** merging; sessions from the password era keep
+working as the owner. Afterwards `npx wrangler secret delete APP_PASSWORD_HASH`.
 
 ### Email reminders
 

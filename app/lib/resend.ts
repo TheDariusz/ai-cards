@@ -1,4 +1,4 @@
-import type { Mailer } from './mailer'
+import type { Mailer, MailMessage } from './mailer'
 
 // The only file that knows Resend. The cron and the "Send test" button both wait on it.
 const ENDPOINT = 'https://api.resend.com/emails'
@@ -26,4 +26,17 @@ export function mailerFromEnv(
   const from = env.REMINDER_FROM?.trim()
   if (!apiKey || !from || !to) return null
   return createResendMailer({ apiKey, from, to })
+}
+
+// For mail to arbitrary recipients (login links, access requests). On localhost without a
+// Resend key the mail goes to the dev-server log instead; anywhere else that's an error.
+export function mailSenderFromEnv(
+  env: Pick<Env, 'RESEND_API_KEY' | 'REMINDER_FROM' | 'REMINDER_TO'>, origin: string,
+): (to: string, msg: MailMessage) => Promise<void> {
+  return async (to, msg) => {
+    const mailer = mailerFromEnv(env, to)
+    if (mailer) return mailer.send(msg)
+    if (new URL(origin).hostname !== 'localhost') throw new Error('RESEND_API_KEY/REMINDER_FROM not configured')
+    console.log(`mail to ${to} (Resend not configured): ${msg.subject}\n${msg.text}`)
+  }
 }

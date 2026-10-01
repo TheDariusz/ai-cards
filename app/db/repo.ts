@@ -1,7 +1,7 @@
 import { drizzle } from 'drizzle-orm/d1'
 import { eq, lte, and, desc, asc, count, isNull, isNotNull, gt, min } from 'drizzle-orm'
 import * as schema from './schema'
-import { cards, reviewLog, dayLog, settings, users, loginTokens, OWNER_USER_ID, type Card } from './schema'
+import { cards, reviewLog, dayLog, settings, users, loginTokens, accessRequests, OWNER_USER_ID, type Card } from './schema'
 import { newCardSrs, schedule, type Grade } from '../lib/srs'
 import { dayKey } from '../lib/streak'
 import type { CardContent, DecodePart } from '../lib/ai'
@@ -203,4 +203,41 @@ export async function findOrCreateUser(db: Db, email: string, ownerEmail: string
   await db.insert(users).values({ email, createdAt: now }).onConflictDoNothing()
   const [created] = await db.select({ id: users.id }).from(users).where(eq(users.email, email))
   return created.id
+}
+
+export type AccessRequest = typeof accessRequests.$inferSelect
+
+export async function isApproved(db: Db, email: string): Promise<boolean> {
+  const [row] = await db.select({ status: accessRequests.status }).from(accessRequests).where(eq(accessRequests.email, email))
+  return row?.status === 'approved'
+}
+
+// true only for a brand-new request: asking again (or after a rejection) changes nothing
+export async function createAccessRequest(db: Db, email: string, now: number): Promise<boolean> {
+  const inserted = await db
+    .insert(accessRequests)
+    .values({ email, status: 'pending', requestedAt: now })
+    .onConflictDoNothing()
+    .returning({ email: accessRequests.email })
+  return inserted.length === 1
+}
+
+export async function countPendingRequests(db: Db): Promise<number> {
+  const [row] = await db.select({ n: count() }).from(accessRequests).where(eq(accessRequests.status, 'pending'))
+  return row.n
+}
+
+export async function listAccessRequests(db: Db): Promise<AccessRequest[]> {
+  return db.select().from(accessRequests).orderBy(desc(accessRequests.requestedAt))
+}
+
+export async function decideAccessRequest(
+  db: Db, email: string, status: 'approved' | 'rejected', now: number,
+): Promise<boolean> {
+  const updated = await db
+    .update(accessRequests)
+    .set({ status, decidedAt: now })
+    .where(eq(accessRequests.email, email))
+    .returning({ email: accessRequests.email })
+  return updated.length === 1
 }

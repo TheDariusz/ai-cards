@@ -2,8 +2,9 @@ import { Form, Link, useFetcher, useLocation, useRevalidator, useRouteLoaderData
 import { useEffect } from 'react'
 import type { Route } from './+types/home'
 import { requireAuth } from '../lib/session'
-import { createDb, insertPendingCard, getCard, listCards, countDue, completedDays, getNewCards, getSetting } from '../db/repo'
+import { countPendingRequests, createDb, insertPendingCard, getCard, listCards, countDue, completedDays, getNewCards, getSetting } from '../db/repo'
 import { runCardPipeline } from '../lib/pipeline'
+import { OWNER_USER_ID } from '../db/schema'
 import { aiFromEnv } from '../lib/openrouter'
 import { computeStreak, dayKey } from '../lib/streak'
 import type { ThemePref } from '../lib/theme'
@@ -35,6 +36,8 @@ export async function loader({ request, context }: Route.LoaderArgs) {
     completed: days.filter((d) => d.startsWith(today.slice(0, 7))), // this month
     today,
     reminderEnabled: (await getSetting(db, userId, 'reminderEnabled')) !== 'false',
+    // null hides the admin link from everyone but the owner
+    pendingRequests: userId === OWNER_USER_ID ? await countPendingRequests(db) : null,
   }
 }
 
@@ -69,7 +72,7 @@ export async function action({ request, context }: Route.ActionArgs) {
 }
 
 export default function Home({ loaderData, actionData }: Route.ComponentProps) {
-  const { pending, failed, total, due, newCards, streak, completed, today, reminderEnabled } = loaderData
+  const { pending, failed, total, due, newCards, streak, completed, today, reminderEnabled, pendingRequests } = loaderData
   const revalidator = useRevalidator()
   const location = useLocation()
   const theme = useRouteLoaderData<typeof rootLoader>('root')?.theme ?? 'auto'
@@ -132,6 +135,7 @@ export default function Home({ loaderData, actionData }: Route.ComponentProps) {
         <Link to="/cards">Cards ({total})</Link>
         <a href="/export/csv" download>Export CSV</a>
         <a href="/export/json" download>Backup JSON</a>
+        {pendingRequests !== null && <Link to="/admin">Access requests{pendingRequests > 0 && ` (${pendingRequests})`}</Link>}
       </nav>
       <Form method="post" action="/theme" className="theme-switch">
         <input type="hidden" name="redirectTo" value={location.pathname + location.search} />

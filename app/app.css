@@ -56,6 +56,9 @@ form > input:not([type="hidden"]) + button, form > textarea + button { margin-to
 .quick-add > input:not([type="hidden"]) + button { margin-top: 0; }
 .quick-add input { flex: 1; }
 .failed-row { display: flex; gap: 0.5rem; align-items: center; }
+.request-row { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; padding: 0.5rem 0; border-bottom: 1px solid var(--accent-soft); }
+.request-row > span:first-of-type { flex: 1; min-width: 9rem; overflow-wrap: anywhere; }
+.request-actions { display: flex; gap: 0.5rem; align-items: center; margin-left: auto; }
 .stats { display: flex; gap: 0.75rem; margin: 1rem 0; }
 .stat { background: var(--surface); border: 1px solid var(--edge); border-radius: 18px; padding: 0.8rem 1rem; flex: 1; text-align: center; color: var(--muted); }
 .stat b { display: block; font-size: 1.6rem; color: var(--text); }

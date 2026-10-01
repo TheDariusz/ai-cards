@@ -5,6 +5,7 @@ export default [
   route('login', 'routes/login.tsx'),
   route('login/verify', 'routes/login-verify.tsx'),
   route('logout', 'routes/logout.ts'),
+  route('admin', 'routes/admin.tsx'),
   route('cards', 'routes/cards.tsx'),
   route('cards/:id', 'routes/card-detail.tsx'),
   route('review', 'routes/review.tsx'),

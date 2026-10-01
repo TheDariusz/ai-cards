@@ -60,3 +60,11 @@ export const loginTokens = sqliteTable('login_tokens', {
   expiresAt: integer('expires_at').notNull(),
   usedAt: integer('used_at'),
 }, (t) => [index('login_tokens_email_created_idx').on(t.email, t.createdAt)])
+
+// Who may log in besides OWNER_EMAIL: a visitor asks on /login, the owner decides on /admin.
+export const accessRequests = sqliteTable('access_requests', {
+  email: text('email').primaryKey(),
+  status: text('status', { enum: ['pending', 'approved', 'rejected'] }).notNull().default('pending'),
+  requestedAt: integer('requested_at').notNull(),
+  decidedAt: integer('decided_at'),
+})

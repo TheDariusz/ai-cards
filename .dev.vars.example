@@ -1,6 +1,5 @@
 SESSION_SECRET=dev-secret-change-me
 OWNER_EMAIL=you@example.com
-ALLOWED_EMAILS=friend@example.com, other@example.com
 OPENROUTER_API_KEY=sk-or-your-key
 RESEND_API_KEY=re_your-key
 REMINDER_TO=you@example.com
