@@ -12,7 +12,9 @@
 		"TTS_MODEL": "microsoft/mai-voice-2",
 		"TTS_VOICE": "en-US-Harper:MAI-Voice-2",
 		"APP_URL": "https://ai-cards.thedariusz.workers.dev",
-		"REMINDER_FROM": "AI Cards <cards@2doai.app>"
+		"REMINDER_FROM": "AI Cards <cards@2doai.app>",
+		// new cards per Warsaw day for invited users (each costs an LLM + TTS call); the owner is exempt
+		"DAILY_CARD_LIMIT": "20"
 	},
 	// 19:00 Europe/Warsaw is 17:00 UTC in CEST and 18:00 UTC in CET; isReminderHour() drops the other one
 	"triggers": {

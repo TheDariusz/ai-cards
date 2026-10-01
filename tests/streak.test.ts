@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { dayKey, computeStreak, endOfDay } from '../app/lib/streak'
+import { dayKey, computeStreak, endOfDay, startOfDay } from '../app/lib/streak'
 
 describe('dayKey', () => {
   it('formats in Europe/Warsaw', () => {
@@ -38,5 +38,17 @@ describe('endOfDay', () => {
   it('handles the DST switch day and the moment right after midnight', () => {
     // 2026-10-25 has 25 hours in Warsaw; it ends at 23:00 UTC
     expect(endOfDay(Date.UTC(2026, 9, 24, 22, 0))).toBe(Date.UTC(2026, 9, 25, 23, 0) - 1)
+  })
+})
+
+describe('startOfDay', () => {
+  it('returns Warsaw midnight in CEST and CET', () => {
+    expect(startOfDay(Date.UTC(2026, 8, 27, 17, 0))).toBe(Date.UTC(2026, 8, 26, 22, 0))
+    expect(startOfDay(Date.UTC(2026, 0, 15, 18, 0))).toBe(Date.UTC(2026, 0, 14, 23, 0))
+  })
+  it('handles the DST switch day and exact midnight', () => {
+    // 2026-10-25 starts in CEST (22:00 UTC the day before) and ends in CET
+    expect(startOfDay(Date.UTC(2026, 9, 25, 20, 0))).toBe(Date.UTC(2026, 9, 24, 22, 0))
+    expect(startOfDay(Date.UTC(2026, 9, 24, 22, 0))).toBe(Date.UTC(2026, 9, 24, 22, 0))
   })
 })

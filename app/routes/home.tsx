@@ -6,6 +6,7 @@ import { countPendingRequests, createDb, insertPendingCard, getCard, listCards, 
 import { runCardPipeline } from '../lib/pipeline'
 import { OWNER_USER_ID } from '../db/schema'
 import { aiFromEnv } from '../lib/openrouter'
+import { canAddCard, dailyCardLimit } from '../lib/quota'
 import { computeStreak, dayKey } from '../lib/streak'
 import type { ThemePref } from '../lib/theme'
 import type { loader as rootLoader } from '../root'
@@ -51,6 +52,10 @@ export async function action({ request, context }: Route.ActionArgs) {
   if (intent === 'add') {
     const word = String(form.get('word') ?? '').trim()
     if (!word) return { error: 'Type a word first' }
+    const limit = dailyCardLimit(env)
+    if (!(await canAddCard(db, userId, Date.now(), limit))) {
+      return { error: `Daily limit of ${limit} new cards reached — try again tomorrow` }
+    }
     const id = await insertPendingCard(db, userId, word, Date.now())
     context.cloudflare.ctx.waitUntil(
       runCardPipeline({ db, ai: aiFromEnv(env), audio: env.AUDIO }, userId, id, word),

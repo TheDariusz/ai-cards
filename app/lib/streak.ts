@@ -15,6 +15,14 @@ export function endOfDay(epochMs: number): number {
   return t - 1
 }
 
+// First ms of the Warsaw day containing epochMs (same whole-hour argument as endOfDay).
+export function startOfDay(epochMs: number): number {
+  const today = dayKey(epochMs)
+  let t = Math.floor(epochMs / HOUR) * HOUR
+  while (dayKey(t - HOUR) === today) t -= HOUR
+  return t
+}
+
 function prevDay(day: string): string {
   const d = new Date(`${day}T12:00:00Z`)
   d.setUTCDate(d.getUTCDate() - 1)
