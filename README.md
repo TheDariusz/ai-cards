@@ -2,7 +2,7 @@
 
 A personal English-learning flashcard app for a Polish native speaker. Hear an unfamiliar word in a podcast, type just the word — AI builds a complete flashcard in the background: the Polish equivalent, a simple English explanation, an example sentence deliberately pitched slightly above B1 (the level-stretching mechanism), its Polish translation, and natural TTS audio. Review daily with spaced repetition and keep the streak alive.
 
-**Live:** https://ai-cards.thedariusz.workers.dev (single user, password-protected)
+**Live:** https://ai-cards.thedariusz.workers.dev (invite-only, email login link)
 
 ## Features
 
@@ -16,6 +16,7 @@ A personal English-learning flashcard app for a Polish native speaker. Hear an u
 - **Export** — CSV (Anki/spreadsheet-compatible) and JSON full backup, no import by design
 - **Light and dark themes** — calm, study-focused look (Instrument Sans UI, Literata for study sentences); *Auto* follows the phone, or pin *Light* / *Dark* from the home footer — remembered in a cookie and rendered on the server, so there is no wrong-theme flash; review shows a progress bar for today, the streak, and highlights the suggested grade
 - **Email reminder** — at 19:00 Europe/Warsaw, a short Polish email if the day is not done yet and cards are due or new; On/Off and *Send test* on the home screen
+- **Accounts** — log in with a one-time link mailed via Resend (15 min, single use); only addresses in `OWNER_EMAIL`/`ALLOWED_EMAILS` get one, and every user's cards, streak and settings are separate
 - **PWA** — "Add to Home Screen" on iPhone gives a full-screen app; online-only, no service worker
 
 ## Tech stack
@@ -39,9 +40,12 @@ npm run dev                            # http://localhost:5173
 |---|---|
 | `OPENROUTER_API_KEY` | Server-side key for card generation + TTS |
 | `SESSION_SECRET` | Signs the session cookie (`openssl rand -hex 32`) |
-| `APP_PASSWORD_HASH` | SHA-256 hex of the login password (`echo -n "pass" \| shasum -a 256`) |
+| `OWNER_EMAIL` | Your address; its first login takes over the original single-user account and data |
+| `ALLOWED_EMAILS` | Other addresses that may log in, comma-separated (empty = owner only) |
 | `RESEND_API_KEY` | Resend API key for the daily reminder email |
 | `REMINDER_TO` | Recipient of the reminder — any address of yours |
+
+Locally, leave `RESEND_API_KEY` empty to get login links printed to the dev-server terminal instead of mailed.
 
 ### Tests
 
@@ -82,7 +86,8 @@ npx wrangler r2 bucket create ai-cards-audio
 npx wrangler d1 migrations apply ai-cards --remote
 npx wrangler secret put OPENROUTER_API_KEY
 npx wrangler secret put SESSION_SECRET
-npx wrangler secret put APP_PASSWORD_HASH
+npx wrangler secret put OWNER_EMAIL
+npx wrangler secret put ALLOWED_EMAILS
 npx wrangler secret put RESEND_API_KEY
 npx wrangler secret put REMINDER_TO
 ```
@@ -94,6 +99,18 @@ npm run deploy      # builds + deploys to https://ai-cards.thedariusz.workers.de
 ```
 
 New migrations must be applied remotely by hand (`npx wrangler d1 migrations apply ai-cards --remote`) before deploying code that depends on them.
+
+### Login
+
+`/login` asks for an email. An allowed address gets a one-time link to `/login/verify` (valid 15 minutes,
+at most 3 per address per 15 minutes); everything else gets the same "check your inbox" answer and no mail.
+The link opens a page with a **Log in** button rather than logging in on GET, so mail scanners that prefetch
+links can't use up the token. Only a hash of the token is stored (`login_tokens`). Login mail is sent from
+`REMINDER_FROM` through the same Resend key as the reminder. Removing an address from `ALLOWED_EMAILS` stops
+new logins, not existing 90-day sessions — rotate `SESSION_SECRET` to log everyone out.
+
+Moving off the old shared password: set `OWNER_EMAIL` and `ALLOWED_EMAILS` **before** merging; sessions from
+the password era keep working as the owner. Afterwards `npx wrangler secret delete APP_PASSWORD_HASH`.
 
 ### Email reminders
 

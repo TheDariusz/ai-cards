@@ -29,10 +29,14 @@ export function sessionUserId(data: SessionData): number | null {
   return null
 }
 
-export async function requireAuth(request: Request, env: Env): Promise<number> {
+export async function getUserId(request: Request, env: Env): Promise<number | null> {
   const { getSession } = getSessionStorage(env.SESSION_SECRET)
   const session = await getSession(request.headers.get('Cookie'))
-  const userId = sessionUserId({ userId: session.get('userId'), authed: session.get('authed') })
+  return sessionUserId({ userId: session.get('userId'), authed: session.get('authed') })
+}
+
+export async function requireAuth(request: Request, env: Env): Promise<number> {
+  const userId = await getUserId(request, env)
   if (userId === null) throw redirect('/login')
   return userId
 }

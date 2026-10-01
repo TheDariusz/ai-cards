@@ -18,10 +18,12 @@ export function createResendMailer(opts: { apiKey: string; from: string; to: str
   }
 }
 
-export function mailerFromEnv(env: Pick<Env, 'RESEND_API_KEY' | 'REMINDER_FROM' | 'REMINDER_TO'>): Mailer | null {
+// `to` defaults to the reminder recipient; login links pass the address being signed in.
+export function mailerFromEnv(
+  env: Pick<Env, 'RESEND_API_KEY' | 'REMINDER_FROM' | 'REMINDER_TO'>, to: string | undefined = env.REMINDER_TO?.trim(),
+): Mailer | null {
   const apiKey = env.RESEND_API_KEY?.trim()
   const from = env.REMINDER_FROM?.trim()
-  const to = env.REMINDER_TO?.trim()
   if (!apiKey || !from || !to) return null
   return createResendMailer({ apiKey, from, to })
 }

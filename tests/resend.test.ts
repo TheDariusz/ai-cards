@@ -49,6 +49,13 @@ describe('mailerFromEnv', () => {
     expect(mailerFromEnv({ REMINDER_FROM: 'a@x.com' } as any)).toBeNull()
   })
 
+  it('sends to an explicit recipient instead of REMINDER_TO', async () => {
+    const fetchMock = ok()
+    vi.stubGlobal('fetch', fetchMock)
+    await mailerFromEnv(env as any, 'c@z.com')!.send(msg)
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body)).toMatchObject({ to: 'c@z.com' })
+  })
+
   it('builds a Resend mailer from the env', async () => {
     const fetchMock = ok()
     vi.stubGlobal('fetch', fetchMock)

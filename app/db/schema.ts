@@ -51,3 +51,12 @@ export const settings = sqliteTable('settings', {
   key: text('key').notNull(),
   value: text('value').notNull(),
 }, (t) => [primaryKey({ columns: [t.userId, t.key] })])
+
+// Magic-link tokens: only the SHA-256 of the token is stored; single use, short-lived.
+export const loginTokens = sqliteTable('login_tokens', {
+  tokenHash: text('token_hash').primaryKey(),
+  email: text('email').notNull(),
+  createdAt: integer('created_at').notNull(),
+  expiresAt: integer('expires_at').notNull(),
+  usedAt: integer('used_at'),
+}, (t) => [index('login_tokens_email_created_idx').on(t.email, t.createdAt)])

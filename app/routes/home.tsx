@@ -155,6 +155,9 @@ export default function Home({ loaderData, actionData }: Route.ComponentProps) {
       {reminder.state === 'idle' && reminder.data && 'reminderError' in reminder.data && (
         <p className="error">⚠ {reminder.data.reminderError}</p>
       )}
+      <Form method="post" action="/logout">
+        <button type="submit" className="link-button">Log out</button>
+      </Form>
     </main>
   )
 }

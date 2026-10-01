@@ -29,6 +29,13 @@
       "when": 1790857724548,
       "tag": "0003_multi_user",
       "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "6",
+      "when": 1790858327069,
+      "tag": "0004_login_tokens",
+      "breakpoints": true
     }
   ]
 }

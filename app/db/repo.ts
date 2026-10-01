@@ -1,7 +1,7 @@
 import { drizzle } from 'drizzle-orm/d1'
 import { eq, lte, and, desc, asc, count, isNull, isNotNull, gt, min } from 'drizzle-orm'
 import * as schema from './schema'
-import { cards, reviewLog, dayLog, settings, type Card } from './schema'
+import { cards, reviewLog, dayLog, settings, users, loginTokens, OWNER_USER_ID, type Card } from './schema'
 import { newCardSrs, schedule, type Grade } from '../lib/srs'
 import { dayKey } from '../lib/streak'
 import type { CardContent, DecodePart } from '../lib/ai'
@@ -161,4 +161,46 @@ export async function listReviewLog(db: Db, userId: number) {
       .where(eq(cards.userId, userId))
       .orderBy(asc(reviewLog.id))
   ).map((r) => r.log)
+}
+
+export async function createLoginToken(
+  db: Db, tokenHash: string, email: string, now: number, expiresAt: number,
+): Promise<void> {
+  await db.insert(loginTokens).values({ tokenHash, email, createdAt: now, expiresAt })
+}
+
+export async function countLoginTokensSince(db: Db, email: string, since: number): Promise<number> {
+  const [row] = await db
+    .select({ n: count() })
+    .from(loginTokens)
+    .where(and(eq(loginTokens.email, email), gt(loginTokens.createdAt, since)))
+  return row.n
+}
+
+// Marks the token used and returns its email, or null if unknown, expired or already used.
+// The guarded UPDATE makes a double submit (or a replay) lose the race instead of logging in twice.
+export async function consumeLoginToken(db: Db, tokenHash: string, now: number): Promise<string | null> {
+  const [row] = await db
+    .update(loginTokens)
+    .set({ usedAt: now })
+    .where(and(eq(loginTokens.tokenHash, tokenHash), isNull(loginTokens.usedAt), gt(loginTokens.expiresAt, now)))
+    .returning({ email: loginTokens.email })
+  return row?.email ?? null
+}
+
+// The owner's row predates emails; the first login with ownerEmail claims it.
+export async function findOrCreateUser(db: Db, email: string, ownerEmail: string | null, now: number): Promise<number> {
+  const [existing] = await db.select({ id: users.id }).from(users).where(eq(users.email, email))
+  if (existing) return existing.id
+  if (ownerEmail && email === ownerEmail) {
+    const [claimed] = await db
+      .update(users)
+      .set({ email })
+      .where(and(eq(users.id, OWNER_USER_ID), isNull(users.email)))
+      .returning({ id: users.id })
+    if (claimed) return claimed.id
+  }
+  await db.insert(users).values({ email, createdAt: now }).onConflictDoNothing()
+  const [created] = await db.select({ id: users.id }).from(users).where(eq(users.email, email))
+  return created.id
 }
