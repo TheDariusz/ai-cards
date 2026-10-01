@@ -118,7 +118,7 @@ export async function getSetting(db: Db, key: string): Promise<string | null> {
 }
 
 export async function setSetting(db: Db, key: string, value: string): Promise<void> {
-  await db.insert(settings).values({ key, value }).onConflictDoUpdate({ target: settings.key, set: { value } })
+  await db.insert(settings).values({ key, value }).onConflictDoUpdate({ target: [settings.userId, settings.key], set: { value } })
 }
 
 export async function updateCardContent(

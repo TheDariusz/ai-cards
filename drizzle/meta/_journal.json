@@ -22,6 +22,13 @@
       "when": 1790503555050,
       "tag": "0002_steep_doctor_faustus",
       "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "6",
+      "when": 1790857724548,
+      "tag": "0003_multi_user",
+      "breakpoints": true
     }
   ]
 }
