@@ -1,14 +1,13 @@
 import type { Route } from './+types/export'
 import { requireAuth } from '../lib/session'
-import { createDb, listCards, completedDays } from '../db/repo'
-import { reviewLog } from '../db/schema'
+import { createDb, listCards, completedDays, listReviewLog } from '../db/repo'
 import { toCsv } from '../lib/csv'
 
 export async function loader({ request, params, context }: Route.LoaderArgs) {
   const env = context.cloudflare.env
-  await requireAuth(request, env)
+  const userId = await requireAuth(request, env)
   const db = createDb(env.DB)
-  const cards = await listCards(db)
+  const cards = await listCards(db, userId)
 
   if (params.format === 'csv') {
     const rows = [
@@ -29,8 +28,8 @@ export async function loader({ request, params, context }: Route.LoaderArgs) {
     const body = {
       exportedAt: new Date().toISOString(),
       cards,
-      reviewLog: await db.select().from(reviewLog),
-      completedDays: await completedDays(db),
+      reviewLog: await listReviewLog(db, userId),
+      completedDays: await completedDays(db, userId),
     }
     return new Response(JSON.stringify(body, null, 2), {
       headers: {

@@ -9,17 +9,17 @@ const STEPS = ['Decode', 'Listen & understand', 'Without help', 'Speak once']
 
 export async function loader({ request, context }: Route.LoaderArgs) {
   const env = context.cloudflare.env
-  await requireAuth(request, env)
-  const cards = await getNewCards(createDb(env.DB))
+  const userId = await requireAuth(request, env)
+  const cards = await getNewCards(createDb(env.DB), userId)
   return { card: cards[0] ?? null, remaining: cards.length }
 }
 
 export async function action({ request, context }: Route.ActionArgs) {
   const env = context.cloudflare.env
-  await requireAuth(request, env)
+  const userId = await requireAuth(request, env)
   const form = await request.formData()
   if (form.get('intent') !== 'complete') return { ok: false as const }
-  const ok = await completeFirstLearning(createDb(env.DB), Number(form.get('cardId')), Date.now())
+  const ok = await completeFirstLearning(createDb(env.DB), userId, Number(form.get('cardId')), Date.now())
   return { ok }
 }
 

@@ -19,6 +19,7 @@ export async function generateAudio(
 
 export async function runCardPipeline(
   deps: { db: Db; ai: AiProvider; audio: AudioStore },
+  userId: number,
   cardId: number,
   word: string,
   hint?: string,
@@ -26,7 +27,7 @@ export async function runCardPipeline(
   const { db, ai, audio } = deps
   let prev: Awaited<ReturnType<typeof getCard>> = undefined
   try {
-    prev = await getCard(db, cardId)
+    prev = await getCard(db, userId, cardId)
     const content = await ai.generateCard(word, hint)
     let audioKey: string | null = prev?.audioKey ?? null
     try {

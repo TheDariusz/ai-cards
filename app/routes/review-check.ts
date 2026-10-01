@@ -12,11 +12,11 @@ const json = (body: CheckResult, status = 200) => Response.json(body, { status }
 // caller's catch → local-diff fallback, and the /review loader isn't revalidated.
 export async function action({ request, context }: Route.ActionArgs) {
   const env = context.cloudflare.env
-  await requireAuth(request, env)
+  const userId = await requireAuth(request, env)
   const form = await request.formData()
   const typed = String(form.get('typed') ?? '').trim()
   if (!typed) return json({ ok: false }, 400)
-  const card = await getCard(createDb(env.DB), Number(form.get('cardId')))
+  const card = await getCard(createDb(env.DB), userId, Number(form.get('cardId')))
   if (!card || card.status !== 'ready' || !card.sentencePl || !card.sentenceEn) return json({ ok: false }, 404)
   try {
     const evaluation = await aiFromEnv(env).evaluateAnswer({

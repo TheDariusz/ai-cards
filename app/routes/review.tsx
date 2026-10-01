@@ -14,20 +14,20 @@ const KEY_TO_GRADE: Record<string, 'again' | 'good' | 'easy'> = { '1': 'again', 
 
 export async function loader({ request, context }: Route.LoaderArgs) {
   const env = context.cloudflare.env
-  await requireAuth(request, env)
+  const userId = await requireAuth(request, env)
   const db = createDb(env.DB)
   const now = Date.now()
   const today = dayKey(now)
   return {
-    due: await getDueCards(db, now),
-    streak: computeStreak(await completedDays(db), today),
-    doneToday: await countReviewsOn(db, today),
+    due: await getDueCards(db, userId, now),
+    streak: computeStreak(await completedDays(db, userId), today),
+    doneToday: await countReviewsOn(db, userId, today),
   }
 }
 
 export async function action({ request, context }: Route.ActionArgs) {
   const env = context.cloudflare.env
-  await requireAuth(request, env)
+  const userId = await requireAuth(request, env)
   const form = await request.formData()
   const grade = String(form.get('grade'))
   const mode = form.get('mode') === 'write' ? 'write' : 'flip'
@@ -35,6 +35,7 @@ export async function action({ request, context }: Route.ActionArgs) {
   try {
     await applyReview(
       createDb(env.DB),
+      userId,
       Number(form.get('cardId')),
       grade,
       mode,
