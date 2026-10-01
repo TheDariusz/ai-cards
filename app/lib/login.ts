@@ -67,8 +67,9 @@ export type LinkDeps = {
   config: LoginConfig
   send: (to: string, msg: MailMessage) => Promise<void>
 }
-// everything but 'invalid' must look the same to the visitor, so nobody can probe who has access
-export type LinkResult = 'sent' | 'requested' | 'ignored' | 'throttled' | 'invalid'
+// everything but 'invalid' must look the same to the visitor, so nobody can probe who has access;
+// the route logs the result so the owner can tell them apart in Workers Logs
+export type LinkResult = 'sent' | 'requested' | 'ignored' | 'throttled' | 'invalid' | 'no-owner'
 
 export async function requestLoginLink(
   deps: LinkDeps, rawEmail: unknown, origin: string, now: number,
@@ -85,7 +86,8 @@ export async function requestLoginLink(
 
 async function requestAccess(deps: LinkDeps, email: string, origin: string, now: number): Promise<LinkResult> {
   const owner = deps.config.ownerEmail
-  if (!owner || (await countPendingRequests(deps.db)) >= MAX_PENDING_REQUESTS) return 'ignored'
+  if (!owner) return 'no-owner'
+  if ((await countPendingRequests(deps.db)) >= MAX_PENDING_REQUESTS) return 'ignored'
   if (!(await createAccessRequest(deps.db, email, now))) return 'ignored' // already pending or decided
   await deps.send(owner, buildAccessRequestEmail(email, `${origin}/admin`))
   return 'requested'

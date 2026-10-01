@@ -3,7 +3,7 @@ import type { Route } from './+types/login'
 import { getUserId } from '../lib/session'
 import { createDb } from '../db/repo'
 import { mailSenderFromEnv } from '../lib/resend'
-import { loginConfigFromEnv, requestLoginLink } from '../lib/login'
+import { loginConfigFromEnv, normalizeEmail, requestLoginLink } from '../lib/login'
 
 export async function loader({ request, context }: Route.LoaderArgs) {
   if ((await getUserId(request, context.cloudflare.env)) !== null) throw redirect('/')
@@ -14,14 +14,19 @@ export async function action({ request, context }: Route.ActionArgs) {
   const env = context.cloudflare.env
   const form = await request.formData()
   const origin = new URL(request.url).origin
+  const config = loginConfigFromEnv(env)
+  const email = normalizeEmail(form.get('email')) ?? String(form.get('email'))
+  // the visitor sees the same answer either way, so this log is the only place outcomes show up
+  const owner = config.ownerEmail === null ? 'OWNER_EMAIL missing/invalid' : email === config.ownerEmail ? 'is owner' : 'not owner'
   try {
-    const deps = { db: createDb(env.DB), config: loginConfigFromEnv(env), send: mailSenderFromEnv(env, origin) }
+    const deps = { db: createDb(env.DB), config, send: mailSenderFromEnv(env, origin) }
     const result = await requestLoginLink(deps, form.get('email'), origin, Date.now())
+    const log = result === 'no-owner' ? console.error : console.log
+    log(`login: ${result} for ${email} (${owner})`)
     if (result === 'invalid') return { error: 'Enter a valid email address' }
-    if (result === 'throttled' || result === 'requested') console.log(`login: ${result}`)
   } catch (err) {
     // same answer as success, so a failure can't reveal which addresses are on the list
-    console.error('login: sending link failed', err)
+    console.error(`login: sending mail failed for ${email} (${owner})`, err)
   }
   return { sent: true as const }
 }
