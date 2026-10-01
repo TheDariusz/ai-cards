@@ -18,29 +18,29 @@ const isStuck = (c: { status: string; createdAt: number }, now: number) =>
 
 export async function loader({ request, context }: Route.LoaderArgs) {
   const env = context.cloudflare.env
-  await requireAuth(request, env)
+  const userId = await requireAuth(request, env)
   const db = createDb(env.DB)
-  const all = await listCards(db)
+  const all = await listCards(db, userId)
   const now = Date.now()
-  const days = await completedDays(db)
-  const newCards = await getNewCards(db)
+  const days = await completedDays(db, userId)
+  const newCards = await getNewCards(db, userId)
   const today = dayKey(now)
   return {
     pending: all.filter((c) => c.status === 'pending' && !isStuck(c, now)).map((c) => ({ id: c.id, word: c.word })),
     failed: all.filter((c) => c.status === 'failed' || isStuck(c, now)).map((c) => ({ id: c.id, word: c.word })),
     total: all.length,
-    due: await countDue(db, now),
+    due: await countDue(db, userId, now),
     newCards: newCards.map((c) => ({ id: c.id, word: c.word })),
     streak: computeStreak(days, today),
     completed: days.filter((d) => d.startsWith(today.slice(0, 7))), // this month
     today,
-    reminderEnabled: (await getSetting(db, 'reminderEnabled')) !== 'false',
+    reminderEnabled: (await getSetting(db, userId, 'reminderEnabled')) !== 'false',
   }
 }
 
 export async function action({ request, context }: Route.ActionArgs) {
   const env = context.cloudflare.env
-  await requireAuth(request, env)
+  const userId = await requireAuth(request, env)
   const db = createDb(env.DB)
   const form = await request.formData()
   const intent = form.get('intent')
@@ -48,19 +48,19 @@ export async function action({ request, context }: Route.ActionArgs) {
   if (intent === 'add') {
     const word = String(form.get('word') ?? '').trim()
     if (!word) return { error: 'Type a word first' }
-    const id = await insertPendingCard(db, word, Date.now())
+    const id = await insertPendingCard(db, userId, word, Date.now())
     context.cloudflare.ctx.waitUntil(
-      runCardPipeline({ db, ai: aiFromEnv(env), audio: env.AUDIO }, id, word),
+      runCardPipeline({ db, ai: aiFromEnv(env), audio: env.AUDIO }, userId, id, word),
     )
     return { added: word }
   }
 
   if (intent === 'retry') {
     const id = Number(form.get('cardId'))
-    const card = await getCard(db, id)
+    const card = await getCard(db, userId, id)
     if (card && (card.status === 'failed' || isStuck(card, Date.now()))) {
       context.cloudflare.ctx.waitUntil(
-        runCardPipeline({ db, ai: aiFromEnv(env), audio: env.AUDIO }, id, card.word),
+        runCardPipeline({ db, ai: aiFromEnv(env), audio: env.AUDIO }, userId, id, card.word),
       )
     }
     return { retried: id }

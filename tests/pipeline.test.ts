@@ -3,6 +3,7 @@ import { testDb } from './helpers/db'
 import { insertPendingCard, getCard, markReady } from '../app/db/repo'
 import { runCardPipeline } from '../app/lib/pipeline'
 import type { AiProvider } from '../app/lib/ai'
+import { OWNER_USER_ID as U } from '../app/db/schema'
 
 const NOW = 1_750_000_000_000
 const CONTENT = {
@@ -34,10 +35,10 @@ const okAi: AiProvider = {
 describe('runCardPipeline', () => {
   it('happy path: content + audio, card ready', async () => {
     const db = testDb()
-    const id = await insertPendingCard(db, 'reluctant', NOW)
+    const id = await insertPendingCard(db, U, 'reluctant', NOW)
     const audio = fakeAudio()
-    await runCardPipeline({ db, ai: okAi, audio }, id, 'reluctant')
-    const card = await getCard(db, id)
+    await runCardPipeline({ db, ai: okAi, audio }, U, id, 'reluctant')
+    const card = await getCard(db, U, id)
     expect(card!.status).toBe('ready')
     expect(card!.sentenceEn).toBe(CONTENT.sentenceEn)
     expect(card!.audioKey).toMatch(new RegExp(`^audio/${id}-\\d+\\.mp3$`))
@@ -46,32 +47,32 @@ describe('runCardPipeline', () => {
 
   it('content failure marks card failed', async () => {
     const db = testDb()
-    const id = await insertPendingCard(db, 'reluctant', NOW)
+    const id = await insertPendingCard(db, U, 'reluctant', NOW)
     const ai = { ...okAi, generateCard: async () => { throw new Error('boom') } }
-    await runCardPipeline({ db, ai, audio: fakeAudio() }, id, 'reluctant')
-    expect((await getCard(db, id))!.status).toBe('failed')
+    await runCardPipeline({ db, ai, audio: fakeAudio() }, U, id, 'reluctant')
+    expect((await getCard(db, U, id))!.status).toBe('failed')
   })
 
   it('TTS failure on a new card still yields a ready text-only card', async () => {
     const db = testDb()
-    const id = await insertPendingCard(db, 'reluctant', NOW)
+    const id = await insertPendingCard(db, U, 'reluctant', NOW)
     const ai = { ...okAi, tts: async () => { throw new Error('no audio') } }
-    await runCardPipeline({ db, ai, audio: fakeAudio() }, id, 'reluctant')
-    const card = await getCard(db, id)
+    await runCardPipeline({ db, ai, audio: fakeAudio() }, U, id, 'reluctant')
+    const card = await getCard(db, U, id)
     expect(card!.status).toBe('ready')
     expect(card!.audioKey).toBeNull()
   })
 
   it('TTS failure on a ready card with existing audio clears the stale audio key and deletes the old file', async () => {
     const db = testDb()
-    const id = await insertPendingCard(db, 'reluctant', NOW)
+    const id = await insertPendingCard(db, U, 'reluctant', NOW)
     const existingAudioKey = `audio/${id}-1000.mp3`
     await markReady(db, id, CONTENT, existingAudioKey)
     const audio = fakeAudio()
     audio.store.set(existingAudioKey, new Uint8Array([1]).buffer)
     const ai = { ...okAi, tts: async () => { throw new Error('no audio') } }
-    await runCardPipeline({ db, ai, audio }, id, 'reluctant')
-    const card = await getCard(db, id)
+    await runCardPipeline({ db, ai, audio }, U, id, 'reluctant')
+    const card = await getCard(db, U, id)
     expect(card!.status).toBe('ready')
     expect(card!.sentenceEn).toBe(CONTENT.sentenceEn)
     expect(card!.audioKey).toBeNull()
@@ -81,12 +82,12 @@ describe('runCardPipeline', () => {
 
   it('content-generation failure on a ready card keeps it ready with existing content untouched', async () => {
     const db = testDb()
-    const id = await insertPendingCard(db, 'reluctant', NOW)
+    const id = await insertPendingCard(db, U, 'reluctant', NOW)
     const existingAudioKey = `audio/${id}-1000.mp3`
     await markReady(db, id, CONTENT, existingAudioKey)
     const ai = { ...okAi, generateCard: async () => { throw new Error('boom') } }
-    await runCardPipeline({ db, ai, audio: fakeAudio() }, id, 'reluctant')
-    const card = await getCard(db, id)
+    await runCardPipeline({ db, ai, audio: fakeAudio() }, U, id, 'reluctant')
+    const card = await getCard(db, U, id)
     expect(card!.status).toBe('ready')
     expect(card!.sentenceEn).toBe(CONTENT.sentenceEn)
     expect(card!.audioKey).toBe(existingAudioKey)
@@ -94,13 +95,13 @@ describe('runCardPipeline', () => {
 
   it('successful regeneration on a ready card deletes the old audio key and stores the new one', async () => {
     const db = testDb()
-    const id = await insertPendingCard(db, 'reluctant', NOW)
+    const id = await insertPendingCard(db, U, 'reluctant', NOW)
     const existingAudioKey = `audio/${id}-1000.mp3`
     await markReady(db, id, CONTENT, existingAudioKey)
     const audio = fakeAudio()
     audio.store.set(existingAudioKey, new Uint8Array([1]).buffer)
-    await runCardPipeline({ db, ai: okAi, audio }, id, 'reluctant')
-    const card = await getCard(db, id)
+    await runCardPipeline({ db, ai: okAi, audio }, U, id, 'reluctant')
+    const card = await getCard(db, U, id)
     expect(card!.status).toBe('ready')
     expect(card!.audioKey).not.toBe(existingAudioKey)
     expect(card!.audioKey).toMatch(new RegExp(`^audio/${id}-\\d+\\.mp3$`))

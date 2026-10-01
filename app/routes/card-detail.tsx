@@ -8,31 +8,31 @@ import { decodePartsFromText, decodePartsToText } from '../lib/ai'
 
 export async function loader({ request, params, context }: Route.LoaderArgs) {
   const env = context.cloudflare.env
-  await requireAuth(request, env)
-  const card = await getCard(createDb(env.DB), Number(params.id))
+  const userId = await requireAuth(request, env)
+  const card = await getCard(createDb(env.DB), userId, Number(params.id))
   if (!card) throw new Response('Not found', { status: 404 })
   return { card }
 }
 
 export async function action({ request, params, context }: Route.ActionArgs) {
   const env = context.cloudflare.env
-  await requireAuth(request, env)
+  const userId = await requireAuth(request, env)
   const db = createDb(env.DB)
   const id = Number(params.id)
-  const card = await getCard(db, id)
+  const card = await getCard(db, userId, id)
   if (!card) throw new Response('Not found', { status: 404 })
   const form = await request.formData()
   const intent = form.get('intent')
 
   if (intent === 'delete') {
-    await deleteCard(db, id)
+    await deleteCard(db, userId, id)
     if (card.audioKey) context.cloudflare.ctx.waitUntil(env.AUDIO.delete(card.audioKey).catch(() => {}))
     return redirect('/cards')
   }
 
   if (intent === 'regenerate') {
     const hint = String(form.get('hint') ?? '').trim() || undefined
-    await runCardPipeline({ db, ai: aiFromEnv(env), audio: env.AUDIO }, id, card.word, hint)
+    await runCardPipeline({ db, ai: aiFromEnv(env), audio: env.AUDIO }, userId, id, card.word, hint)
     return { regenerated: true }
   }
 
@@ -43,7 +43,7 @@ export async function action({ request, params, context }: Route.ActionArgs) {
       try {
         const newKey = await generateAudio({ ai: aiFromEnv(env), audio: env.AUDIO }, id, sentenceEn)
         if (card.audioKey && card.audioKey !== newKey) await env.AUDIO.delete(card.audioKey).catch(() => {})
-        await setAudioKey(db, id, newKey) // a text-only card gains audio here
+        await setAudioKey(db, userId, id, newKey) // a text-only card gains audio here
       } catch (err) {
         console.error(`audio refresh failed for card ${id}:`, err)
         return { audioRetried: false }
@@ -70,7 +70,7 @@ export async function action({ request, params, context }: Route.ActionArgs) {
       sentencePl: String(form.get('sentencePl') ?? ''),
       decodeParts,
     }
-    await updateCardContent(db, id, content)
+    await updateCardContent(db, userId, id, content)
     const sentenceChanged = content.sentenceEn !== card.sentenceEn
     if (sentenceChanged) {
       // sentence changed → regenerate audio to match (content is already saved)
@@ -78,14 +78,14 @@ export async function action({ request, params, context }: Route.ActionArgs) {
         (async () => {
           const newKey = await generateAudio({ ai: aiFromEnv(env), audio: env.AUDIO }, id, content.sentenceEn)
           if (card.audioKey && card.audioKey !== newKey) await env.AUDIO.delete(card.audioKey).catch(() => {})
-          await setAudioKey(db, id, newKey)
+          await setAudioKey(db, userId, id, newKey)
         })().catch(async (err) => {
           console.error(`audio refresh failed for card ${id}:`, err)
           // TTS failed for the new sentence — the old audio (if any) no longer
           // matches, so clear it and fall back to a text-only card with retry.
           if (card.audioKey) {
             await env.AUDIO.delete(card.audioKey).catch(() => {})
-            await setAudioKey(db, id, null)
+            await setAudioKey(db, userId, id, null)
           }
         }),
       )

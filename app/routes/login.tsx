@@ -1,6 +1,7 @@
 import { Form, redirect, useActionData } from 'react-router'
 import type { Route } from './+types/login'
 import { getSessionStorage, sha256Hex } from '../lib/session'
+import { OWNER_USER_ID } from '../db/schema'
 
 export async function action({ request, context }: Route.ActionArgs) {
   const env = context.cloudflare.env
@@ -11,7 +12,8 @@ export async function action({ request, context }: Route.ActionArgs) {
   }
   const { getSession, commitSession } = getSessionStorage(env.SESSION_SECRET)
   const session = await getSession()
-  session.set('authed', true)
+  // single shared password until per-user login exists: it always signs in the owner
+  session.set('userId', OWNER_USER_ID)
   return redirect('/', { headers: { 'Set-Cookie': await commitSession(session) } })
 }
 

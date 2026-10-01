@@ -5,8 +5,8 @@ import { createDb, listCards } from '../db/repo'
 
 export async function loader({ request, context }: Route.LoaderArgs) {
   const env = context.cloudflare.env
-  await requireAuth(request, env)
-  return { cards: await listCards(createDb(env.DB)) }
+  const userId = await requireAuth(request, env)
+  return { cards: await listCards(createDb(env.DB), userId) }
 }
 
 export default function Cards({ loaderData }: Route.ComponentProps) {

@@ -1,5 +1,6 @@
 import { createRequestHandler, RouterContextProvider } from "react-router";
 import { createDb } from "../app/db/repo";
+import { OWNER_USER_ID } from "../app/db/schema";
 import { mailerFromEnv } from "../app/lib/resend";
 import { isReminderHour } from "../app/lib/reminder";
 import { runReminder } from "../app/lib/reminder-job";
@@ -29,8 +30,9 @@ export default {
       console.log("reminder: RESEND_API_KEY/REMINDER_TO not configured, skipping");
       return;
     }
+    // REMINDER_TO is the owner's address, so only the owner is reminded for now
     ctx.waitUntil(
-      runReminder({ db: createDb(env.DB), mailer, appUrl: env.APP_URL }, t).then(
+      runReminder({ db: createDb(env.DB), mailer, appUrl: env.APP_URL }, OWNER_USER_ID, t).then(
         (result) => console.log(`reminder: ${JSON.stringify(result)}`),
         (err) => console.error(`reminder: send failed ${err instanceof Error ? err.message : String(err)}`),
       ),
