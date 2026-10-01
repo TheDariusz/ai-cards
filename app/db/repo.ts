@@ -1,5 +1,5 @@
 import { drizzle } from 'drizzle-orm/d1'
-import { eq, lte, and, desc, asc, count, isNull, isNotNull, gt, min } from 'drizzle-orm'
+import { eq, lte, and, desc, asc, count, isNull, isNotNull, gt, gte, min } from 'drizzle-orm'
 import * as schema from './schema'
 import { cards, reviewLog, dayLog, settings, users, loginTokens, accessRequests, OWNER_USER_ID, type Card } from './schema'
 import { newCardSrs, schedule, type Grade } from '../lib/srs'
@@ -44,6 +44,14 @@ export async function listCards(db: Db, userId: number): Promise<Card[]> {
 
 const dueCondition = (userId: number, now: number) =>
   and(eq(cards.userId, userId), eq(cards.status, 'ready'), isNotNull(cards.firstLearnedAt), lte(cards.dueAt, now))
+
+export async function countCardsCreatedSince(db: Db, userId: number, since: number): Promise<number> {
+  const [row] = await db
+    .select({ n: count() })
+    .from(cards)
+    .where(and(eq(cards.userId, userId), gte(cards.createdAt, since)))
+  return row.n
+}
 
 export async function getDueCards(db: Db, userId: number, now: number): Promise<Card[]> {
   return db
@@ -240,4 +248,13 @@ export async function decideAccessRequest(
     .where(eq(accessRequests.email, email))
     .returning({ email: accessRequests.email })
   return updated.length === 1
+}
+
+export async function listUsers(db: Db): Promise<{ id: number; email: string | null }[]> {
+  return db.select({ id: users.id, email: users.email }).from(users).orderBy(asc(users.id))
+}
+
+export async function getUserEmail(db: Db, userId: number): Promise<string | null> {
+  const [row] = await db.select({ email: users.email }).from(users).where(eq(users.id, userId))
+  return row?.email ?? null
 }

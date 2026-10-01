@@ -1,4 +1,5 @@
-import { completedDays, countDue, countNew, getSetting, isDayDone, nextDueAt, setSetting, type Db } from '../db/repo'
+import { completedDays, countDue, countNew, getSetting, isDayDone, listUsers, nextDueAt, setSetting, type Db } from '../db/repo'
+import { OWNER_USER_ID } from '../db/schema'
 import type { Mailer } from './mailer'
 import { buildReminder, shouldRemind, type SkipReason } from './reminder'
 import { computeStreak, dayKey, endOfDay } from './streak'
@@ -34,4 +35,35 @@ export async function runReminder(
   await mailer.send(msg)
   if (!force) await setSetting(db, userId, 'reminderLastSent', today)
   return { send: true, due, fresh, streak }
+}
+
+// The user's login email; the owner falls back to REMINDER_TO until their first email login.
+export function reminderRecipient(user: { id: number; email: string | null }, ownerFallback?: string): string | null {
+  return user.email ?? (user.id === OWNER_USER_ID ? ownerFallback?.trim() || null : null)
+}
+
+export type AllRemindersDeps = {
+  db: Db
+  appUrl: string
+  mailerFor: (to: string) => Mailer | null
+  ownerFallback?: string
+}
+
+// One user's failure (bad address, Resend error) never stops the others.
+export async function runAllReminders(deps: AllRemindersDeps, now: number) {
+  const results: { userId: number; result?: ReminderResult; error?: string }[] = []
+  for (const user of await listUsers(deps.db)) {
+    const to = reminderRecipient(user, deps.ownerFallback)
+    const mailer = to ? deps.mailerFor(to) : null
+    if (!mailer) {
+      results.push({ userId: user.id, error: 'no recipient or mailer' })
+      continue
+    }
+    try {
+      results.push({ userId: user.id, result: await runReminder({ db: deps.db, mailer, appUrl: deps.appUrl }, user.id, now) })
+    } catch (err) {
+      results.push({ userId: user.id, error: err instanceof Error ? err.message : String(err) })
+    }
+  }
+  return results
 }

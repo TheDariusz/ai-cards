@@ -1,8 +1,8 @@
 import type { Route } from './+types/reminder'
 import { requireAuth } from '../lib/session'
-import { createDb, setSetting } from '../db/repo'
+import { createDb, getUserEmail, setSetting } from '../db/repo'
 import { mailerFromEnv } from '../lib/resend'
-import { runReminder } from '../lib/reminder-job'
+import { reminderRecipient, runReminder } from '../lib/reminder-job'
 
 export async function action({ request, context }: Route.ActionArgs) {
   const env = context.cloudflare.env
@@ -15,8 +15,9 @@ export async function action({ request, context }: Route.ActionArgs) {
     return { ok: true as const }
   }
   if (intent === 'test') {
-    const mailer = mailerFromEnv(env)
-    if (!mailer) return { reminderError: 'RESEND_API_KEY/REMINDER_TO not configured' }
+    const to = reminderRecipient({ id: userId, email: await getUserEmail(db, userId) }, env.REMINDER_TO)
+    const mailer = to ? mailerFromEnv(env, to) : null
+    if (!mailer) return { reminderError: 'No email address or RESEND_API_KEY/REMINDER_FROM not configured' }
     try {
       await runReminder({ db, mailer, appUrl: env.APP_URL }, userId, Date.now(), { force: true })
       return { reminderSent: true as const }

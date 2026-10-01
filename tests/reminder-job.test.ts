@@ -2,8 +2,8 @@ import { describe, it, expect } from 'vitest'
 import { eq } from 'drizzle-orm'
 import { testDb } from './helpers/db'
 import { insertPendingCard, markReady, completeFirstLearning, getSetting, setSetting, type Db } from '../app/db/repo'
-import { cards, dayLog, OWNER_USER_ID as U } from '../app/db/schema'
-import { runReminder } from '../app/lib/reminder-job'
+import { cards, dayLog, users, OWNER_USER_ID as U } from '../app/db/schema'
+import { reminderRecipient, runAllReminders, runReminder } from '../app/lib/reminder-job'
 import type { MailMessage, Mailer } from '../app/lib/mailer'
 
 const NOW = Date.parse('2026-09-27T17:00:00Z')
@@ -19,10 +19,10 @@ function fakeMailer() {
   return mailer
 }
 
-async function addDueCard(db: Db) {
-  const id = await insertPendingCard(db, U, 'reluctant', NOW - 3 * DAY)
+async function addDueCard(db: Db, userId = U) {
+  const id = await insertPendingCard(db, userId, 'reluctant', NOW - 3 * DAY)
   await markReady(db, id, CONTENT, null)
-  await completeFirstLearning(db, U, id, NOW - 2 * DAY)
+  await completeFirstLearning(db, userId, id, NOW - 2 * DAY)
   await db.update(cards).set({ dueAt: NOW - 1 }).where(eq(cards.id, id))
 }
 
@@ -132,5 +132,49 @@ describe('runReminder', () => {
     expect(mailer.sent).toHaveLength(1)
     expect(mailer.sent[0].subject.startsWith('[Test] ')).toBe(true)
     expect(await getSetting(db, U, 'reminderLastSent')).toBeNull()
+  })
+})
+
+describe('reminderRecipient', () => {
+  it('uses the login email, falling back to REMINDER_TO for the owner only', () => {
+    expect(reminderRecipient({ id: 2, email: 'f@x.dev' }, 'o@x.dev')).toBe('f@x.dev')
+    expect(reminderRecipient({ id: U, email: null }, ' o@x.dev ')).toBe('o@x.dev')
+    expect(reminderRecipient({ id: U, email: null })).toBeNull()
+    expect(reminderRecipient({ id: 2, email: null }, 'o@x.dev')).toBeNull()
+  })
+})
+
+describe('runAllReminders', () => {
+  it('reminds each user at their own address about their own cards', async () => {
+    const db = testDb()
+    const [friend] = await db.insert(users).values({ email: 'f@x.dev', createdAt: 0 }).returning()
+    const [idle] = await db.insert(users).values({ email: 'idle@x.dev', createdAt: 0 }).returning()
+    await addDueCard(db, U)
+    await addDueCard(db, friend.id)
+    await addDueCard(db, friend.id)
+    const inbox = new Map<string, MailMessage[]>()
+    const mailerFor = (to: string): Mailer => ({ send: async (m) => { inbox.set(to, [...(inbox.get(to) ?? []), m]) } })
+
+    const results = await runAllReminders({ db, appUrl: 'https://x.dev', mailerFor, ownerFallback: 'o@x.dev' }, NOW)
+
+    expect(inbox.get('o@x.dev')?.[0].subject).toBe('1 karta do powtórki')
+    expect(inbox.get('f@x.dev')?.[0].subject).toBe('2 karty do powtórki')
+    expect(inbox.has('idle@x.dev')).toBe(false)
+    expect(results.find((r) => r.userId === idle.id)?.result).toEqual({ send: false, reason: 'nothing-to-do' })
+    expect(await getSetting(db, friend.id, 'reminderLastSent')).toBe('2026-09-27')
+  })
+
+  it('one failing address does not stop the others', async () => {
+    const db = testDb()
+    const [friend] = await db.insert(users).values({ email: 'f@x.dev', createdAt: 0 }).returning()
+    await addDueCard(db, U)
+    await addDueCard(db, friend.id)
+    const sent: string[] = []
+    const mailerFor = (to: string): Mailer => ({
+      send: async () => { if (to === 'o@x.dev') throw new Error('Resend 422'); sent.push(to) },
+    })
+    const results = await runAllReminders({ db, appUrl: 'https://x.dev', mailerFor, ownerFallback: 'o@x.dev' }, NOW)
+    expect(results.find((r) => r.userId === U)?.error).toBe('Resend 422')
+    expect(sent).toEqual(['f@x.dev'])
   })
 })

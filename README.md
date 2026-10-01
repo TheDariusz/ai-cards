@@ -15,8 +15,9 @@ A personal English-learning flashcard app for a Polish native speaker. Hear an u
 - **Card management** — edit any field, regenerate with a hint ("make it shorter", "business context"), delete; SRS progress survives edits
 - **Export** — CSV (Anki/spreadsheet-compatible) and JSON full backup, no import by design
 - **Light and dark themes** — calm, study-focused look (Instrument Sans UI, Literata for study sentences); *Auto* follows the phone, or pin *Light* / *Dark* from the home footer — remembered in a cookie and rendered on the server, so there is no wrong-theme flash; review shows a progress bar for today, the streak, and highlights the suggested grade
-- **Email reminder** — at 19:00 Europe/Warsaw, a short Polish email if the day is not done yet and cards are due or new; On/Off and *Send test* on the home screen
+- **Email reminder** — at 19:00 Europe/Warsaw, a short Polish email to each user whose day is not done yet and cards are due or new; On/Off and *Send test* on the home screen
 - **Accounts** — log in with a one-time link mailed via Resend (15 min, single use); anyone else asks for access on the login page and the owner approves them under *Access requests*; every user's cards, streak and settings are separate
+- **Daily card limit** — invited users can add `DAILY_CARD_LIMIT` new cards per Warsaw day (default 20, in `wrangler.jsonc`), since each card costs an LLM + TTS call on the owner's key; the owner is exempt
 - **PWA** — "Add to Home Screen" on iPhone gives a full-screen app; online-only, no service worker
 
 ## Tech stack
@@ -42,7 +43,7 @@ npm run dev                            # http://localhost:5173
 | `SESSION_SECRET` | Signs the session cookie (`openssl rand -hex 32`) |
 | `OWNER_EMAIL` | Your address; its first login takes over the original single-user account and data |
 | `RESEND_API_KEY` | Resend API key for the daily reminder email |
-| `REMINDER_TO` | Recipient of the reminder — any address of yours |
+| `REMINDER_TO` | Optional: the owner's reminder address until their first email login (everyone else gets reminders at their login email) |
 
 Locally, leave `RESEND_API_KEY` empty to get login links printed to the dev-server terminal instead of mailed.
 
@@ -118,7 +119,7 @@ working as the owner. Afterwards `npx wrangler secret delete APP_PASSWORD_HASH`.
 ### Email reminders
 
 Two Cron Triggers (`0 17 * * *` and `0 18 * * *` UTC) run `scheduled` in `workers/app.ts`; only the one that is
-19:00 in Warsaw (CEST or CET) goes on. It emails once a day when today has no completed review day and there are
+19:00 in Warsaw (CEST or CET) goes on. It emails every user, at their login email (the owner falls back to `REMINDER_TO` until their first email login), once a day when their today has no completed review day and there are
 due or new cards, unless switched off on the home screen. Mail goes through [Resend](https://resend.com)'s
 free plan (3,000/month, 100/day) from `AI Cards <cards@2doai.app>` (`REMINDER_FROM` in `wrangler.jsonc`), an
 address in the `2doai.app` domain verified in Resend, so `REMINDER_TO` can be any address of yours.
