@@ -15,7 +15,11 @@ export async function action({ request, context }: Route.ActionArgs) {
   const userId = await verifyLoginLink(
     { db: createDb(env.DB), config: loginConfigFromEnv(env) }, form.get('token'), Date.now(),
   )
-  if (userId === null) return { error: 'This link has expired or was already used.' }
+  if (userId === null) {
+    console.log('login/verify: rejected (expired, used or no longer allowed)')
+    return { error: 'This link has expired or was already used.' }
+  }
+  console.log(`login/verify: signed in user ${userId}`)
   const { getSession, commitSession } = getSessionStorage(env.SESSION_SECRET)
   const session = await getSession()
   session.set('userId', userId)
@@ -35,8 +39,9 @@ export default function LoginVerify({ loaderData }: Route.ComponentProps) {
         </>
       ) : (
         <Form method="post">
+          <p>One more step: tap the button to finish logging in on this device.</p>
           <input type="hidden" name="token" value={loaderData.token} />
-          <button type="submit" disabled={busy} autoFocus>{busy ? 'Logging in…' : 'Log in'}</button>
+          <button type="submit" disabled={busy} autoFocus>{busy ? 'Logging in…' : 'Finish logging in'}</button>
         </Form>
       )}
     </main>
