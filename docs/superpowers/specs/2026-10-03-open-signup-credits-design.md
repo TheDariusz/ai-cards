@@ -70,7 +70,8 @@ records nothing.
 - **TTS** (`/audio/speech`): the response is raw audio with no usage body. TTS is priced per input
   character, so cost = `characters × TTS_USD_PER_MILLION_CHARS` (var in `wrangler.jsonc`), rounded up.
   The `X-Generation-Id` header is stored so the cost can be checked against OpenRouter's dashboard later.
-  The actual MAI-Voice price must be read from OpenRouter's model page before release.
+  `microsoft/mai-voice-2` costs **$22 / 1M characters**: a typical ~70-character sentence is ≈ $0.0015,
+  or about 1.5 credits.
 
 `aiFromEnv(env, onUsage)` passes it through. Call sites build it with `usageRecorder(db, userId)` from a new
 `app/lib/credits.ts`. The adapter awaits the insert before returning, so it finishes inside whichever request or `waitUntil`
@@ -182,7 +183,7 @@ Every server action re-checks `hasCredits`. The UI hiding is a convenience, not 
 
 ## Config (`wrangler.jsonc` vars)
 
-`STARTER_CREDITS: "500"`, `MAX_SIGNUPS_PER_DAY: "20"`, `TTS_USD_PER_MILLION_CHARS: "<from OpenRouter model page>"`.
+`STARTER_CREDITS: "500"`, `MAX_SIGNUPS_PER_DAY: "20"`, `TTS_USD_PER_MILLION_CHARS: "22"` (microsoft/mai-voice-2).
 `DAILY_CARD_LIMIT` stays.
 
 ## Testing (Vitest, no UI tests)
