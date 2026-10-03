@@ -13,8 +13,14 @@
 		"TTS_VOICE": "en-US-Harper:MAI-Voice-2",
 		"APP_URL": "https://ai-cards.thedariusz.workers.dev",
 		"REMINDER_FROM": "AI Cards <cards@2doai.app>",
-		// new cards per Warsaw day for invited users (each costs an LLM + TTS call); the owner is exempt
-		"DAILY_CARD_LIMIT": "20"
+		// new cards per Warsaw day per user, a backstop next to credits; the owner is exempt
+		"DAILY_CARD_LIMIT": "20",
+		// credits every new account starts with (1 credit = $0.001 of OpenRouter cost); the owner is never limited
+		"STARTER_CREDITS": "500",
+		// new accounts per Warsaw day; beyond it unknown addresses get no link
+		"MAX_SIGNUPS_PER_DAY": "20",
+		// TTS is billed per input character; microsoft/mai-voice-2 costs $22 per 1M
+		"TTS_USD_PER_MILLION_CHARS": "22"
 	},
 	// 19:00 Europe/Warsaw is 17:00 UTC in CEST and 18:00 UTC in CET; isReminderHour() drops the other one
 	"triggers": {

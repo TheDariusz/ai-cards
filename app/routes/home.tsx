@@ -2,11 +2,12 @@ import { Form, Link, useFetcher, useLocation, useRevalidator, useRouteLoaderData
 import { useEffect } from 'react'
 import type { Route } from './+types/home'
 import { requireAuth } from '../lib/session'
-import { countPendingRequests, createDb, insertPendingCard, getCard, listCards, countDue, completedDays, getNewCards, getSetting } from '../db/repo'
+import { createDb, insertPendingCard, getCard, listCards, countDue, completedDays, getNewCards, getSetting, getBalance } from '../db/repo'
 import { runCardPipeline } from '../lib/pipeline'
 import { OWNER_USER_ID } from '../db/schema'
 import { aiFromEnv } from '../lib/openrouter'
 import { canAddCard, dailyCardLimit } from '../lib/quota'
+import { hasCredits, NO_CREDITS_MESSAGE, toCredits, usageRecorder } from '../lib/credits'
 import { computeStreak, dayKey } from '../lib/streak'
 import type { ThemePref } from '../lib/theme'
 import type { loader as rootLoader } from '../root'
@@ -27,6 +28,8 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   const days = await completedDays(db, userId)
   const newCards = await getNewCards(db, userId)
   const today = dayKey(now)
+  const balance = await getBalance(db, userId)
+  const isOwner = userId === OWNER_USER_ID
   return {
     pending: all.filter((c) => c.status === 'pending' && !isStuck(c, now)).map((c) => ({ id: c.id, word: c.word })),
     failed: all.filter((c) => c.status === 'failed' || isStuck(c, now)).map((c) => ({ id: c.id, word: c.word })),
@@ -37,8 +40,9 @@ export async function loader({ request, context }: Route.LoaderArgs) {
     completed: days.filter((d) => d.startsWith(today.slice(0, 7))), // this month
     today,
     reminderEnabled: (await getSetting(db, userId, 'reminderEnabled')) !== 'false',
-    // null hides the admin link from everyone but the owner
-    pendingRequests: userId === OWNER_USER_ID ? await countPendingRequests(db) : null,
+    isOwner,
+    credits: { left: toCredits(balance.balanceMicros), granted: toCredits(balance.grantedMicros), spentMicros: balance.spentMicros },
+    outOfCredits: !isOwner && balance.balanceMicros <= 0,
   }
 }
 
@@ -52,13 +56,14 @@ export async function action({ request, context }: Route.ActionArgs) {
   if (intent === 'add') {
     const word = String(form.get('word') ?? '').trim()
     if (!word) return { error: 'Type a word first' }
+    if (!(await hasCredits(db, userId))) return { error: NO_CREDITS_MESSAGE }
     const limit = dailyCardLimit(env)
     if (!(await canAddCard(db, userId, Date.now(), limit))) {
       return { error: `Daily limit of ${limit} new cards reached — try again tomorrow` }
     }
     const id = await insertPendingCard(db, userId, word, Date.now())
     context.cloudflare.ctx.waitUntil(
-      runCardPipeline({ db, ai: aiFromEnv(env), audio: env.AUDIO }, userId, id, word),
+      runCardPipeline({ db, ai: aiFromEnv(env, usageRecorder(db, userId)), audio: env.AUDIO }, userId, id, word),
     )
     return { added: word }
   }
@@ -66,9 +71,10 @@ export async function action({ request, context }: Route.ActionArgs) {
   if (intent === 'retry') {
     const id = Number(form.get('cardId'))
     const card = await getCard(db, userId, id)
+    if (!(await hasCredits(db, userId))) return { error: NO_CREDITS_MESSAGE }
     if (card && (card.status === 'failed' || isStuck(card, Date.now()))) {
       context.cloudflare.ctx.waitUntil(
-        runCardPipeline({ db, ai: aiFromEnv(env), audio: env.AUDIO }, userId, id, card.word),
+        runCardPipeline({ db, ai: aiFromEnv(env, usageRecorder(db, userId)), audio: env.AUDIO }, userId, id, card.word),
       )
     }
     return { retried: id }
@@ -77,7 +83,7 @@ export async function action({ request, context }: Route.ActionArgs) {
 }
 
 export default function Home({ loaderData, actionData }: Route.ComponentProps) {
-  const { pending, failed, total, due, newCards, streak, completed, today, reminderEnabled, pendingRequests } = loaderData
+  const { pending, failed, total, due, newCards, streak, completed, today, reminderEnabled, isOwner, credits, outOfCredits } = loaderData
   const revalidator = useRevalidator()
   const location = useLocation()
   const theme = useRouteLoaderData<typeof rootLoader>('root')?.theme ?? 'auto'
@@ -94,11 +100,18 @@ export default function Home({ loaderData, actionData }: Route.ComponentProps) {
   return (
     <main className="page">
       <h1 className="home-head">AI Cards {streak > 0 && <span className="streak-chip">🔥 {streak}</span>}</h1>
-      <Form method="post" className="quick-add">
-        <input type="hidden" name="intent" value="add" />
-        <input name="word" placeholder="New word…" autoComplete="off" autoFocus />
-        <button type="submit">Add</button>
-      </Form>
+      {outOfCredits ? (
+        <p className="error">{NO_CREDITS_MESSAGE}</p>
+      ) : (
+        <Form method="post" className="quick-add">
+          <input type="hidden" name="intent" value="add" />
+          <input name="word" placeholder="New word…" autoComplete="off" autoFocus />
+          <button type="submit">Add</button>
+        </Form>
+      )}
+      <p className="muted credits">
+        {isOwner ? `Spent: $${(credits.spentMicros / 1e6).toFixed(2)}` : `Credits: ${credits.left} / ${credits.granted}`}
+      </p>
       {actionData && 'added' in actionData && <p className="ok">Added “{actionData.added}” — generating…</p>}
       {actionData && 'error' in actionData && <p className="error">{actionData.error}</p>}
 
@@ -110,7 +123,7 @@ export default function Home({ loaderData, actionData }: Route.ComponentProps) {
           <input type="hidden" name="intent" value="retry" />
           <input type="hidden" name="cardId" value={c.id} />
           <span className="error">“{c.word}” failed</span>
-          <button type="submit">Retry</button>
+          {!outOfCredits && <button type="submit">Retry</button>}
         </Form>
       ))}
 
@@ -140,7 +153,7 @@ export default function Home({ loaderData, actionData }: Route.ComponentProps) {
         <Link to="/cards">Cards ({total})</Link>
         <a href="/export/csv" download>Export CSV</a>
         <a href="/export/json" download>Backup JSON</a>
-        {pendingRequests !== null && <Link to="/admin">Access requests{pendingRequests > 0 && ` (${pendingRequests})`}</Link>}
+        {isOwner && <Link to="/admin">Users</Link>}
       </nav>
       <Form method="post" action="/theme" className="theme-switch">
         <input type="hidden" name="redirectTo" value={location.pathname + location.search} />

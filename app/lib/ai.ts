@@ -53,6 +53,19 @@ export function validateAnswerEvaluation(value: unknown, typed: string): AnswerE
   }
 }
 
+export type UsageKind = 'card' | 'evaluate' | 'tts'
+
+// One billed OpenRouter response; costMicros is USD × 1e6 (1 credit = 1,000).
+export interface UsageEvent {
+  kind: UsageKind
+  model: string
+  costMicros: number
+  promptTokens: number | null
+  completionTokens: number | null
+  characters: number | null
+  generationId: string | null
+}
+
 export interface AiProvider {
   generateCard(word: string, hint?: string): Promise<CardContent>
   evaluateAnswer(input: AnswerToEvaluate): Promise<AnswerEvaluation>

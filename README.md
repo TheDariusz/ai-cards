@@ -2,7 +2,7 @@
 
 A personal English-learning flashcard app for a Polish native speaker. Hear an unfamiliar word in a podcast, type just the word — AI builds a complete flashcard in the background: the Polish equivalent, a simple English explanation, an example sentence deliberately pitched slightly above B1 (the level-stretching mechanism), its Polish translation, and natural TTS audio. Review daily with spaced repetition and keep the streak alive.
 
-**Live:** https://ai-cards.thedariusz.workers.dev (invite-only, email login link)
+**Live:** https://ai-cards.thedariusz.workers.dev (open sign-up with a starter credit pool, email login link)
 
 ## Features
 
@@ -16,8 +16,9 @@ A personal English-learning flashcard app for a Polish native speaker. Hear an u
 - **Export** — CSV (Anki/spreadsheet-compatible) and JSON full backup, no import by design
 - **Light and dark themes** — calm, study-focused look (Instrument Sans UI, Literata for study sentences); *Auto* follows the phone, or pin *Light* / *Dark* from the home footer — remembered in a cookie and rendered on the server, so there is no wrong-theme flash; review shows a progress bar for today, the streak, and highlights the suggested grade
 - **Email reminder** — at 19:00 Europe/Warsaw, a short Polish email to each user whose day is not done yet and cards are due or new; On/Off and *Send test* on the home screen
-- **Accounts** — log in with a one-time link mailed via Resend (15 min, single use); anyone else asks for access on the login page and the owner approves them under *Access requests*; every user's cards, streak and settings are separate
-- **Daily card limit** — invited users can add `DAILY_CARD_LIMIT` new cards per Warsaw day (default 20, in `wrangler.jsonc`), since each card costs an LLM + TTS call on the owner's key; the owner is exempt
+- **Accounts** — log in or sign up with a one-time link mailed via Resend (15 min, single use); every user's cards, streak and settings are separate
+- **Credits** — every new account gets `STARTER_CREDITS` (default 500; 1 credit = $0.001). Every OpenRouter call made for a user (new card, retry, regenerate, audio, answer check) is charged at its real cost and logged in `usage_log`; at zero, adding cards and AI features stop while learning and reviews keep working. The owner is never limited and tops users up or blocks them on `/admin`
+- **Daily card limit** — non-owners can add `DAILY_CARD_LIMIT` new cards per Warsaw day (default 20, in `wrangler.jsonc`), a backstop next to credits
 - **PWA** — "Add to Home Screen" on iPhone gives a full-screen app; online-only, no service worker
 
 ## Tech stack
@@ -101,17 +102,20 @@ New migrations must be applied remotely by hand (`npx wrangler d1 migrations app
 
 ### Login
 
-`/login` asks for an email. `OWNER_EMAIL` and approved addresses get a one-time link to `/login/verify` (valid
-15 minutes, at most 3 per address per 15 minutes). Any other address files an access request and the owner gets
-an email; the visitor sees the same message either way, so nobody can probe who has an account. The owner
-approves, rejects or revokes on `/admin` (linked from the home footer as *Access requests*), and an approved
-person is emailed a login link to the app. Repeat requests don't re-notify, and new requests are dropped while
-20 are still undecided.
+`/login` asks for an email and mails a one-time link to `/login/verify` (valid 15 minutes, at most 3 per address
+per 15 minutes). Following the link for a new address creates the account with the starter credit pool. At most
+`MAX_SIGNUPS_PER_DAY` (default 20) accounts are created per Warsaw day; beyond that, and for blocked addresses, no
+link is sent, but the visitor sees the same message either way. The owner sees every user's spend and balance on
+`/admin` (*Users* in the home footer), and can add credits or block and unblock a user. Blocking also ends the
+user's existing session.
+
+Chat calls are charged from OpenRouter's `usage.cost`; if it is missing, a 2¢ fallback is charged and logged. TTS
+returns no cost, so it is charged per character at `TTS_USD_PER_MILLION_CHARS` (22 for `microsoft/mai-voice-2`);
+the `X-Generation-Id` is stored to reconcile with OpenRouter.
 
 The link opens a page with a **Log in** button rather than logging in on GET, so mail scanners that prefetch
 links can't use up the token. Only a hash of the token is stored (`login_tokens`). All login mail is sent from
-`REMINDER_FROM` through the same Resend key as the reminder. Revoking stops new logins, not existing 90-day
-sessions — rotate `SESSION_SECRET` to log everyone out.
+`REMINDER_FROM` through the same Resend key as the reminder. Rotate `SESSION_SECRET` to log everyone out.
 
 Moving off the old shared password: set `OWNER_EMAIL` **before** merging; sessions from the password era keep
 working as the owner. Afterwards `npx wrangler secret delete APP_PASSWORD_HASH`.

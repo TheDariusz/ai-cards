@@ -1,10 +1,10 @@
 import { drizzle } from 'drizzle-orm/d1'
-import { eq, lte, and, desc, asc, count, isNull, isNotNull, gt, gte, min } from 'drizzle-orm'
+import { eq, lte, and, desc, asc, count, isNull, isNotNull, gt, gte, min, sum, ne } from 'drizzle-orm'
 import * as schema from './schema'
-import { cards, reviewLog, dayLog, settings, users, loginTokens, accessRequests, OWNER_USER_ID, type Card } from './schema'
+import { cards, reviewLog, dayLog, settings, users, loginTokens, usageLog, creditGrants, OWNER_USER_ID, type Card } from './schema'
 import { newCardSrs, schedule, type Grade } from '../lib/srs'
 import { dayKey } from '../lib/streak'
-import type { CardContent, DecodePart } from '../lib/ai'
+import type { CardContent, DecodePart, UsageEvent } from '../lib/ai'
 
 export function createDb(d1: D1Database) {
   return drizzle(d1, { schema })
@@ -197,7 +197,10 @@ export async function consumeLoginToken(db: Db, tokenHash: string, now: number):
 }
 
 // The owner's row predates emails; the first login with ownerEmail claims it.
-export async function findOrCreateUser(db: Db, email: string, ownerEmail: string | null, now: number): Promise<number> {
+// A brand-new account starts with `starterMicros` of credit.
+export async function findOrCreateUser(
+  db: Db, email: string, ownerEmail: string | null, now: number, starterMicros: number,
+): Promise<number> {
   const [existing] = await db.select({ id: users.id }).from(users).where(eq(users.email, email))
   if (existing) return existing.id
   if (ownerEmail && email === ownerEmail) {
@@ -208,50 +211,78 @@ export async function findOrCreateUser(db: Db, email: string, ownerEmail: string
       .returning({ id: users.id })
     if (claimed) return claimed.id
   }
-  await db.insert(users).values({ email, createdAt: now }).onConflictDoNothing()
-  const [created] = await db.select({ id: users.id }).from(users).where(eq(users.email, email))
-  return created.id
+  const inserted = await db.insert(users).values({ email, createdAt: now }).onConflictDoNothing().returning({ id: users.id })
+  if (inserted.length === 0) { // lost a race with a parallel first login; that one granted the pool
+    const [created] = await db.select({ id: users.id }).from(users).where(eq(users.email, email))
+    return created.id
+  }
+  const id = inserted[0].id
+  if (id !== OWNER_USER_ID) await grantCredits(db, id, starterMicros, 'starter', now)
+  return id
 }
 
-export type AccessRequest = typeof accessRequests.$inferSelect
-
-export async function isApproved(db: Db, email: string): Promise<boolean> {
-  const [row] = await db.select({ status: accessRequests.status }).from(accessRequests).where(eq(accessRequests.email, email))
-  return row?.status === 'approved'
+export async function isEmailBlocked(db: Db, email: string): Promise<boolean> {
+  const [row] = await db.select({ blockedAt: users.blockedAt }).from(users).where(eq(users.email, email))
+  return row?.blockedAt != null
 }
 
-// true only for a brand-new request: asking again (or after a rejection) changes nothing
-export async function createAccessRequest(db: Db, email: string, now: number): Promise<boolean> {
-  const inserted = await db
-    .insert(accessRequests)
-    .values({ email, status: 'pending', requestedAt: now })
-    .onConflictDoNothing()
-    .returning({ email: accessRequests.email })
-  return inserted.length === 1
+export async function isUserBlocked(db: Db, userId: number): Promise<boolean> {
+  const [row] = await db.select({ blockedAt: users.blockedAt }).from(users).where(eq(users.id, userId))
+  return row?.blockedAt != null
 }
 
-export async function countPendingRequests(db: Db): Promise<number> {
-  const [row] = await db.select({ n: count() }).from(accessRequests).where(eq(accessRequests.status, 'pending'))
-  return row.n
+export async function hasAccount(db: Db, email: string): Promise<boolean> {
+  const [row] = await db.select({ id: users.id }).from(users).where(eq(users.email, email))
+  return row !== undefined
 }
 
-export async function listAccessRequests(db: Db): Promise<AccessRequest[]> {
-  return db.select().from(accessRequests).orderBy(desc(accessRequests.requestedAt))
-}
-
-export async function decideAccessRequest(
-  db: Db, email: string, status: 'approved' | 'rejected', now: number,
-): Promise<boolean> {
-  const updated = await db
-    .update(accessRequests)
-    .set({ status, decidedAt: now })
-    .where(eq(accessRequests.email, email))
-    .returning({ email: accessRequests.email })
+// The owner can't be blocked; returns false for the owner or an unknown id.
+export async function setBlocked(db: Db, userId: number, blockedAt: number | null): Promise<boolean> {
+  if (userId === OWNER_USER_ID) return false
+  const updated = await db.update(users).set({ blockedAt }).where(eq(users.id, userId)).returning({ id: users.id })
   return updated.length === 1
 }
 
+// Sign-ups only: the owner's row isn't one.
+export async function countUsersCreatedSince(db: Db, since: number): Promise<number> {
+  const [row] = await db.select({ n: count() }).from(users).where(and(gte(users.createdAt, since), ne(users.id, OWNER_USER_ID)))
+  return row.n
+}
+
+export async function recordUsage(db: Db, userId: number, event: UsageEvent, now: number): Promise<void> {
+  await db.insert(usageLog).values({ userId, createdAt: now, ...event })
+}
+
+export async function grantCredits(
+  db: Db, userId: number, amountMicros: number, reason: 'starter' | 'admin' | 'purchase', now: number,
+): Promise<void> {
+  await db.insert(creditGrants).values({ userId, createdAt: now, amountMicros, reason })
+}
+
+export type Balance = { grantedMicros: number; spentMicros: number; balanceMicros: number }
+
+// Computed on read so there is no counter to drift; per-user scans are fine at this scale.
+export async function getBalance(db: Db, userId: number): Promise<Balance> {
+  const [granted] = await db.select({ n: sum(creditGrants.amountMicros) }).from(creditGrants).where(eq(creditGrants.userId, userId))
+  const [spent] = await db.select({ n: sum(usageLog.costMicros) }).from(usageLog).where(eq(usageLog.userId, userId))
+  const grantedMicros = Number(granted?.n ?? 0)
+  const spentMicros = Number(spent?.n ?? 0)
+  return { grantedMicros, spentMicros, balanceMicros: grantedMicros - spentMicros }
+}
+
+export type UserWithUsage = { id: number; email: string | null; createdAt: number; blockedAt: number | null } & Balance
+
+export async function listUsersWithUsage(db: Db): Promise<UserWithUsage[]> {
+  const rows = await db
+    .select({ id: users.id, email: users.email, createdAt: users.createdAt, blockedAt: users.blockedAt })
+    .from(users)
+    .orderBy(desc(users.createdAt))
+  return Promise.all(rows.map(async (u) => ({ ...u, ...(await getBalance(db, u.id)) })))
+}
+
+// Reminder recipients: blocked users get no mail.
 export async function listUsers(db: Db): Promise<{ id: number; email: string | null }[]> {
-  return db.select({ id: users.id, email: users.email }).from(users).orderBy(asc(users.id))
+  return db.select({ id: users.id, email: users.email }).from(users).where(isNull(users.blockedAt)).orderBy(asc(users.id))
 }
 
 export async function getUserEmail(db: Db, userId: number): Promise<string | null> {

@@ -46,3 +46,37 @@ describe('multi-user migration', () => {
       .toEqual([{ user_id: 1, key: 'reminderEnabled', value: 'false' }])
   })
 })
+
+describe('open sign-up + credits migrations', () => {
+  it('blocks rejected addresses, grants existing users the starter pool, drops access_requests', () => {
+    const sqlite = new Database(':memory:')
+    const files = ['0000_init', '0001_great_professor_monster', '0002_steep_doctor_faustus', '0003_multi_user', '0004_login_tokens', '0005_access_requests']
+    for (const f of files) sqlite.exec(readFileSync(`drizzle/${f}.sql`, 'utf8'))
+    sqlite.exec(`
+      UPDATE users SET email = 'owner@example.com' WHERE id = 1;
+      INSERT INTO users (email, created_at) VALUES ('friend@example.com', 10), ('revoked@example.com', 11);
+      INSERT INTO access_requests (email, status, requested_at, decided_at) VALUES
+        ('friend@example.com', 'approved', 1, 2),
+        ('revoked@example.com', 'rejected', 1, 5),
+        ('spammer@example.com', 'rejected', 3, 4),
+        ('waiting@example.com', 'pending', 6, NULL);
+    `)
+
+    sqlite.exec(readFileSync('drizzle/0006_open_signup.sql', 'utf8'))
+    sqlite.exec(readFileSync('drizzle/0007_credits.sql', 'utf8'))
+
+    const blocked = sqlite.prepare('SELECT email, blocked_at FROM users ORDER BY id').all()
+    expect(blocked).toEqual([
+      { email: 'owner@example.com', blocked_at: null },
+      { email: 'friend@example.com', blocked_at: null },
+      { email: 'revoked@example.com', blocked_at: 5 },
+      { email: 'spammer@example.com', blocked_at: 4 },
+    ])
+    const grants = sqlite.prepare(`
+      SELECT u.email, g.amount_micros, g.reason FROM credit_grants g JOIN users u ON u.id = g.user_id ORDER BY u.id
+    `).all()
+    expect(grants.map((g: any) => g.email)).toEqual(['friend@example.com', 'revoked@example.com', 'spammer@example.com'])
+    expect(grants.every((g: any) => g.amount_micros === 500_000 && g.reason === 'starter')).toBe(true)
+    expect(sqlite.prepare("SELECT name FROM sqlite_master WHERE name = 'access_requests'").all()).toEqual([])
+  })
+})

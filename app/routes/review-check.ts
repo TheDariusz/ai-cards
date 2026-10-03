@@ -3,8 +3,9 @@ import { requireAuth } from '../lib/session'
 import { createDb, getCard } from '../db/repo'
 import { aiFromEnv } from '../lib/openrouter'
 import type { AnswerEvaluation } from '../lib/ai'
+import { hasCredits, usageRecorder } from '../lib/credits'
 
-export type CheckResult = { ok: true; evaluation: AnswerEvaluation } | { ok: false }
+export type CheckResult = { ok: true; evaluation: AnswerEvaluation } | { ok: false; reason?: 'no-credits' }
 
 const json = (body: CheckResult, status = 200) => Response.json(body, { status })
 
@@ -16,10 +17,12 @@ export async function action({ request, context }: Route.ActionArgs) {
   const form = await request.formData()
   const typed = String(form.get('typed') ?? '').trim()
   if (!typed) return json({ ok: false }, 400)
-  const card = await getCard(createDb(env.DB), userId, Number(form.get('cardId')))
+  const db = createDb(env.DB)
+  const card = await getCard(db, userId, Number(form.get('cardId')))
   if (!card || card.status !== 'ready' || !card.sentencePl || !card.sentenceEn) return json({ ok: false }, 404)
+  if (!(await hasCredits(db, userId))) return json({ ok: false, reason: 'no-credits' })
   try {
-    const evaluation = await aiFromEnv(env).evaluateAnswer({
+    const evaluation = await aiFromEnv(env, usageRecorder(db, userId)).evaluateAnswer({
       word: card.word,
       wordPl: card.wordPl,
       sentencePl: card.sentencePl,

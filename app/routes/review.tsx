@@ -235,7 +235,11 @@ function WriteCard({ card }: { card: Route.ComponentProps['loaderData']['due'][n
             <p className="muted">
               {!evaluation && `${Math.round(local.diff.score * 100)}% — `}suggested: <b>{suggested}</b>
             </p>
-            {!evaluation && <p className="muted">AI feedback unavailable</p>}
+            {!evaluation && (
+              <p className="muted">
+                {checked && !checked.ok && checked.reason === 'no-credits' ? 'AI feedback unavailable — out of credits' : 'AI feedback unavailable'}
+              </p>
+            )}
             {local.headword === 'missing' && <p className="error">Main word missing: <b>{card.word}</b></p>}
             {local.headword === 'typo' && <p className="muted">Main word had a typo.</p>}
             {card.audioKey && <audio ref={audioRef} controls src={`/audio/${card.id}?v=${encodeURIComponent(card.audioKey)}`} />}
