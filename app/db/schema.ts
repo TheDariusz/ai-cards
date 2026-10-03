@@ -8,6 +8,8 @@ export const users = sqliteTable('users', {
   id: integer('id').primaryKey({ autoIncrement: true }),
   email: text('email').unique(),
   createdAt: integer('created_at').notNull(),
+  // set by the owner on /admin; a blocked user can't log in and their session stops working
+  blockedAt: integer('blocked_at'),
 })
 
 export const cards = sqliteTable('cards', {
@@ -61,10 +63,25 @@ export const loginTokens = sqliteTable('login_tokens', {
   usedAt: integer('used_at'),
 }, (t) => [index('login_tokens_email_created_idx').on(t.email, t.createdAt)])
 
-// Who may log in besides OWNER_EMAIL: a visitor asks on /login, the owner decides on /admin.
-export const accessRequests = sqliteTable('access_requests', {
-  email: text('email').primaryKey(),
-  status: text('status', { enum: ['pending', 'approved', 'rejected'] }).notNull().default('pending'),
-  requestedAt: integer('requested_at').notNull(),
-  decidedAt: integer('decided_at'),
-})
+// Every metered OpenRouter call made on a user's behalf; cost is in micro-dollars (1 credit = 1,000).
+export const usageLog = sqliteTable('usage_log', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  userId: integer('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  createdAt: integer('created_at').notNull(),
+  kind: text('kind', { enum: ['card', 'evaluate', 'tts'] }).notNull(),
+  model: text('model').notNull(),
+  costMicros: integer('cost_micros').notNull(),
+  promptTokens: integer('prompt_tokens'),
+  completionTokens: integer('completion_tokens'),
+  characters: integer('characters'),
+  generationId: text('generation_id'),
+}, (t) => [index('usage_log_user_idx').on(t.userId)])
+
+// What a user may spend: the starter pool, owner top-ups and (later) purchases. Balance = grants − usage.
+export const creditGrants = sqliteTable('credit_grants', {
+  id: integer('id').primaryKey({ autoIncrement: true }),
+  userId: integer('user_id').notNull().references(() => users.id, { onDelete: 'cascade' }),
+  createdAt: integer('created_at').notNull(),
+  amountMicros: integer('amount_micros').notNull(),
+  reason: text('reason', { enum: ['starter', 'admin', 'purchase'] }).notNull(),
+}, (t) => [index('credit_grants_user_idx').on(t.userId)])

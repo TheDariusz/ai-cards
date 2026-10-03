@@ -1,17 +1,19 @@
 import {
-  consumeLoginToken, countLoginTokensSince, countPendingRequests, createAccessRequest, createLoginToken,
-  findOrCreateUser, isApproved, type Db,
+  consumeLoginToken, countLoginTokensSince, countUsersCreatedSince, createLoginToken, findOrCreateUser, hasAccount,
+  isEmailBlocked, type Db,
 } from '../db/repo'
+import { starterMicros } from './credits'
 import type { MailMessage } from './mailer'
 import { sha256Hex } from './session'
+import { startOfDay } from './streak'
 
 export const LINK_TTL_MS = 15 * 60_000
 // per address, within one TTL window: enough for "didn't arrive, send again", not for mail-bombing
 export const MAX_LINKS_PER_WINDOW = 3
-// beyond this many undecided requests new ones are dropped, so a flood can't bury the owner's inbox
-export const MAX_PENDING_REQUESTS = 20
+// new accounts per Warsaw day, so a bot can't burn the mail quota and a pile of starter pools
+export const DEFAULT_MAX_SIGNUPS_PER_DAY = 20
 
-export type LoginConfig = { ownerEmail: string | null }
+export type LoginConfig = { ownerEmail: string | null; maxSignupsPerDay: number; starterMicros: number }
 
 export function normalizeEmail(raw: unknown): string | null {
   if (typeof raw !== 'string') return null
@@ -19,13 +21,27 @@ export function normalizeEmail(raw: unknown): string | null {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email) && email.length <= 254 ? email : null
 }
 
-export function loginConfigFromEnv(env: { OWNER_EMAIL?: string }): LoginConfig {
-  return { ownerEmail: normalizeEmail(env.OWNER_EMAIL) }
+export function loginConfigFromEnv(
+  env: { OWNER_EMAIL?: string; MAX_SIGNUPS_PER_DAY?: string; STARTER_CREDITS?: string },
+): LoginConfig {
+  const n = Number(env.MAX_SIGNUPS_PER_DAY)
+  return {
+    ownerEmail: normalizeEmail(env.OWNER_EMAIL),
+    maxSignupsPerDay: Number.isInteger(n) && n >= 0 ? n : DEFAULT_MAX_SIGNUPS_PER_DAY,
+    starterMicros: starterMicros(env),
+  }
 }
 
-// The owner always; anyone else once the owner approved their request.
+// Anyone may sign up; the owner can block an address on /admin. The owner is never blocked.
 export async function isAllowed(db: Db, config: LoginConfig, email: string): Promise<boolean> {
-  return email === config.ownerEmail || isApproved(db, email)
+  return email === config.ownerEmail || !(await isEmailBlocked(db, email))
+}
+
+// A new address may create an account only while today's sign-up cap isn't reached.
+async function canSignIn(db: Db, config: LoginConfig, email: string, now: number): Promise<boolean> {
+  if (!(await isAllowed(db, config, email))) return false
+  if (email === config.ownerEmail || (await hasAccount(db, email))) return true
+  return (await countUsersCreatedSince(db, startOfDay(now))) < config.maxSignupsPerDay
 }
 
 export function buildLoginEmail(link: string): MailMessage {
@@ -35,26 +51,6 @@ export function buildLoginEmail(link: string): MailMessage {
     html: `<p><a href="${link}">Zaloguj się do AI Cards</a></p>`
       + '<p>Link działa 15 minut i tylko raz. Jeśli to nie Ty, zignoruj tę wiadomość.</p>',
   }
-}
-
-export function buildAccessRequestEmail(email: string, adminUrl: string): MailMessage {
-  return {
-    subject: `Prośba o dostęp · ${email}`,
-    text: `${email} prosi o dostęp do AI Cards.\nZatwierdź lub odrzuć: ${adminUrl}`,
-    html: `<p>${escapeHtml(email)} prosi o dostęp do AI Cards.</p><p><a href="${adminUrl}">Zatwierdź lub odrzuć</a></p>`,
-  }
-}
-
-export function buildApprovedEmail(loginUrl: string): MailMessage {
-  return {
-    subject: 'Masz dostęp do AI Cards',
-    text: `Twoja prośba o dostęp została zaakceptowana. Zaloguj się: ${loginUrl}`,
-    html: `<p>Twoja prośba o dostęp została zaakceptowana.</p><p><a href="${loginUrl}">Zaloguj się</a></p>`,
-  }
-}
-
-function escapeHtml(s: string): string {
-  return s.replace(/[&<>"']/g, (c) => `&#${c.charCodeAt(0)};`)
 }
 
 function newToken(): string {
@@ -67,16 +63,17 @@ export type LinkDeps = {
   config: LoginConfig
   send: (to: string, msg: MailMessage) => Promise<void>
 }
-// everything but 'invalid' must look the same to the visitor, so nobody can probe who has access;
+// everything but 'invalid' must look the same to the visitor, so nobody can probe who is blocked;
 // the route logs the result so the owner can tell them apart in Workers Logs
-export type LinkResult = 'sent' | 'requested' | 'ignored' | 'throttled' | 'invalid' | 'no-owner'
+export type LinkResult = 'sent' | 'blocked' | 'throttled' | 'signups-full' | 'invalid'
 
 export async function requestLoginLink(
   deps: LinkDeps, rawEmail: unknown, origin: string, now: number,
 ): Promise<LinkResult> {
   const email = normalizeEmail(rawEmail)
   if (!email) return 'invalid'
-  if (!(await isAllowed(deps.db, deps.config, email))) return requestAccess(deps, email, origin, now)
+  if (!(await isAllowed(deps.db, deps.config, email))) return 'blocked'
+  if (!(await canSignIn(deps.db, deps.config, email, now))) return 'signups-full'
   if ((await countLoginTokensSince(deps.db, email, now - LINK_TTL_MS)) >= MAX_LINKS_PER_WINDOW) return 'throttled'
   const token = newToken()
   await createLoginToken(deps.db, await sha256Hex(token), email, now, now + LINK_TTL_MS)
@@ -84,22 +81,13 @@ export async function requestLoginLink(
   return 'sent'
 }
 
-async function requestAccess(deps: LinkDeps, email: string, origin: string, now: number): Promise<LinkResult> {
-  const owner = deps.config.ownerEmail
-  if (!owner) return 'no-owner'
-  if ((await countPendingRequests(deps.db)) >= MAX_PENDING_REQUESTS) return 'ignored'
-  if (!(await createAccessRequest(deps.db, email, now))) return 'ignored' // already pending or decided
-  await deps.send(owner, buildAccessRequestEmail(email, `${origin}/admin`))
-  return 'requested'
-}
-
-// Returns the user id to sign in, or null for an unknown/expired/used token or a
-// no-longer-allowed address.
+// Returns the user id to sign in, or null for an unknown/expired/used token, a blocked
+// address, or a new address once today's sign-up cap is reached.
 export async function verifyLoginLink(
   deps: Pick<LinkDeps, 'db' | 'config'>, token: unknown, now: number,
 ): Promise<number | null> {
   if (typeof token !== 'string' || !/^[0-9a-f]{64}$/.test(token)) return null
   const email = await consumeLoginToken(deps.db, await sha256Hex(token), now)
-  if (!email || !(await isAllowed(deps.db, deps.config, email))) return null
-  return findOrCreateUser(deps.db, email, deps.config.ownerEmail, now)
+  if (!email || !(await canSignIn(deps.db, deps.config, email, now))) return null
+  return findOrCreateUser(deps.db, email, deps.config.ownerEmail, now, deps.config.starterMicros)
 }

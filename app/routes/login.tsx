@@ -21,8 +21,7 @@ export async function action({ request, context }: Route.ActionArgs) {
   try {
     const deps = { db: createDb(env.DB), config, send: mailSenderFromEnv(env, origin) }
     const result = await requestLoginLink(deps, form.get('email'), origin, Date.now())
-    const log = result === 'no-owner' ? console.error : console.log
-    log(`login: ${result} for ${email} (${owner})`)
+    console.log(`login: ${result} for ${email} (${owner})`)
     if (result === 'invalid') return { error: 'Enter a valid email address' }
   } catch (err) {
     // same answer as success, so a failure can't reveal which addresses are on the list
@@ -37,8 +36,9 @@ export default function Login() {
   return (
     <main className="page">
       <h1>AI Cards</h1>
+      <p className="muted">Enter your email to log in or create an account.</p>
       {data && 'sent' in data ? (
-        <p className="ok">If this address has access, a login link is on its way (valid for 15 minutes). If not, your request has been sent to the owner — you’ll get an email once it’s approved.</p>
+        <p className="ok">A login link is on its way (valid for 15 minutes). New here? The link creates your account.</p>
       ) : (
         <Form method="post">
           <input type="email" name="email" placeholder="Email" autoComplete="email" required autoFocus />

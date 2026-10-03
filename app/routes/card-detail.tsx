@@ -5,13 +5,14 @@ import { createDb, getCard, updateCardContent, deleteCard, setAudioKey } from '.
 import { runCardPipeline, generateAudio } from '../lib/pipeline'
 import { aiFromEnv } from '../lib/openrouter'
 import { decodePartsFromText, decodePartsToText } from '../lib/ai'
+import { hasCredits, NO_CREDITS_MESSAGE, usageRecorder } from '../lib/credits'
 
 export async function loader({ request, params, context }: Route.LoaderArgs) {
   const env = context.cloudflare.env
   const userId = await requireAuth(request, env)
   const card = await getCard(createDb(env.DB), userId, Number(params.id))
   if (!card) throw new Response('Not found', { status: 404 })
-  return { card }
+  return { card, outOfCredits: !(await hasCredits(createDb(env.DB), userId)) }
 }
 
 export async function action({ request, params, context }: Route.ActionArgs) {
@@ -23,6 +24,7 @@ export async function action({ request, params, context }: Route.ActionArgs) {
   if (!card) throw new Response('Not found', { status: 404 })
   const form = await request.formData()
   const intent = form.get('intent')
+  const ai = aiFromEnv(env, usageRecorder(db, userId))
 
   if (intent === 'delete') {
     await deleteCard(db, userId, id)
@@ -30,9 +32,13 @@ export async function action({ request, params, context }: Route.ActionArgs) {
     return redirect('/cards')
   }
 
+  if ((intent === 'regenerate' || intent === 'retry-audio') && !(await hasCredits(db, userId))) {
+    return { error: NO_CREDITS_MESSAGE }
+  }
+
   if (intent === 'regenerate') {
     const hint = String(form.get('hint') ?? '').trim() || undefined
-    await runCardPipeline({ db, ai: aiFromEnv(env), audio: env.AUDIO }, userId, id, card.word, hint)
+    await runCardPipeline({ db, ai, audio: env.AUDIO }, userId, id, card.word, hint)
     return { regenerated: true }
   }
 
@@ -41,7 +47,7 @@ export async function action({ request, params, context }: Route.ActionArgs) {
     if (card.sentenceEn) {
       const sentenceEn = card.sentenceEn
       try {
-        const newKey = await generateAudio({ ai: aiFromEnv(env), audio: env.AUDIO }, id, sentenceEn)
+        const newKey = await generateAudio({ ai, audio: env.AUDIO }, id, sentenceEn)
         if (card.audioKey && card.audioKey !== newKey) await env.AUDIO.delete(card.audioKey).catch(() => {})
         await setAudioKey(db, userId, id, newKey) // a text-only card gains audio here
       } catch (err) {
@@ -72,11 +78,17 @@ export async function action({ request, params, context }: Route.ActionArgs) {
     }
     await updateCardContent(db, userId, id, content)
     const sentenceChanged = content.sentenceEn !== card.sentenceEn
-    if (sentenceChanged) {
+    if (sentenceChanged && !(await hasCredits(db, userId))) {
+      // no credits for new audio; the old one no longer matches, so the card becomes text-only
+      if (card.audioKey) {
+        await setAudioKey(db, userId, id, null)
+        context.cloudflare.ctx.waitUntil(env.AUDIO.delete(card.audioKey).catch(() => {}))
+      }
+    } else if (sentenceChanged) {
       // sentence changed → regenerate audio to match (content is already saved)
       context.cloudflare.ctx.waitUntil(
         (async () => {
-          const newKey = await generateAudio({ ai: aiFromEnv(env), audio: env.AUDIO }, id, content.sentenceEn)
+          const newKey = await generateAudio({ ai, audio: env.AUDIO }, id, content.sentenceEn)
           if (card.audioKey && card.audioKey !== newKey) await env.AUDIO.delete(card.audioKey).catch(() => {})
           await setAudioKey(db, userId, id, newKey)
         })().catch(async (err) => {
@@ -98,7 +110,7 @@ export async function action({ request, params, context }: Route.ActionArgs) {
 }
 
 export default function CardDetail({ loaderData, actionData }: Route.ComponentProps) {
-  const { card } = loaderData
+  const { card, outOfCredits } = loaderData
   const nav = useNavigation()
   const busy = nav.state !== 'idle'
   // Remount the edit form when the editable content changes (e.g. after
@@ -111,6 +123,8 @@ export default function CardDetail({ loaderData, actionData }: Route.ComponentPr
       <h1><Link to="/cards">←</Link> {card.word}</h1>
       {card.audioKey ? (
         <audio controls src={`/audio/${card.id}?v=${encodeURIComponent(card.audioKey ?? '')}`} />
+      ) : card.status === 'ready' && outOfCredits ? (
+        <p className="muted">No audio. {NO_CREDITS_MESSAGE}</p>
       ) : card.status === 'ready' ? (
         <Form method="post">
           <input type="hidden" name="intent" value="retry-audio" />
@@ -137,12 +151,14 @@ export default function CardDetail({ loaderData, actionData }: Route.ComponentPr
         )}
       </Form>
 
-      <Form method="post" className="quick-add">
-        <input type="hidden" name="intent" value="regenerate" />
-        <input name="hint" placeholder="Hint (optional): e.g. business context" />
-        <button type="submit" disabled={busy}>Regenerate</button>
-        {busy && <span className="pending"> ⏳</span>}
-      </Form>
+      {!outOfCredits && (
+        <Form method="post" className="quick-add">
+          <input type="hidden" name="intent" value="regenerate" />
+          <input name="hint" placeholder="Hint (optional): e.g. business context" />
+          <button type="submit" disabled={busy}>Regenerate</button>
+          {busy && <span className="pending"> ⏳</span>}
+        </Form>
+      )}
 
       <Form
         method="post"

@@ -1,7 +1,7 @@
 # Open Sign-up with a Credit Pool — Design
 
 **Date:** 2026-10-03
-**Status:** Draft (awaiting owner review)
+**Status:** Approved, implemented
 
 ## Purpose
 
@@ -90,7 +90,7 @@ made the call. A failed insert is logged and never fails the user's action.
 
 Making `onUsage` a required option means that forgetting a call site is a type error, not a silent leak.
 
-## Data model (`drizzle/0006_*.sql`, via `npx drizzle-kit generate` + hand-written data steps)
+## Data model (`drizzle/0006_open_signup.sql` + `drizzle/0007_credits.sql`, generated separately because drizzle-kit asks interactively about table renames; data steps hand-written)
 
 ```ts
 export const usageLog = sqliteTable('usage_log', {
@@ -135,7 +135,7 @@ on read, with no stored counter that could drift. Per-user scans are fine at thi
 
 - Remove `isApproved`, `createAccessRequest`, `countPendingRequests`, `listAccessRequests`, `decideAccessRequest`.
 - `findOrCreateUser(db, email, ownerEmail, now, starterMicros)`: when it creates a user, it also inserts the
-  starter grant in the same `db.batch`.
+  starter grant right after the insert (it needs the new id; a lost insert race skips the grant, which the winner made).
 - `isBlocked(db, email)`, `isUserBlocked(db, userId)`, `setBlocked(db, userId, blockedAt | null)`.
 - `countUsersCreatedSince(db, since)`.
 - `recordUsage(db, userId, event, now)`, `grantCredits(db, userId, amountMicros, reason, now)`.
@@ -149,14 +149,14 @@ on read, with no stored counter that could drift. Per-user scans are fine at thi
 - `hasCredits(db, userId)`: `true` for the owner, otherwise `balanceMicros > 0`.
 - `usageRecorder(db, userId)` returns the `onUsage` callback.
 - `toCredits(micros)` = `Math.floor(micros / 1000)`, used for display (a balance of −3 credits shows as 0).
-- `NO_CREDITS_MESSAGE = 'Skończyły się kredyty — nowe karty i funkcje AI są niedostępne.'`
+- `NO_CREDITS_MESSAGE = 'Out of credits — new cards and AI features are unavailable.'` (UI strings are English like the rest of the app)
 
 ## Login (`app/lib/login.ts`)
 
 - `isAllowed` becomes "not blocked". The owner is never blocked.
 - `requestLoginLink`: for an address with no account yet, check
   `countUsersCreatedSince(startOfDay(now)) < MAX_SIGNUPS_PER_DAY`, otherwise return `'throttled'`. Then send
-  the link as usual. `'requested'`, `'ignored'` and `'no-owner'` disappear from `LinkResult`. Every
+  the link as usual. `LinkResult` becomes `'sent' | 'blocked' | 'throttled' | 'signups-full' | 'invalid'`; the owner row never counts as a sign-up. Every
   non-`'invalid'` result still looks identical to the visitor.
 - `verifyLoginLink` re-checks the block and the sign-up cap (for a new address) before `findOrCreateUser`.
 - `buildAccessRequestEmail` and `buildApprovedEmail` are removed.
@@ -165,15 +165,14 @@ on read, with no stored counter that could drift. Per-user scans are fine at thi
 
 ## UI
 
-- **Home**: shows "Kredyty: 312 / 500" (balance / total granted) to non-owners. The owner sees "Wydane: $X"
+- **Home**: shows "Credits: 312 / 500" (balance / total granted) to non-owners. The owner sees "Spent: $X"
   instead. With no credits, the add form is replaced by `NO_CREDITS_MESSAGE` and "Retry" on failed cards is
   hidden. The admin link no longer shows a pending count.
 - **Card detail**: "Regenerate" and "Generate audio" are disabled and replaced by the message. Saving an edited
   sentence still saves. With no credits the old (now mismatched) audio is cleared, as on a TTS failure, so
   the card becomes text-only.
 - **Review**: `review-check` returns `{ ok: false, reason: 'no-credits' }` without calling OpenRouter. The
-  review screen uses the existing local-diff fallback and adds a muted line "Ocena AI niedostępna — brak
-  kredytów".
+  review screen uses the existing local-diff fallback and says "AI feedback unavailable — out of credits".
 - **Login page**: copy changes from "ask for access" to "enter your email to sign in or create an account".
 - **`/admin`** (owner only, as now): a table of users with email, joined date, spent ($, 2 dp), balance
   (credits) and status. Each row has a "+500" button (grant `STARTER_CREDITS`, reason `admin`) and

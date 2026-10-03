@@ -43,6 +43,20 @@
       "when": 1790859344257,
       "tag": "0005_access_requests",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "6",
+      "when": 1791043507309,
+      "tag": "0006_open_signup",
+      "breakpoints": true
+    },
+    {
+      "idx": 7,
+      "version": "6",
+      "when": 1791043516789,
+      "tag": "0007_credits",
+      "breakpoints": true
     }
   ]
 }

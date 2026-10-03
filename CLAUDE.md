@@ -1,6 +1,6 @@
 # AI Cards
 
-Invite-only English flashcard PWA for Polish speakers (originally single-user; owner is user id 1). React Router 8 (framework mode) on
+English flashcard PWA for Polish speakers (originally single-user; owner is user id 1). React Router 8 (framework mode) on
 Cloudflare Workers · D1 + Drizzle · R2 audio · OpenRouter for LLM + TTS. Product/setup: README.md.
 
 ## Commands
@@ -18,7 +18,8 @@ Cloudflare Workers · D1 + Drizzle · R2 audio · OpenRouter for LLM + TTS. Prod
 - Mail follows the same pattern: `app/lib/mailer.ts` is the port, `app/lib/resend.ts` the only adapter. The daily reminder cron is `scheduled` in `workers/app.ts` — the one intentional edit to that template file.
 - `app/db/repo.ts` is the only file that touches Drizzle. Routes call repo functions, never build queries.
 - Generation is fire-and-forget: `context.cloudflare.ctx.waitUntil(runCardPipeline(...))`. Cards go `pending → ready | failed`; home polls every 3s while pending.
-- Auth is a magic link (`app/lib/login.ts`, `OWNER_EMAIL` + owner-approved `access_requests`, decided on `/admin`); the session cookie holds `userId`.
+- Auth is a magic link (`app/lib/login.ts`): open sign-up capped by `MAX_SIGNUPS_PER_DAY`, owner blocks users on `/admin` (`users.blocked_at`, enforced in `requireAuth`); the session cookie holds `userId`.
+- Credits (`app/lib/credits.ts`): every OpenRouter call goes through `aiFromEnv(env, usageRecorder(db, userId))` after a `hasCredits(db, userId)` check. Cost is micro-dollars in `usage_log`; balance = `credit_grants` − `usage_log`, computed on read. The owner is never limited.
 - Every loader/action starts with `const userId = await requireAuth(request, env)`, and every repo call that reads or writes user data takes that `userId` (2nd arg). A card id owned by another user behaves as missing — never add a repo function that looks a card up by id alone (`markReady`/`markFailed` are pipeline-internal exceptions).
 - `context.cloudflare.{env,ctx}` comes from `workers/context.d.ts`, which must augment **two** module paths (see comment there). Keep `react-router` and `@react-router/dev` pinned to exact `8.0.0`.
 

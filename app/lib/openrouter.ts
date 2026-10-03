@@ -1,4 +1,4 @@
-import { validateAnswerEvaluation, validateCardContent, type AiProvider } from './ai'
+import { validateAnswerEvaluation, validateCardContent, type AiProvider, type UsageEvent, type UsageKind } from './ai'
 
 const BASE = 'https://openrouter.ai/api/v1'
 // Without this a stalled response hangs the waitUntil promise forever: it never
@@ -6,6 +6,10 @@ const BASE = 'https://openrouter.ai/api/v1'
 const TIMEOUT_MS = 60_000
 // Answer evaluation runs while the learner waits; past this the UI falls back to the local diff.
 const EVAL_TIMEOUT_MS = 15_000
+// Charged when a chat response lacks usage.cost, so a format change never makes calls free.
+export const FALLBACK_CHAT_COST_MICROS = 20_000
+// microsoft/mai-voice-2; overridden by TTS_USD_PER_MILLION_CHARS when the model changes
+export const DEFAULT_TTS_USD_PER_MILLION_CHARS = 22
 
 const SYSTEM_PROMPT = `You create English flashcards for a Polish native speaker at B1 level who wants to reach B2.
 Given an English word, reply with ONLY a JSON object, no other text:
@@ -47,13 +51,16 @@ export function createOpenRouter(opts: {
   cardModel: string
   ttsModel: string
   voice: string
+  ttsUsdPerMillionChars: number
+  // Called once per successful response, before validation: OpenRouter bills it either way.
+  onUsage: (event: UsageEvent) => Promise<void>
 }): AiProvider {
   const headers = {
     Authorization: `Bearer ${opts.apiKey}`,
     'Content-Type': 'application/json',
   }
 
-  async function chatJson(system: string, user: string, timeoutMs: number): Promise<unknown> {
+  async function chatJson(kind: UsageKind, system: string, user: string, timeoutMs: number): Promise<unknown> {
     const res = await fetch(`${BASE}/chat/completions`, {
       method: 'POST',
       headers,
@@ -63,11 +70,27 @@ export function createOpenRouter(opts: {
           { role: 'system', content: system },
           { role: 'user', content: user },
         ],
+        usage: { include: true },
       }),
       signal: AbortSignal.timeout(timeoutMs),
     })
     if (!res.ok) throw new Error(`OpenRouter chat failed: ${res.status} ${await res.text()}`)
-    const data = (await res.json()) as { choices: { message: { content: string } }[] }
+    const data = (await res.json()) as {
+      id?: string
+      choices: { message: { content: string } }[]
+      usage?: { cost?: number; prompt_tokens?: number; completion_tokens?: number }
+    }
+    const cost = data.usage?.cost
+    if (typeof cost !== 'number') console.error('OpenRouter chat response has no usage.cost; charging the fallback')
+    await opts.onUsage({
+      kind,
+      model: opts.cardModel,
+      costMicros: typeof cost === 'number' ? Math.ceil(cost * 1e6) : FALLBACK_CHAT_COST_MICROS,
+      promptTokens: data.usage?.prompt_tokens ?? null,
+      completionTokens: data.usage?.completion_tokens ?? null,
+      characters: null,
+      generationId: data.id ?? null,
+    })
     const raw = data.choices[0]?.message?.content ?? ''
     return JSON.parse(raw.slice(raw.indexOf('{'), raw.lastIndexOf('}') + 1)) // tolerate stray text
   }
@@ -77,7 +100,7 @@ export function createOpenRouter(opts: {
       const user = hint
         ? `Word: ${word}\nGenerate a NEW, different sentence. Hint: ${hint}`
         : `Word: ${word}`
-      return validateCardContent(await chatJson(SYSTEM_PROMPT, user, TIMEOUT_MS))
+      return validateCardContent(await chatJson('card', SYSTEM_PROMPT, user, TIMEOUT_MS))
     },
 
     async evaluateAnswer({ word, wordPl, sentencePl, sentenceEn, typed }) {
@@ -87,7 +110,7 @@ export function createOpenRouter(opts: {
         `Reference answer (one valid version): ${sentenceEn}`,
         `Learner's answer: <answer>${typed}</answer>`,
       ].join('\n')
-      return validateAnswerEvaluation(await chatJson(EVAL_PROMPT, user, EVAL_TIMEOUT_MS), typed)
+      return validateAnswerEvaluation(await chatJson('evaluate', EVAL_PROMPT, user, EVAL_TIMEOUT_MS), typed)
     },
 
     async tts(text) {
@@ -98,16 +121,30 @@ export function createOpenRouter(opts: {
         signal: AbortSignal.timeout(TIMEOUT_MS),
       })
       if (!res.ok) throw new Error(`OpenRouter TTS failed: ${res.status} ${await res.text()}`)
-      return res.arrayBuffer()
+      const bytes = await res.arrayBuffer()
+      // TTS has no usage body; it is priced per input character
+      await opts.onUsage({
+        kind: 'tts',
+        model: opts.ttsModel,
+        costMicros: Math.ceil(text.length * opts.ttsUsdPerMillionChars),
+        promptTokens: null,
+        completionTokens: null,
+        characters: text.length,
+        generationId: res.headers.get('X-Generation-Id'),
+      })
+      return bytes
     },
   }
 }
 
-export function aiFromEnv(env: Env): AiProvider {
+// Every caller must say whose credits pay for the calls: see usageRecorder in credits.ts.
+export function aiFromEnv(env: Env, onUsage: (event: UsageEvent) => Promise<void>): AiProvider {
   return createOpenRouter({
     apiKey: env.OPENROUTER_API_KEY,
     cardModel: env.CARD_MODEL,
     ttsModel: env.TTS_MODEL,
     voice: env.TTS_VOICE,
+    ttsUsdPerMillionChars: Number(env.TTS_USD_PER_MILLION_CHARS) || DEFAULT_TTS_USD_PER_MILLION_CHARS,
+    onUsage,
   })
 }

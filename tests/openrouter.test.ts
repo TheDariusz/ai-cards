@@ -1,8 +1,12 @@
 import { describe, it, expect, vi, afterEach } from 'vitest'
-import { createOpenRouter } from '../app/lib/openrouter'
+import { createOpenRouter, FALLBACK_CHAT_COST_MICROS } from '../app/lib/openrouter'
+import type { UsageEvent } from '../app/lib/ai'
 
-const provider = () =>
-  createOpenRouter({ apiKey: 'k', cardModel: 'anthropic/claude-sonnet-5', ttsModel: 'openai/gpt-4o-mini-tts', voice: 'alloy' })
+const provider = (usage: UsageEvent[] = []) =>
+  createOpenRouter({
+    apiKey: 'k', cardModel: 'anthropic/claude-sonnet-5', ttsModel: 'openai/gpt-4o-mini-tts', voice: 'alloy',
+    ttsUsdPerMillionChars: 22, onUsage: async (e) => { usage.push(e) },
+  })
 
 const CONTENT = {
   wordPl: 'niechętny',
@@ -18,7 +22,7 @@ const CONTENT = {
   ],
 }
 
-afterEach(() => vi.unstubAllGlobals())
+afterEach(() => { vi.unstubAllGlobals(); vi.restoreAllMocks() })
 
 describe('generateCard', () => {
   it('POSTs to chat completions and parses the JSON content', async () => {
@@ -160,5 +164,59 @@ describe('evaluateAnswer', () => {
   it('throws on a non-2xx response', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response('down', { status: 500 })))
     await expect(provider().evaluateAnswer(INPUT)).rejects.toThrow(/500/)
+  })
+})
+
+describe('usage metering', () => {
+  const chat = (content: unknown, extra: object = {}) =>
+    new Response(JSON.stringify({ choices: [{ message: { content: JSON.stringify(content) } }], ...extra }))
+
+  it('asks for usage and charges usage.cost, rounded up to a micro-dollar', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(chat(CONTENT, {
+      id: 'gen-1', usage: { cost: 0.0123451, prompt_tokens: 900, completion_tokens: 250 },
+    }))
+    vi.stubGlobal('fetch', fetchMock)
+    const usage: UsageEvent[] = []
+    await provider(usage).generateCard('reluctant')
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body).usage).toEqual({ include: true })
+    expect(usage).toEqual([{
+      kind: 'card', model: 'anthropic/claude-sonnet-5', costMicros: 12346,
+      promptTokens: 900, completionTokens: 250, characters: null, generationId: 'gen-1',
+    }])
+  })
+
+  it('charges the fallback when usage.cost is missing', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(chat({ verdict: 'correct', summaryPl: 'Dobrze.', corrected: 'x', notesPl: [] })))
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    const usage: UsageEvent[] = []
+    await provider(usage).evaluateAnswer({ word: 'w', wordPl: null, sentencePl: 'p', sentenceEn: 'e', typed: 'x' })
+    expect(usage).toMatchObject([{ kind: 'evaluate', costMicros: FALLBACK_CHAT_COST_MICROS, promptTokens: null }])
+  })
+
+  it('still charges a response that fails validation — OpenRouter billed it', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(chat({ wordPl: 'x' }, { usage: { cost: 0.01 } })))
+    const usage: UsageEvent[] = []
+    await expect(provider(usage).generateCard('reluctant')).rejects.toThrow(/missing/i)
+    expect(usage.map((e) => e.costMicros)).toEqual([10_000])
+  })
+
+  it('charges nothing for a failed request', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response('nope', { status: 500 })))
+    const usage: UsageEvent[] = []
+    await expect(provider(usage).generateCard('reluctant')).rejects.toThrow()
+    await expect(provider(usage).tts('Hello.')).rejects.toThrow()
+    expect(usage).toEqual([])
+  })
+
+  it('charges TTS per input character and keeps the generation id', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(
+      new Response(new Uint8Array([1]).buffer, { headers: { 'X-Generation-Id': 'gen-tts-1' } }),
+    ))
+    const usage: UsageEvent[] = []
+    await provider(usage).tts('She was reluctant to speak.') // 27 chars × $22/M = 594 µ$
+    expect(usage).toEqual([{
+      kind: 'tts', model: 'openai/gpt-4o-mini-tts', costMicros: 594,
+      promptTokens: null, completionTokens: null, characters: 27, generationId: 'gen-tts-1',
+    }])
   })
 })
