@@ -1,6 +1,6 @@
 # AI Cards
 
-A personal English-learning flashcard app for a Polish native speaker. Hear an unfamiliar word in a podcast, type just the word — AI builds a complete flashcard in the background: the Polish equivalent, a simple English explanation, an example sentence deliberately pitched slightly above B1 (the level-stretching mechanism), its Polish translation, and natural TTS audio. Review daily with spaced repetition and keep the streak alive.
+A personal English-learning flashcard app for a Polish native speaker. Hear an unfamiliar word in a podcast, type just the word — AI builds a complete flashcard in the background: the Polish equivalent, a simple English explanation, a short example sentence in simple B1 English where the new word is the only hard part, its Polish translation, and natural TTS audio. Review daily with spaced repetition and keep the streak alive.
 
 **Live:** https://ai-cards.thedariusz.workers.dev (open sign-up with a starter credit pool, email login link)
 
@@ -10,7 +10,8 @@ A personal English-learning flashcard app for a Polish native speaker. Hear an u
 - **AI-generated cards** — Claude (via OpenRouter) writes the content; TTS audio stored in R2
 - **Birkenbihl first learning** — each new card gets an ordered literal EN–PL decode and a one-time guided introduction before it enters SRS
 - **Spaced repetition** — simplified SM-2 scheduler; newly introduced cards become due the day after first learning
-- **Two review modes** — *write it* (default: translate the Polish sentence in your own words; AI judges meaning, grammar and naturalness, shows a corrected version with short Polish notes and suggests a grade — the tested word must appear or the grade is *again*; falls back to a word-by-word diff when AI is unavailable) and classic flip (Polish → reveal English + audio → self-grade)
+- **Two review modes** — *write it* (default: translate the Polish sentence in your own words) and classic flip (Polish → reveal English + audio → self-grade)
+- **AI answer check** — in *write it*, AI judges meaning, grammar and naturalness, shows a corrected version with up to three short Polish notes and suggests a grade (correct → *easy*, minor errors → *good*, wrong → *again*); you still pick the grade. The tested word must appear or the suggestion is *again* (a typo in it lowers *easy* to *good*; only regular inflections are recognized). Falls back to a word-by-word diff when AI is unavailable or credits run out
 - **Streak** — a day counts when all due cards are reviewed (or ≥10 reviews on backlog days), Europe/Warsaw timezone, month calendar on the home screen
 - **Card management** — edit any field, regenerate with a hint ("make it shorter", "business context"), delete; SRS progress survives edits
 - **Export** — CSV (Anki/spreadsheet-compatible) and JSON full backup, no import by design
@@ -43,7 +44,7 @@ npm run dev                            # http://localhost:5173
 | `OPENROUTER_API_KEY` | Server-side key for card generation + TTS |
 | `SESSION_SECRET` | Signs the session cookie (`openssl rand -hex 32`) |
 | `OWNER_EMAIL` | Your address; its first login takes over the original single-user account and data |
-| `RESEND_API_KEY` | Resend API key for the daily reminder email |
+| `RESEND_API_KEY` | Resend API key for login links and the daily reminder email; without it nobody can log in on production |
 | `REMINDER_TO` | Optional: the owner's reminder address until their first email login (everyone else gets reminders at their login email) |
 
 Locally, leave `RESEND_API_KEY` empty to get login links printed to the dev-server terminal instead of mailed.
@@ -51,11 +52,11 @@ Locally, leave `RESEND_API_KEY` empty to get login links printed to the dev-serv
 ### Tests
 
 ```bash
-npm test            # Vitest: SRS scheduler, answer diff, streak, CSV, repo, adapter, pipeline
+npm test            # Vitest: scheduling, answer check, login, credits, reminders, repo, adapters
 npm run typecheck
 ```
 
-Pure logic (scheduling, diffing, streaks, CSV) is fully unit-tested; DB tests run against in-memory SQLite with the real migrations.
+Pure logic (scheduling, diffing, answer grading, streaks, CSV, login, credits, quota, reminders, themes) is unit-tested, adapters (OpenRouter, Resend) against a stubbed `fetch`; DB tests run against in-memory SQLite with the real migrations.
 
 ### First-learning flow
 
@@ -128,18 +129,19 @@ due or new cards, unless switched off on the home screen. Mail goes through [Res
 free plan (3,000/month, 100/day) from `AI Cards <cards@2doai.app>` (`REMINDER_FROM` in `wrangler.jsonc`), an
 address in the `2doai.app` domain verified in Resend, so `REMINDER_TO` can be any address of yours.
 
-One-time setup, **before** merging to `master`:
+One-time setup for a new deployment:
 
 1. In Resend, verify the `2doai.app` domain and create an API key with sending access restricted to it.
-2. `npx wrangler secret put RESEND_API_KEY` and `npx wrangler secret put REMINDER_TO` (the recipient address).
-3. Merge to `master`; CI deploys and applies migration `0002` (`settings` table).
+2. `npx wrangler secret put RESEND_API_KEY`. `REMINDER_TO` is optional: it is only the owner's reminder address
+   until their first email login.
+3. Deploy; CI applies all pending migrations.
 4. On production, press **Send test** on the home screen to confirm the setup.
 
 Failures show up in `npx wrangler tail ai-cards` as `reminder: …` lines (`Resend <status>: <body>`). Locally the
 mail is really sent via Resend, so put a real `RESEND_API_KEY` in `.dev.vars` to try it; fire the cron by hand with:
 
 ```bash
-curl "http://localhost:5173/cdn-cgi/handler/scheduled?cron=0+17+*+*+*&time=$(date -d 2026-09-28T17:00:00Z +%s)000"
+curl "http://localhost:5173/cdn-cgi/handler/scheduled?cron=0+17+*+*+*&time=1790614800000"   # 2026-09-28 17:00 UTC = 19:00 Warsaw
 ```
 
 ### AI model configuration
@@ -156,8 +158,13 @@ Model ids live in `wrangler.jsonc` `vars` — swap models with a config change +
 
 ## Project docs
 
-- Design spec: [docs/superpowers/specs/2026-07-07-ai-cards-design.md](docs/superpowers/specs/2026-07-07-ai-cards-design.md)
-- Implementation plan: [docs/superpowers/plans/2026-07-07-ai-cards.md](docs/superpowers/plans/2026-07-07-ai-cards.md)
+Specs live in [docs/superpowers/specs/](docs/superpowers/specs/), matching plans in [docs/superpowers/plans/](docs/superpowers/plans/):
+
+- [Original design](docs/superpowers/specs/2026-07-07-ai-cards-design.md) — the single-user app; login and scale have since changed
+- [AI answer check](docs/superpowers/specs/2026-09-26-ai-answer-evaluation-design.md)
+- [Email reminders](docs/superpowers/specs/2026-09-27-email-reminders-design.md)
+- [Visual refresh and themes](docs/superpowers/specs/2026-09-27-visual-refresh-themes-design.md)
+- [Open sign-up with credits](docs/superpowers/specs/2026-10-03-open-signup-credits-design.md)
 
 ## Known quirks
 

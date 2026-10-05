@@ -7,9 +7,9 @@ Cloudflare Workers · D1 + Drizzle · R2 audio · OpenRouter for LLM + TTS. Prod
 
 - `npm run dev` — http://localhost:5173 (local D1/R2 via Miniflare)
 - `npm test` — Vitest; single file: `npx vitest run tests/<name>.test.ts`
-- `npm run typecheck` — `wrangler types && react-router typegen && tsc -b`; **requires `.dev.vars` to exist** (keys only) or `Env` won't resolve
+- `npm run typecheck` — `wrangler types && react-router typegen && tsc -b`; **requires `.dev.vars` with every key from `.dev.vars.example`** (values can be empty) or `Env` won't resolve — after pulling, add any new keys
 - `npx drizzle-kit generate` then `npx wrangler d1 migrations apply DB --local`
-- `npx wrangler tail ai-cards` — prod logs; where LLM/TTS failures actually show up
+- `npx wrangler tail ai-cards` — prod logs; where LLM/TTS, login-mail and reminder failures actually show up
 - Never run `npm run deploy` — deploy is CI-only, and every push to `master` deploys once tests pass
 
 ## Architecture
@@ -20,7 +20,7 @@ Cloudflare Workers · D1 + Drizzle · R2 audio · OpenRouter for LLM + TTS. Prod
 - Generation is fire-and-forget: `context.cloudflare.ctx.waitUntil(runCardPipeline(...))`. Cards go `pending → ready | failed`; home polls every 3s while pending.
 - Auth is a magic link (`app/lib/login.ts`): open sign-up capped by `MAX_SIGNUPS_PER_DAY`, owner blocks users on `/admin` (`users.blocked_at`, enforced in `requireAuth`); the session cookie holds `userId`.
 - Credits (`app/lib/credits.ts`): every OpenRouter call goes through `aiFromEnv(env, usageRecorder(db, userId))` after a `hasCredits(db, userId)` check. Cost is micro-dollars in `usage_log`; balance = `credit_grants` − `usage_log`, computed on read. The owner is never limited.
-- Every loader/action starts with `const userId = await requireAuth(request, env)`, and every repo call that reads or writes user data takes that `userId` (2nd arg). A card id owned by another user behaves as missing — never add a repo function that looks a card up by id alone (`markReady`/`markFailed` are pipeline-internal exceptions).
+- Every loader/action starts with `const userId = await requireAuth(request, env)` (public exceptions: `login`, `login/verify`, `logout`; `admin` wraps it in `requireOwner`), and every repo call that reads or writes user data takes that `userId` (2nd arg). A card id owned by another user behaves as missing — never add a repo function that looks a card up by id alone (`markReady`/`markFailed` are pipeline-internal exceptions).
 - `context.cloudflare.{env,ctx}` comes from `workers/context.d.ts`, which must augment **two** module paths (see comment there). Keep `react-router` and `@react-router/dev` pinned to exact `8.0.0`.
 
 ## Conventions
@@ -29,7 +29,7 @@ Cloudflare Workers · D1 + Drizzle · R2 audio · OpenRouter for LLM + TTS. Prod
 - **No Tailwind utilities.** The plugin is template leftover; styling is hand-written semantic classes in `app/app.css`.
 - No linter/formatter — match surrounding code.
 - Conventional commits (`feat:`, `fix:`, `docs:`, `ci:`).
-- Small scale (a handful of invited users) is a deliberate constraint: per-user O(n) scans are intentional (see `countReviewsOn`).
+- Small scale (open sign-up, but capped per day and by credits) is a deliberate constraint: per-user O(n) scans are intentional (see `countReviewsOn`).
 - Timestamps are epoch ms; day keys are `YYYY-MM-DD` in Europe/Warsaw (`app/lib/streak.ts`).
 
 ## Linear workflow (via Linear MCP)
@@ -57,7 +57,7 @@ don't ask me to paste issue details.
 ## Testing
 
 - Node 24 (`.node-version`) — Node 26 breaks better-sqlite3's native binding and tests won't run.
-- Pure logic + adapters with stubs (`vi.stubGlobal('fetch', …)` in `tests/openrouter.test.ts`, fake deps in `tests/pipeline.test.ts`).
+- Pure logic + adapters with stubs (`vi.stubGlobal('fetch', …)` in `tests/openrouter.test.ts` and `tests/resend.test.ts`, fake deps in `tests/pipeline.test.ts`, `tests/login.test.ts`, `tests/reminder-job.test.ts`).
 - DB tests use `tests/helpers/db.ts`: in-memory better-sqlite3 replaying the real `drizzle/*.sql`.
 - **No UI test infra** (no jsdom/testing-library) and don't add it — route/keyboard behavior is verified manually.
 
