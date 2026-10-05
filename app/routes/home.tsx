@@ -7,6 +7,7 @@ import { runCardPipeline } from '../lib/pipeline'
 import { OWNER_USER_ID } from '../db/schema'
 import { aiFromEnv } from '../lib/openrouter'
 import { canAddCard, dailyCardLimit } from '../lib/quota'
+import { MAX_WORD_CHARS } from '../lib/limits'
 import { hasCredits, NO_CREDITS_MESSAGE, toCredits, usageRecorder } from '../lib/credits'
 import { computeStreak, dayKey } from '../lib/streak'
 import type { ThemePref } from '../lib/theme'
@@ -56,6 +57,7 @@ export async function action({ request, context }: Route.ActionArgs) {
   if (intent === 'add') {
     const word = String(form.get('word') ?? '').trim()
     if (!word) return { error: 'Type a word first' }
+    if (word.length > MAX_WORD_CHARS) return { error: `Keep it within ${MAX_WORD_CHARS} characters` }
     if (!(await hasCredits(db, userId))) return { error: NO_CREDITS_MESSAGE }
     const limit = dailyCardLimit(env)
     if (!(await canAddCard(db, userId, Date.now(), limit))) {
@@ -105,7 +107,7 @@ export default function Home({ loaderData, actionData }: Route.ComponentProps) {
       ) : (
         <Form method="post" className="quick-add">
           <input type="hidden" name="intent" value="add" />
-          <input name="word" placeholder="New word…" autoComplete="off" autoFocus />
+          <input name="word" placeholder="New word…" autoComplete="off" maxLength={MAX_WORD_CHARS} autoFocus />
           <button type="submit">Add</button>
         </Form>
       )}

@@ -4,6 +4,7 @@ import { createDb, getCard } from '../db/repo'
 import { aiFromEnv } from '../lib/openrouter'
 import type { AnswerEvaluation } from '../lib/ai'
 import { hasCredits, usageRecorder } from '../lib/credits'
+import { MAX_TEXT_CHARS } from '../lib/limits'
 
 export type CheckResult = { ok: true; evaluation: AnswerEvaluation } | { ok: false; reason?: 'no-credits' }
 
@@ -16,7 +17,7 @@ export async function action({ request, context }: Route.ActionArgs) {
   const userId = await requireAuth(request, env)
   const form = await request.formData()
   const typed = String(form.get('typed') ?? '').trim()
-  if (!typed) return json({ ok: false }, 400)
+  if (!typed || typed.length > MAX_TEXT_CHARS) return json({ ok: false }, 400)
   const db = createDb(env.DB)
   const card = await getCard(db, userId, Number(form.get('cardId')))
   if (!card || card.status !== 'ready' || !card.sentencePl || !card.sentenceEn) return json({ ok: false }, 404)
