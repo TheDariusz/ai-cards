@@ -9,6 +9,7 @@ import { highlightHeadword } from '../lib/headword'
 import type { Grade } from '../lib/srs'
 import { computeStreak, dayKey } from '../lib/streak'
 import type { CheckResult } from './review-check'
+import { MAX_TEXT_CHARS } from '../lib/limits'
 
 const KEY_TO_GRADE: Record<string, 'again' | 'good' | 'easy'> = { '1': 'again', '2': 'good', '3': 'easy' }
 
@@ -197,6 +198,7 @@ function WriteCard({ card }: { card: Route.ComponentProps['loaderData']['due'][n
               }
             }}
             placeholder="Write the English sentence…"
+            maxLength={MAX_TEXT_CHARS}
             autoFocus
             rows={3}
           />

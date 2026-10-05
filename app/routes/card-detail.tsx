@@ -6,6 +6,7 @@ import { runCardPipeline, generateAudio } from '../lib/pipeline'
 import { aiFromEnv } from '../lib/openrouter'
 import { decodePartsFromText, decodePartsToText } from '../lib/ai'
 import { hasCredits, NO_CREDITS_MESSAGE, usageRecorder } from '../lib/credits'
+import { MAX_TEXT_CHARS, MAX_WORD_CHARS } from '../lib/limits'
 
 export async function loader({ request, params, context }: Route.LoaderArgs) {
   const env = context.cloudflare.env
@@ -38,6 +39,7 @@ export async function action({ request, params, context }: Route.ActionArgs) {
 
   if (intent === 'regenerate') {
     const hint = String(form.get('hint') ?? '').trim() || undefined
+    if (hint && hint.length > MAX_TEXT_CHARS) return { error: `Keep the hint within ${MAX_TEXT_CHARS} characters` }
     await runCardPipeline({ db, ai, audio: env.AUDIO }, userId, id, card.word, hint)
     return { regenerated: true }
   }
@@ -75,6 +77,13 @@ export async function action({ request, params, context }: Route.ActionArgs) {
       sentenceEn,
       sentencePl: String(form.get('sentencePl') ?? ''),
       decodeParts,
+    }
+    // saved text is replayed into later LLM and TTS calls (answer check, audio), so cap it here
+    if (
+      content.wordPl.length > MAX_WORD_CHARS ||
+      [content.explanationEn, content.sentenceEn, content.sentencePl].some((s) => s.length > MAX_TEXT_CHARS)
+    ) {
+      return { saved: false, error: `Keep the word within ${MAX_WORD_CHARS} and each text within ${MAX_TEXT_CHARS} characters` }
     }
     await updateCardContent(db, userId, id, content)
     const sentenceChanged = content.sentenceEn !== card.sentenceEn
@@ -135,10 +144,10 @@ export default function CardDetail({ loaderData, actionData }: Route.ComponentPr
 
       <Form method="post" key={contentKey}>
         <input type="hidden" name="intent" value="save" />
-        <label>Polish word <input name="wordPl" defaultValue={card.wordPl ?? ''} /></label>
-        <label>Explanation <textarea name="explanationEn" defaultValue={card.explanationEn ?? ''} /></label>
-        <label>English sentence <textarea name="sentenceEn" className="study" defaultValue={card.sentenceEn ?? ''} /></label>
-        <label>Polish sentence <textarea name="sentencePl" className="study" defaultValue={card.sentencePl ?? ''} /></label>
+        <label>Polish word <input name="wordPl" maxLength={MAX_WORD_CHARS} defaultValue={card.wordPl ?? ''} /></label>
+        <label>Explanation <textarea name="explanationEn" maxLength={MAX_TEXT_CHARS} defaultValue={card.explanationEn ?? ''} /></label>
+        <label>English sentence <textarea name="sentenceEn" className="study" maxLength={MAX_TEXT_CHARS} defaultValue={card.sentenceEn ?? ''} /></label>
+        <label>Polish sentence <textarea name="sentencePl" className="study" maxLength={MAX_TEXT_CHARS} defaultValue={card.sentencePl ?? ''} /></label>
         <label>
           Literal decode <span className="muted">(English | Polish, one fragment per line)</span>
           <textarea name="decodeParts" rows={5} defaultValue={decodePartsToText(card.decodeParts)} />
@@ -154,7 +163,7 @@ export default function CardDetail({ loaderData, actionData }: Route.ComponentPr
       {!outOfCredits && (
         <Form method="post" className="quick-add">
           <input type="hidden" name="intent" value="regenerate" />
-          <input name="hint" placeholder="Hint (optional): e.g. business context" />
+          <input name="hint" maxLength={MAX_TEXT_CHARS} placeholder="Hint (optional): e.g. business context" />
           <button type="submit" disabled={busy}>Regenerate</button>
           {busy && <span className="pending"> ⏳</span>}
         </Form>
