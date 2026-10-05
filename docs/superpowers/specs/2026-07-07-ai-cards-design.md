@@ -1,7 +1,9 @@
 # AI Cards — Design
 
 **Date:** 2026-07-07
-**Status:** Approved by user
+**Status:** Approved by user. This is the original single-user design; multiple users, email-link login and
+credits were added later and replace the *Auth & security* section below — see
+[open sign-up with credits](2026-10-03-open-signup-credits-design.md).
 
 ## Purpose
 
@@ -129,7 +131,7 @@ Both are plain authenticated GET endpoints generating the file on the fly — no
 ## Out of scope (YAGNI, revisit later)
 
 - Offline reviews / sync
-- Multiple users
+- ~~Multiple users~~ — built since, see [open sign-up with credits](2026-10-03-open-signup-credits-design.md)
 - Decks/tags, import (export is in scope, see above)
 - Premium voices (ElevenLabs), multiple sentences per word
 - Voice capture
