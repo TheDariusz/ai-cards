@@ -151,35 +151,40 @@ export default function Home({ loaderData, actionData }: Route.ComponentProps) {
       </div>
 
       <nav className="nav">
-        <Link to="/review">Review</Link>
-        <Link to="/cards">Cards ({total})</Link>
-        <a href="/export/csv" download>Export CSV</a>
-        <a href="/export/json" download>Backup JSON</a>
-        {isOwner && <Link to="/admin">Users</Link>}
+        <Link to="/review" className="nav-tile">Review <span>→</span></Link>
+        <Link to="/cards" className="nav-tile">Cards <span>{total}</span></Link>
       </nav>
-      <Form method="post" action="/theme" className="theme-switch">
-        <input type="hidden" name="redirectTo" value={location.pathname + location.search} />
-        {(['auto', 'light', 'dark'] as ThemePref[]).map((value) => (
-          <button key={value} type="submit" name="theme" value={value} aria-pressed={theme === value}>
-            {value[0].toUpperCase() + value.slice(1)}
+      <details className="settings">
+        <summary>⚙ Settings</summary>
+        <div className="settings-links">
+          <a href="/export/csv" download>Export CSV</a>
+          <a href="/export/json" download>Backup JSON</a>
+          {isOwner && <Link to="/admin">Users</Link>}
+        </div>
+        <Form method="post" action="/theme" className="theme-switch">
+          <input type="hidden" name="redirectTo" value={location.pathname + location.search} />
+          {(['auto', 'light', 'dark'] as ThemePref[]).map((value) => (
+            <button key={value} type="submit" name="theme" value={value} aria-pressed={theme === value}>
+              {value[0].toUpperCase() + value.slice(1)}
+            </button>
+          ))}
+        </Form>
+        <reminder.Form method="post" action="/reminder" className="reminder-switch">
+          <span>Reminder at 19:00</span>
+          <span className="reminder-segment">
+            <button type="submit" name="intent" value="on" aria-pressed={reminderEnabled}>On</button>
+            <button type="submit" name="intent" value="off" aria-pressed={!reminderEnabled}>Off</button>
+          </span>
+          <button type="submit" name="intent" value="test" className="link-button" disabled={sendingTest}>
+            {sendingTest ? 'Sending…' : 'Send test'}
           </button>
-        ))}
-      </Form>
-      <reminder.Form method="post" action="/reminder" className="reminder-switch">
-        <span>Reminder at 19:00</span>
-        <span className="reminder-segment">
-          <button type="submit" name="intent" value="on" aria-pressed={reminderEnabled}>On</button>
-          <button type="submit" name="intent" value="off" aria-pressed={!reminderEnabled}>Off</button>
-        </span>
-        <button type="submit" name="intent" value="test" className="link-button" disabled={sendingTest}>
-          {sendingTest ? 'Sending…' : 'Send test'}
-        </button>
-      </reminder.Form>
-      {reminder.state === 'idle' && reminder.data && 'reminderSent' in reminder.data && <p className="ok">Sent ✓</p>}
-      {reminder.state === 'idle' && reminder.data && 'reminderError' in reminder.data && (
-        <p className="error">⚠ {reminder.data.reminderError}</p>
-      )}
-      <Form method="post" action="/logout">
+        </reminder.Form>
+        {reminder.state === 'idle' && reminder.data && 'reminderSent' in reminder.data && <p className="ok">Sent ✓</p>}
+        {reminder.state === 'idle' && reminder.data && 'reminderError' in reminder.data && (
+          <p className="error">⚠ {reminder.data.reminderError}</p>
+        )}
+      </details>
+      <Form method="post" action="/logout" className="logout">
         <button type="submit" className="link-button">Log out</button>
       </Form>
     </main>

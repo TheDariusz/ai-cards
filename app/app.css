@@ -67,7 +67,17 @@ form > input:not([type="hidden"]) + button, form > textarea + button { margin-to
 .calendar { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; margin-top: 1rem; }
 .calendar .day { aspect-ratio: 1; border-radius: 8px; background: var(--accent-soft); display: grid; place-items: center; font-size: 0.75rem; color: var(--muted); }
 .calendar .done { background: var(--ok); color: var(--on-accent); }
-.nav { display: flex; flex-wrap: wrap; gap: 0.5rem 1rem; margin-top: 2rem; }
+.nav { display: flex; gap: 0.75rem; margin-top: 1.5rem; }
+.nav-tile { flex: 1; display: flex; justify-content: space-between; align-items: center; background: var(--surface); border: 1px solid var(--edge); border-radius: 18px; padding: 0.8rem 1rem; color: var(--text); font-weight: 600; text-decoration: none; }
+.nav-tile:hover { border-color: var(--accent); }
+.nav-tile span { color: var(--muted); font-weight: 500; }
+.settings { margin-top: 1.5rem; font-size: 0.9rem; }
+.settings summary { width: fit-content; margin: 0 auto; color: var(--muted); cursor: pointer; }
+.settings[open] { background: var(--surface); border: 1px solid var(--edge); border-radius: 18px; padding: 0.8rem 1rem; }
+.settings[open] summary { margin-bottom: 0.75rem; }
+.settings-links { display: flex; flex-wrap: wrap; gap: 0.5rem 1rem; }
+.logout { text-align: center; margin-top: 0.5rem; }
+.logout .link-button { color: var(--muted); }
 .theme-switch, .reminder-segment { display: inline-flex; gap: 2px; padding: 3px; border-radius: 14px; background: var(--accent-soft); }
 .theme-switch { margin-top: 1rem; }
 .theme-switch button, .reminder-segment button { background: transparent; color: var(--text); border-radius: 11px; padding: 0.35rem 0.9rem; font-size: 0.9rem; }
