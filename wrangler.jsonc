@@ -11,7 +11,7 @@
 		"CARD_MODEL": "anthropic/claude-sonnet-5",
 		"TTS_MODEL": "microsoft/mai-voice-2",
 		"TTS_VOICE": "en-US-Harper:MAI-Voice-2",
-		"APP_URL": "https://ai-cards.thedariusz.workers.dev",
+		"APP_URL": "https://ai-cards.app",
 		"REMINDER_FROM": "AI Cards <cards@2doai.app>",
 		// new cards per Warsaw day per user, a backstop next to credits; the owner is exempt
 		"DAILY_CARD_LIMIT": "20",
@@ -22,6 +22,10 @@
 		// TTS is billed per input character; microsoft/mai-voice-2 costs $22 per 1M
 		"TTS_USD_PER_MILLION_CHARS": "22"
 	},
+	// the zone lives in this Cloudflare account; deploy creates the DNS record and certificate
+	"routes": [
+		{ "pattern": "ai-cards.app", "custom_domain": true }
+	],
 	// 19:00 Europe/Warsaw is 17:00 UTC in CEST and 18:00 UTC in CET; isReminderHour() drops the other one
 	"triggers": {
 		"crons": ["0 17 * * *", "0 18 * * *"]

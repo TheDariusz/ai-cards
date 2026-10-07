@@ -2,7 +2,7 @@
 
 A personal English-learning flashcard app for a Polish native speaker. Hear an unfamiliar word in a podcast, type just the word — AI builds a complete flashcard in the background: the Polish equivalent, a simple English explanation, a short example sentence in simple B1 English where the new word is the only hard part, its Polish translation, and natural TTS audio. Review daily with spaced repetition and keep the streak alive.
 
-**Live:** https://ai-cards.thedariusz.workers.dev (open sign-up with a starter credit pool, email login link)
+**Live:** https://ai-cards.app (open sign-up with a starter credit pool, email login link)
 
 ## Features
 
@@ -96,7 +96,7 @@ npx wrangler secret put REMINDER_TO
 Every deploy after that:
 
 ```bash
-npm run deploy      # builds + deploys to https://ai-cards.thedariusz.workers.dev
+npm run deploy      # builds + deploys to https://ai-cards.app
 ```
 
 New migrations must be applied remotely by hand (`npx wrangler d1 migrations apply ai-cards --remote`) before deploying code that depends on them.
