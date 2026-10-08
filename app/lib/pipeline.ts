@@ -37,7 +37,7 @@ export async function runCardPipeline(
       }
       audioKey = newKey
     } catch (err) {
-      console.error(`TTS failed for card ${cardId}:`, err)
+      console.error(`TTS failed for card ${cardId}: ${err}`)
       // Old audio, if any, no longer matches the newly generated sentence —
       // the card must be text-only so the "Generate audio" retry button appears.
       if (prev?.audioKey) {
@@ -47,7 +47,7 @@ export async function runCardPipeline(
     }
     await markReady(db, cardId, content, audioKey)
   } catch (err) {
-    console.error(`Card generation failed for card ${cardId}:`, err)
+    console.error(`Card generation failed for card ${cardId}: ${err}`)
     if (prev?.status !== 'ready') await markFailed(db, cardId)
     // a ready card being regenerated keeps its existing content and status
   }

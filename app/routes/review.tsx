@@ -45,7 +45,7 @@ export async function action({ request, context }: Route.ActionArgs) {
     )
     return { ok: true as const }
   } catch (err) {
-    console.error('review submission failed:', err)
+    console.error(`review submission failed: ${err}`)
     return { ok: false as const }
   }
 }

@@ -32,7 +32,7 @@ export async function action({ request, context }: Route.ActionArgs) {
     })
     return json({ ok: true, evaluation })
   } catch (err) {
-    console.error('answer evaluation failed:', err)
+    console.error(`answer evaluation failed: ${err}`)
     return json({ ok: false })
   }
 }
