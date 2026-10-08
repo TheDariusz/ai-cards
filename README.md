@@ -126,12 +126,12 @@ working as the owner. Afterwards `npx wrangler secret delete APP_PASSWORD_HASH`.
 Two Cron Triggers (`0 17 * * *` and `0 18 * * *` UTC) run `scheduled` in `workers/app.ts`; only the one that is
 19:00 in Warsaw (CEST or CET) goes on. It emails every user, at their login email (the owner falls back to `REMINDER_TO` until their first email login), once a day when their today has no completed review day and there are
 due or new cards, unless switched off on the home screen. Mail goes through [Resend](https://resend.com)'s
-free plan (3,000/month, 100/day) from `AI Cards <cards@2doai.app>` (`REMINDER_FROM` in `wrangler.jsonc`), an
-address in the `2doai.app` domain verified in Resend, so `REMINDER_TO` can be any address of yours.
+free plan (3,000/month, 100/day) from `AI Cards <cards@ai-cards.app>` (`REMINDER_FROM` in `wrangler.jsonc`), an
+address in the `ai-cards.app` domain verified in Resend, so `REMINDER_TO` can be any address of yours.
 
 One-time setup for a new deployment:
 
-1. In Resend, verify the `2doai.app` domain and create an API key with sending access restricted to it.
+1. In Resend, verify the `ai-cards.app` domain and create an API key with sending access restricted to it.
 2. `npx wrangler secret put RESEND_API_KEY`. `REMINDER_TO` is optional: it is only the owner's reminder address
    until their first email login.
 3. Deploy; CI applies all pending migrations.
