@@ -37,7 +37,7 @@ export function Landing() {
           <div>
             <p className="landing-day">Day 0</p>
             <h2 id="day0">Type the word</h2>
-            <p className="muted">Three seconds, right when you hear it. The card is ready a moment later: Polish meaning, a plain explanation, a simple example sentence with its translation, and audio.</p>
+            <p className="muted">It takes three seconds, right when you hear it. A moment later the card is ready: the Polish meaning, a plain explanation, a simple example sentence with its translation, and audio.</p>
           </div>
           <div className="landing-screen" aria-hidden="true">
             <h3>AI Cards <span className="streak-chip">🔥 12</span></h3>
@@ -53,7 +53,7 @@ export function Landing() {
           <div>
             <p className="landing-day">Day 1</p>
             <h2 id="day1">Learn it once</h2>
-            <p className="muted">A literal word-by-word decode, the audio to shadow, and a check that you really follow the sentence before it enters your reviews.</p>
+            <p className="muted">You read a word-by-word decode, shadow the audio, and confirm you follow the sentence before it joins your reviews.</p>
           </div>
           <div className="landing-screen" aria-hidden="true">
             <h3>← reluctant <span className="muted">(3 new)</span></h3>
@@ -79,7 +79,7 @@ export function Landing() {
           <div>
             <p className="landing-day">Day 2 onward</p>
             <h2 id="day2">Review it</h2>
-            <p className="muted">Write the sentence from the Polish. AI checks meaning, grammar and naturalness, explains in Polish, and suggests a grade. You still pick.</p>
+            <p className="muted">Write the sentence from the Polish. AI checks meaning, grammar and naturalness, explains in Polish, and suggests a grade you can override.</p>
           </div>
           <div className="landing-screen" aria-hidden="true">
             <h3>← Review <span className="muted">· 4 left · 🔥 12</span></h3>
@@ -87,7 +87,7 @@ export function Landing() {
             <div className="card-face">
               <div className="feedback">
                 <p lang="en" className="typed-answer">She was reluctant to borrow her car to a stranger.</p>
-                <p lang="pl" className="verdict verdict-minor">Prawie dobrze – jeden czasownik do poprawy.</p>
+                <p lang="pl" className="verdict verdict-minor">Prawie dobrze: jeden czasownik do poprawy.</p>
                 <p lang="en" className="study">She was reluctant to <b className="head">lend</b> her car to a stranger.</p>
                 <ul lang="pl" className="feedback-notes">
                   <li>„Lend” to dawać komuś, „borrow” to brać od kogoś.</li>
