@@ -28,6 +28,7 @@ export const links: Route.LinksFunction = () => [
     rel: "stylesheet",
     href: "https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=Literata:opsz,wght@7..72,400;7..72,600&display=swap",
   },
+  { rel: "icon", href: "/favicon.png", type: "image/png" },
   { rel: "manifest", href: "/manifest.webmanifest" },
   { rel: "apple-touch-icon", href: "/icons/apple-touch-icon.png" },
 ];
