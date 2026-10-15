@@ -12,7 +12,7 @@ const DECODE: [string, string][] = [
   ['to a stranger', 'obcej osobie'],
 ]
 
-export function Landing() {
+export function Landing({ starterCredits, dailyCardLimit }: { starterCredits: number; dailyCardLimit: number }) {
   return (
     <div className="landing">
       <header className="landing-header">
@@ -108,8 +108,8 @@ export function Landing() {
 
         <p className="landing-facts">
           <span><b>Email link</b>, no password</span>
-          <span><b>500 free credits</b> to start</span>
-          <span><b>20 new cards</b> a day</span>
+          <span><b>{starterCredits} free credits</b> to start</span>
+          <span><b>{dailyCardLimit} new cards</b> a day</span>
           <span><b>Export</b> to Anki any time</span>
         </p>
 
