@@ -1,14 +1,15 @@
 import { Form, Link, useFetcher, useLocation, useRevalidator, useRouteLoaderData } from 'react-router'
 import { useEffect } from 'react'
 import type { Route } from './+types/home'
-import { requireAuth } from '../lib/session'
+import { getUserId, requireAuth } from '../lib/session'
+import { Landing } from '../welcome/landing'
 import { createDb, insertPendingCard, getCard, listCards, countDue, completedDays, getNewCards, getSetting, getBalance } from '../db/repo'
 import { runCardPipeline } from '../lib/pipeline'
 import { OWNER_USER_ID } from '../db/schema'
 import { aiFromEnv } from '../lib/openrouter'
 import { canAddCard, dailyCardLimit } from '../lib/quota'
 import { MAX_WORD_CHARS } from '../lib/limits'
-import { hasCredits, NO_CREDITS_MESSAGE, toCredits, usageRecorder } from '../lib/credits'
+import { hasCredits, NO_CREDITS_MESSAGE, starterMicros, toCredits, usageRecorder } from '../lib/credits'
 import { computeStreak, dayKey } from '../lib/streak'
 import type { ThemePref } from '../lib/theme'
 import type { loader as rootLoader } from '../root'
@@ -22,6 +23,10 @@ const isStuck = (c: { status: string; createdAt: number }, now: number) =>
 
 export async function loader({ request, context }: Route.LoaderArgs) {
   const env = context.cloudflare.env
+  // Visitors get the public landing page; requireAuth still guards the rest (blocked users included).
+  if ((await getUserId(request, env)) === null) {
+    return { guest: { starterCredits: toCredits(starterMicros(env)), dailyCardLimit: dailyCardLimit(env) } }
+  }
   const userId = await requireAuth(request, env)
   const db = createDb(env.DB)
   const all = await listCards(db, userId)
@@ -84,7 +89,14 @@ export async function action({ request, context }: Route.ActionArgs) {
   return null
 }
 
+type UserHome = Exclude<Route.ComponentProps['loaderData'], { guest: object }>
+
 export default function Home({ loaderData, actionData }: Route.ComponentProps) {
+  if (loaderData.guest) return <Landing {...loaderData.guest} />
+  return <UserHome loaderData={loaderData} actionData={actionData} />
+}
+
+function UserHome({ loaderData, actionData }: { loaderData: UserHome; actionData: Route.ComponentProps['actionData'] }) {
   const { pending, failed, total, due, newCards, streak, completed, today, reminderEnabled, isOwner, credits, outOfCredits } = loaderData
   const revalidator = useRevalidator()
   const location = useLocation()

@@ -17,6 +17,7 @@ A personal English-learning flashcard app for a Polish native speaker. Hear an u
 - **Export** — CSV (Anki/spreadsheet-compatible) and JSON full backup, no import by design
 - **Light and dark themes** — calm, study-focused look (Instrument Sans UI, Literata for study sentences); *Auto* follows the phone, or pin *Light* / *Dark* from the home footer — remembered in a cookie and rendered on the server, so there is no wrong-theme flash; review shows a progress bar for today, the streak, and highlights the suggested grade
 - **Email reminder** — at 19:00 Europe/Warsaw, a short Polish email to each user whose day is not done yet and cards are due or new; On/Off and *Send test* on the home screen
+- **Landing page** — visitors at `/` without a session see a public page explaining the product with the real learn and review screens; signed-in users land on home
 - **Accounts** — log in or sign up with a one-time link mailed via Resend (15 min, single use); every user's cards, streak and settings are separate
 - **Credits** — every new account gets `STARTER_CREDITS` (default 500; 1 credit = $0.001). Every OpenRouter call made for a user (new card, retry, regenerate, audio, answer check) is charged at its real cost and logged in `usage_log`; at zero, adding cards and AI features stop while learning and reviews keep working. The owner is never limited and tops users up or blocks them on `/admin`
 - **Daily card limit** — non-owners can add `DAILY_CARD_LIMIT` new cards per Warsaw day (default 20, in `wrangler.jsonc`), a backstop next to credits
