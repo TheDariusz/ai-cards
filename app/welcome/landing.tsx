@@ -83,12 +83,12 @@ export function Landing() {
           </div>
           <div className="landing-screen" aria-hidden="true">
             <h3>← Review <span className="muted">· 4 left · 🔥 12</span></h3>
-            <div className="card-face"><p lang="pl" className="study">Niechętnie pożyczała swój samochód obcej osobie.</p></div>
+            <div className="card-face"><p lang="pl" className="study"><b className="head">Niechętnie</b> pożyczała swój samochód obcej osobie.</p></div>
             <div className="card-face">
               <div className="feedback">
                 <p lang="en" className="typed-answer">She was reluctant to borrow her car to a stranger.</p>
-                <p lang="pl" className="verdict verdict-minor">Prawie dobrze: jeden czasownik do poprawy.</p>
-                <p lang="en" className="study">She was reluctant to <b className="head">lend</b> her car to a stranger.</p>
+                <p lang="pl" className="verdict verdict-wrong">Nie tym razem: „borrow” odwraca znaczenie zdania.</p>
+                <p lang="en" className="study">She was <b className="head">reluctant</b> to lend her car to a stranger.</p>
                 <ul lang="pl" className="feedback-notes">
                   <li>„Lend” to dawać komuś, „borrow” to brać od kogoś.</li>
                   <li>Reszta zdania jest naturalna.</li>
@@ -96,11 +96,11 @@ export function Landing() {
                 <p className="alt-label">Another correct version</p>
               </div>
               <p lang="en" className="study answer">She was <b className="head">reluctant</b> to lend her car to a stranger.</p>
-              <p className="muted">suggested: <b>good</b></p>
+              <p className="muted">suggested: <b>again</b></p>
             </div>
             <div className="grades">
-              <button type="button" tabIndex={-1}>Again</button>
-              <button type="button" className="grade-suggested" tabIndex={-1}>Good</button>
+              <button type="button" className="grade-suggested" tabIndex={-1}>Again</button>
+              <button type="button" tabIndex={-1}>Good</button>
               <button type="button" tabIndex={-1}>Easy</button>
             </div>
           </div>
