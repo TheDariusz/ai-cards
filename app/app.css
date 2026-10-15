@@ -143,7 +143,7 @@ form > input:not([type="hidden"]) + button, form > textarea + button { margin-to
 }
 
 /* Public landing (visitors at `/`). Reuses the app's screen classes inside .landing-screen. */
-.landing { max-width: 720px; margin: 0 auto; padding: 0 16px 48px; }
+.landing { max-width: 1040px; margin: 0 auto; padding: 0 16px 48px; }
 .landing-header { display: flex; align-items: center; justify-content: space-between; padding: 18px 0 34px; }
 .landing-header img { height: 52px; width: auto; display: block; }
 .landing-header .logo-dark { display: none; }
@@ -154,12 +154,12 @@ form > input:not([type="hidden"]) + button, form > textarea + button { margin-to
 :root[data-theme="dark"] .landing-header .logo-light { display: none; }
 :root[data-theme="dark"] .landing-header .logo-dark { display: block; }
 .landing-login { color: var(--text); font-weight: 500; text-underline-offset: 4px; }
-.landing-title { font-family: "Literata", Georgia, serif; font-size: clamp(2rem, 5vw, 2.7rem); line-height: 1.1; letter-spacing: -0.015em; margin: 0 0 14px; max-width: 34rem; text-wrap: balance; }
+.landing-title { font-family: "Literata", Georgia, serif; font-size: clamp(2rem, 5vw, 3.4rem); line-height: 1.1; letter-spacing: -0.015em; margin: 0 0 14px; max-width: 44rem; text-wrap: balance; }
 .landing-pitch { color: var(--muted); font-size: 1.1rem; margin: 0; max-width: 32rem; }
 .landing-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 24px; margin: 24px 0 40px; }
 .landing-cta { display: inline-flex; align-items: center; min-height: 48px; padding: 0 22px; border-radius: 14px; background: var(--accent); color: var(--on-accent); font-weight: 600; text-decoration: none; }
-.landing-step { display: grid; grid-template-columns: 170px 1fr; gap: 24px; padding: 28px 0; border-top: 1px solid var(--edge); align-items: start; }
-.landing-step h2 { font-size: 1.15rem; margin: 0 0 6px; }
+.landing-step { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr); gap: 48px; padding: 40px 0; border-top: 1px solid var(--edge); align-items: start; }
+.landing-step h2 { font-size: 1.4rem; margin: 0 0 6px; }
 .landing-step p { margin: 0; font-size: 0.95rem; }
 .landing-day { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.07em; color: var(--accent); font-weight: 700; margin: 0 0 4px; }
 .landing-screen { background: var(--surface); border: 1px solid var(--edge); border-radius: 18px; padding: 16px; box-shadow: 0 14px 36px -22px rgba(0, 0, 0, 0.4); font-size: 15px; }
@@ -178,4 +178,4 @@ form > input:not([type="hidden"]) + button, form > textarea + button { margin-to
 .landing-closing { text-align: center; margin-top: 40px; padding-top: 36px; border-top: 1px solid var(--edge); }
 .landing-closing h2 { font-family: "Literata", Georgia, serif; font-size: 1.6rem; margin: 0 0 16px; }
 .landing-footer { margin-top: 36px; font-size: 0.85rem; text-align: center; }
-@media (max-width: 600px) { .landing-step { grid-template-columns: 1fr; gap: 12px; } }
+@media (max-width: 760px) { .landing-step { grid-template-columns: 1fr; gap: 12px; padding: 28px 0; } .landing-step h2 { font-size: 1.15rem; } }

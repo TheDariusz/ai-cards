@@ -30,7 +30,7 @@ export function Landing({ starterCredits, dailyCardLimit }: { starterCredits: nu
         </p>
         <div className="landing-actions">
           <Link to="/login" className="landing-cta">Start free</Link>
-          <a href="#how" className="landing-login">How it works</a>
+          <Link to="#how" className="landing-login">How it works</Link>
         </div>
 
         <section className="landing-step" id="how" aria-labelledby="day0">
