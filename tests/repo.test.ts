@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { testDb } from './helpers/db'
 import { eq } from 'drizzle-orm'
-import { insertPendingCard, getDueCards, countDue, getCard, listCards, markReady, applyReview, completedDays, updateCardContent, deleteCard, getNewCards, completeFirstLearning, countReviewsOn, getSetting, setSetting, isDayDone, countNew, nextDueAt, setAudioKey, listReviewLog, type Db } from '../app/db/repo'
+import { insertPendingCard, getDueCards, countDue, getCard, listCards, markReady, applyReview, completedDays, updateCardContent, deleteCard, getNewCards, completeFirstLearning, countReviewsOn, getSetting, setSetting, isDayDone, countNew, nextDueAt, setAudioKey, listReviewLog, findOrCreateUser, getUserLocale, setUserLocale, type Db } from '../app/db/repo'
 import { reviewLog, dayLog, users, OWNER_USER_ID as U } from '../app/db/schema'
 import { dayKey } from '../app/lib/streak'
 
@@ -239,5 +239,34 @@ describe('per-user isolation', () => {
     expect(await getSetting(db, other.id, 'reminderEnabled')).toBeNull()
     await setSetting(db, other.id, 'reminderEnabled', 'true')
     expect(await getSetting(db, U, 'reminderEnabled')).toBe('false')
+  })
+})
+
+describe('user locale', () => {
+  it('stores the locale a new user signs up with', async () => {
+    const db = testDb()
+    const id = await findOrCreateUser(db, 'a@x.dev', null, NOW, 0, 'en')
+    expect(await getUserLocale(db, id)).toBe('en')
+  })
+
+  it('defaults a new user to pl', async () => {
+    const db = testDb()
+    const id = await findOrCreateUser(db, 'a@x.dev', null, NOW, 0)
+    expect(await getUserLocale(db, id)).toBe('pl')
+  })
+
+  it('leaves an existing user locale alone on later logins', async () => {
+    const db = testDb()
+    const id = await findOrCreateUser(db, 'a@x.dev', null, NOW, 0)
+    await findOrCreateUser(db, 'a@x.dev', null, NOW, 0, 'en')
+    expect(await getUserLocale(db, id)).toBe('pl')
+  })
+
+  it('setUserLocale changes it; a missing user reads as pl', async () => {
+    const db = testDb()
+    const id = await findOrCreateUser(db, 'a@x.dev', null, NOW, 0)
+    await setUserLocale(db, id, 'en')
+    expect(await getUserLocale(db, id)).toBe('en')
+    expect(await getUserLocale(db, 9999)).toBe('pl')
   })
 })

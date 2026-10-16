@@ -4,6 +4,7 @@ import * as schema from './schema'
 import { cards, reviewLog, dayLog, settings, users, loginTokens, usageLog, creditGrants, OWNER_USER_ID, type Card } from './schema'
 import { newCardSrs, schedule, type Grade } from '../lib/srs'
 import { dayKey } from '../lib/streak'
+import { toLocale, type Locale } from '../lib/locale'
 import type { CardContent, DecodePart, UsageEvent } from '../lib/ai'
 
 export function createDb(d1: D1Database) {
@@ -199,7 +200,7 @@ export async function consumeLoginToken(db: Db, tokenHash: string, now: number):
 // The owner's row predates emails; the first login with ownerEmail claims it.
 // A brand-new account starts with `starterMicros` of credit.
 export async function findOrCreateUser(
-  db: Db, email: string, ownerEmail: string | null, now: number, starterMicros: number,
+  db: Db, email: string, ownerEmail: string | null, now: number, starterMicros: number, locale: Locale = 'pl',
 ): Promise<number> {
   const [existing] = await db.select({ id: users.id }).from(users).where(eq(users.email, email))
   if (existing) return existing.id
@@ -211,7 +212,7 @@ export async function findOrCreateUser(
       .returning({ id: users.id })
     if (claimed) return claimed.id
   }
-  const inserted = await db.insert(users).values({ email, createdAt: now }).onConflictDoNothing().returning({ id: users.id })
+  const inserted = await db.insert(users).values({ email, createdAt: now, locale }).onConflictDoNothing().returning({ id: users.id })
   if (inserted.length === 0) { // lost a race with a parallel first login; that one granted the pool
     const [created] = await db.select({ id: users.id }).from(users).where(eq(users.email, email))
     return created.id
@@ -219,6 +220,15 @@ export async function findOrCreateUser(
   const id = inserted[0].id
   if (id !== OWNER_USER_ID) await grantCredits(db, id, starterMicros, 'starter', now)
   return id
+}
+
+export async function getUserLocale(db: Db, userId: number): Promise<Locale> {
+  const [row] = await db.select({ locale: users.locale }).from(users).where(eq(users.id, userId))
+  return toLocale(row?.locale)
+}
+
+export async function setUserLocale(db: Db, userId: number, locale: Locale): Promise<void> {
+  await db.update(users).set({ locale }).where(eq(users.id, userId))
 }
 
 export async function isEmailBlocked(db: Db, email: string): Promise<boolean> {

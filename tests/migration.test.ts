@@ -1,6 +1,6 @@
 import Database from 'better-sqlite3'
 import { describe, expect, it } from 'vitest'
-import { readFileSync } from 'node:fs'
+import { readFileSync, readdirSync } from 'node:fs'
 
 describe('Birkenbihl migration', () => {
   it('backfills historical cards as already learned without inventing a decode', () => {
@@ -78,5 +78,18 @@ describe('open sign-up + credits migrations', () => {
     expect(grants.map((g: any) => g.email)).toEqual(['friend@example.com', 'revoked@example.com', 'spammer@example.com'])
     expect(grants.every((g: any) => g.amount_micros === 500_000 && g.reason === 'starter')).toBe(true)
     expect(sqlite.prepare("SELECT name FROM sqlite_master WHERE name = 'access_requests'").all()).toEqual([])
+  })
+})
+
+describe('locale migration', () => {
+  it('defaults existing users to pl', () => {
+    const sqlite = new Database(':memory:')
+    const files = ['0000_init', '0001_great_professor_monster', '0002_steep_doctor_faustus', '0003_multi_user', '0004_login_tokens', '0005_access_requests', '0006_open_signup', '0007_credits']
+    for (const f of files) sqlite.exec(readFileSync(`drizzle/${f}.sql`, 'utf8'))
+    sqlite.exec(`INSERT INTO users (email, created_at) VALUES ('friend@example.com', 10)`)
+
+    sqlite.exec(readFileSync(`drizzle/${readdirSync('drizzle').find(f => f.startsWith('0008_'))}`, 'utf8'))
+
+    expect(sqlite.prepare('SELECT locale FROM users WHERE email = ?').get('friend@example.com')).toEqual({ locale: 'pl' })
   })
 })
