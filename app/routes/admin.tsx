@@ -4,6 +4,8 @@ import { requireAuth } from '../lib/session'
 import { createDb, grantCredits, listUsersWithUsage, setBlocked } from '../db/repo'
 import { OWNER_USER_ID } from '../db/schema'
 import { starterMicros, toCredits } from '../lib/credits'
+import { dict, useT } from '../lib/i18n'
+import { parseLocale } from '../lib/locale'
 
 async function requireOwner(request: Request, env: Env) {
   if ((await requireAuth(request, env)) !== OWNER_USER_ID) throw new Response('Not found', { status: 404 })
@@ -28,7 +30,7 @@ export async function action({ request, context }: Route.ActionArgs) {
   if (intent === 'grant') {
     await grantCredits(db, userId, starterMicros(env), 'admin', now)
   } else if (intent === 'block' || intent === 'unblock') {
-    if (!(await setBlocked(db, userId, intent === 'block' ? now : null))) return { error: `No user #${userId}` }
+    if (!(await setBlocked(db, userId, intent === 'block' ? now : null))) return { error: dict[parseLocale(request.headers.get('Cookie'))].admin.noUser(userId) }
   } else {
     throw new Response('Bad Request', { status: 400 })
   }
@@ -38,10 +40,11 @@ export async function action({ request, context }: Route.ActionArgs) {
 const day = (ms: number) => new Date(ms).toISOString().slice(0, 10)
 
 export default function Admin({ loaderData, actionData }: Route.ComponentProps) {
+  const t = useT().admin
   const { users, topUpCredits } = loaderData
   return (
     <main className="page">
-      <h1><Link to="/">←</Link> Users</h1>
+      <h1><Link to="/">←</Link> {t.title}</h1>
       {actionData && 'error' in actionData && <p className="error">{actionData.error}</p>}
       {users.map((u) => (
         <Form method="post" key={u.id} className="request-row">
@@ -49,15 +52,15 @@ export default function Admin({ loaderData, actionData }: Route.ComponentProps) 
           <span>
             {u.email ?? `#${u.id}`}
             <span className="muted">
-              {' '}· since {day(u.createdAt)} · spent ${(u.spentMicros / 1e6).toFixed(2)}
-              {u.id !== OWNER_USER_ID && ` · ${toCredits(u.balanceMicros)} credits left`}
-              {u.blockedAt !== null && ' · Blocked'}
+              {' '}· {t.since(day(u.createdAt))} · {t.spent((u.spentMicros / 1e6).toFixed(2))}
+              {u.id !== OWNER_USER_ID && ` · ${t.creditsLeft(toCredits(u.balanceMicros))}`}
+              {u.blockedAt !== null && ` · ${t.blocked}`}
             </span>
           </span>
           {u.id !== OWNER_USER_ID && (
             <span className="request-actions">
               <button type="submit" name="intent" value={u.blockedAt === null ? 'block' : 'unblock'} className="link-button">
-                {u.blockedAt === null ? 'Block' : 'Unblock'}
+                {u.blockedAt === null ? t.block : t.unblock}
               </button>
               <button type="submit" name="intent" value="grant">+{topUpCredits}</button>
             </span>

@@ -4,8 +4,7 @@ import type { Route } from './+types/learn'
 import { requireAuth } from '../lib/session'
 import { completeFirstLearning, createDb, getNewCards } from '../db/repo'
 import type { DecodePart } from '../lib/ai'
-
-const STEPS = ['Decode', 'Listen & understand', 'Without help', 'Speak once']
+import { useT } from '../lib/i18n'
 
 export async function loader({ request, context }: Route.LoaderArgs) {
   const env = context.cloudflare.env
@@ -37,6 +36,7 @@ function Decode({ parts }: { parts: DecodePart[] }) {
 }
 
 function LearningCard({ card }: { card: NonNullable<Route.ComponentProps['loaderData']['card']> }) {
+  const t = useT().learn
   const [step, setStep] = useState(0)
   const [understood, setUnderstood] = useState(() => new Set<number>())
   const [hintsShown, setHintsShown] = useState(() => new Set<number>())
@@ -64,35 +64,35 @@ function LearningCard({ card }: { card: NonNullable<Route.ComponentProps['loader
     })
   }
 
-  const backLabel = step === 1 ? 'Back to decode' : step === 2 ? 'Back to listen' : 'Back to understanding'
+  const backLabel = step === 1 ? t.backToDecode : step === 2 ? t.backToListen : t.backToUnderstanding
 
   return (
     <>
-      <p className="step-progress">Step {step + 1} of {STEPS.length} · {STEPS[step]}</p>
+      <p className="step-progress">{t.step(step + 1, t.steps.length, t.steps[step])}</p>
       <div className="card-face learning-card">
         <p className="study answer" lang="en">{card.sentenceEn}</p>
 
         {step === 0 && (
           <>
-            <p>Read from left to right. The Polish line stays deliberately literal.</p>
+            <p>{t.decodeHint}</p>
             <Decode parts={parts} />
-            <p className="muted">Natural Polish: {card.sentencePl}</p>
+            <p className="muted">{t.naturalPolish} {card.sentencePl}</p>
           </>
         )}
 
         {step === 1 && (
           <>
-            <p>Replay the sentence until you can follow its meaning.</p>
+            <p>{t.listenHint}</p>
             {card.audioKey
               ? <audio controls autoPlay src={`/audio/${card.id}?v=${encodeURIComponent(card.audioKey)}`} />
-              : <p className="pending">Audio is unavailable — read the sentence aloud instead.</p>}
+              : <p className="pending">{t.noAudio}</p>}
             <Decode parts={parts} />
           </>
         )}
 
         {step === 2 && (
           <>
-            <p>Confirm each word or expression. If one is unclear, reveal only that hint or return to listening.</p>
+            <p>{t.confirmHint}</p>
             <div className="understanding-list">
               {parts.map((part, index) => (
                 <div className="understanding-item" key={`${index}-${part.en}`}>
@@ -111,7 +111,7 @@ function LearningCard({ card }: { card: NonNullable<Route.ComponentProps['loader
                       aria-expanded={hintsShown.has(index)}
                       onClick={() => toggleHint(index)}
                     >
-                      {hintsShown.has(index) ? 'Hide Polish' : 'Show Polish'}
+                      {hintsShown.has(index) ? t.hidePolish : t.showPolish}
                     </button>
                   </div>
                   {hintsShown.has(index) && <p className="word-hint" lang="pl">{part.pl}</p>}
@@ -124,14 +124,14 @@ function LearningCard({ card }: { card: NonNullable<Route.ComponentProps['loader
               aria-expanded={showExplanation}
               onClick={() => setShowExplanation((shown) => !shown)}
             >
-              {showExplanation ? 'Hide extra explanation' : 'I still need more explanation'}
+              {showExplanation ? t.hideExplanation : t.moreExplanation}
             </button>
             {showExplanation && (
               <div className="explanation-help">
                 <p><b>{card.word}</b> = {card.wordPl}</p>
                 <p>{card.explanationEn}</p>
                 <Decode parts={parts} />
-                <p className="muted">Natural Polish: {card.sentencePl}</p>
+                <p className="muted">{t.naturalPolish} {card.sentencePl}</p>
               </div>
             )}
           </>
@@ -139,13 +139,13 @@ function LearningCard({ card }: { card: NonNullable<Route.ComponentProps['loader
 
         {step === 3 && (
           <>
-            <p>Play it once or twice and speak together with the recording.</p>
+            <p>{t.speakHint}</p>
             {card.audioKey
               ? <audio controls src={`/audio/${card.id}?v=${encodeURIComponent(card.audioKey)}`} />
-              : <p className="pending">Read the sentence aloud once.</p>}
+              : <p className="pending">{t.readAloudOnce}</p>}
             <label className="spoken-check">
               <input type="checkbox" checked={spoken} onChange={(event) => setSpoken(event.target.checked)} />
-              I spoke along once
+              {t.spokeAlong}
             </label>
           </>
         )}
@@ -164,14 +164,14 @@ function LearningCard({ card }: { card: NonNullable<Route.ComponentProps['loader
             disabled={step === 2 && !allUnderstood}
             onClick={() => setStep((current) => current + 1)}
           >
-            {step === 0 ? 'I see the structure' : step === 1 ? 'I understand with help' : 'I understand now'}
+            {step === 0 ? t.seeStructure : step === 1 ? t.understandWithHelp : t.understandNow}
           </button>
         ) : (
           <Form method="post" className="finish-form">
             <input type="hidden" name="intent" value="complete" />
             <input type="hidden" name="cardId" value={card.id} />
             <button type="submit" className="primary-wide" disabled={!spoken || navigation.state !== 'idle'}>
-              Finish · review tomorrow
+              {t.finish}
             </button>
           </Form>
         )}
@@ -181,19 +181,20 @@ function LearningCard({ card }: { card: NonNullable<Route.ComponentProps['loader
 }
 
 export default function Learn({ loaderData, actionData }: Route.ComponentProps) {
+  const t = useT().learn
   if (!loaderData.card) {
     return (
       <main className="page">
-        <h1><Link to="/">←</Link> New to learn</h1>
-        <p className="ok">First learning complete. Your new cards will return tomorrow.</p>
+        <h1><Link to="/">←</Link> {t.title}</h1>
+        <p className="ok">{t.allLearned}</p>
       </main>
     )
   }
 
   return (
     <main className="page">
-      <h1><Link to="/">←</Link> {loaderData.card.word} <span className="muted">({loaderData.remaining} new)</span></h1>
-      {actionData?.ok === false && <p className="error">This card could not be completed. Reload and try again.</p>}
+      <h1><Link to="/">←</Link> {loaderData.card.word} <span className="muted">{t.remaining(loaderData.remaining)}</span></h1>
+      {actionData?.ok === false && <p className="error">{t.completeFailed}</p>}
       <LearningCard key={loaderData.card.id} card={loaderData.card} />
     </main>
   )
