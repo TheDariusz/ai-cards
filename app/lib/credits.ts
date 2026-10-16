@@ -4,7 +4,6 @@ import type { UsageEvent } from './ai'
 
 export const MICROS_PER_CREDIT = 1_000 // 1 credit = $0.001
 export const DEFAULT_STARTER_CREDITS = 500
-export const NO_CREDITS_MESSAGE = 'Out of credits — new cards and AI features are unavailable.'
 
 export function starterMicros(env: { STARTER_CREDITS?: string }): number {
   const n = Number(env.STARTER_CREDITS)

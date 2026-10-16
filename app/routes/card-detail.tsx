@@ -5,7 +5,9 @@ import { createDb, getCard, updateCardContent, deleteCard, setAudioKey } from '.
 import { runCardPipeline, generateAudio } from '../lib/pipeline'
 import { aiFromEnv } from '../lib/openrouter'
 import { decodePartsFromText, decodePartsToText } from '../lib/ai'
-import { hasCredits, NO_CREDITS_MESSAGE, usageRecorder } from '../lib/credits'
+import { hasCredits, usageRecorder } from '../lib/credits'
+import { parseLocale } from '../lib/locale'
+import { dict, useT } from '../lib/i18n'
 import { MAX_TEXT_CHARS, MAX_WORD_CHARS } from '../lib/limits'
 
 export async function loader({ request, params, context }: Route.LoaderArgs) {
@@ -25,6 +27,7 @@ export async function action({ request, params, context }: Route.ActionArgs) {
   if (!card) throw new Response('Not found', { status: 404 })
   const form = await request.formData()
   const intent = form.get('intent')
+  const t = dict[parseLocale(request.headers.get('Cookie'))]
   const ai = aiFromEnv(env, usageRecorder(db, userId))
 
   if (intent === 'delete') {
@@ -34,12 +37,12 @@ export async function action({ request, params, context }: Route.ActionArgs) {
   }
 
   if ((intent === 'regenerate' || intent === 'retry-audio') && !(await hasCredits(db, userId))) {
-    return { error: NO_CREDITS_MESSAGE }
+    return { error: t.common.noCredits }
   }
 
   if (intent === 'regenerate') {
     const hint = String(form.get('hint') ?? '').trim() || undefined
-    if (hint && hint.length > MAX_TEXT_CHARS) return { error: `Keep the hint within ${MAX_TEXT_CHARS} characters` }
+    if (hint && hint.length > MAX_TEXT_CHARS) return { error: t.card.hintTooLong(MAX_TEXT_CHARS) }
     await runCardPipeline({ db, ai, audio: env.AUDIO }, userId, id, card.word, hint)
     return { regenerated: true }
   }
@@ -66,10 +69,10 @@ export async function action({ request, params, context }: Route.ActionArgs) {
     try {
       decodeParts = decodePartsFromText(String(form.get('decodeParts') ?? ''), sentenceEn)
     } catch (err) {
-      return { saved: false, error: err instanceof Error ? err.message : 'Invalid literal decode' }
+      return { saved: false, error: err instanceof Error ? err.message : t.card.invalidDecode }
     }
     if (card.firstLearnedAt === null && !decodeParts) {
-      return { saved: false, error: 'A new card needs a literal decode before first learning' }
+      return { saved: false, error: t.card.needsDecode }
     }
     const content = {
       wordPl: String(form.get('wordPl') ?? ''),
@@ -83,7 +86,7 @@ export async function action({ request, params, context }: Route.ActionArgs) {
       content.wordPl.length > MAX_WORD_CHARS ||
       [content.explanationEn, content.sentenceEn, content.sentencePl].some((s) => s.length > MAX_TEXT_CHARS)
     ) {
-      return { saved: false, error: `Keep the word within ${MAX_WORD_CHARS} and each text within ${MAX_TEXT_CHARS} characters` }
+      return { saved: false, error: t.card.textTooLong(MAX_WORD_CHARS, MAX_TEXT_CHARS) }
     }
     await updateCardContent(db, userId, id, content)
     const sentenceChanged = content.sentenceEn !== card.sentenceEn
@@ -122,6 +125,7 @@ export default function CardDetail({ loaderData, actionData }: Route.ComponentPr
   const { card, outOfCredits } = loaderData
   const nav = useNavigation()
   const busy = nav.state !== 'idle'
+  const t = useT()
   // Remount the edit form when the editable content changes (e.g. after
   // Regenerate) so its uncontrolled defaultValue inputs re-read fresh values.
   // audioKey is deliberately excluded: a background audio refresh after Save
@@ -133,48 +137,48 @@ export default function CardDetail({ loaderData, actionData }: Route.ComponentPr
       {card.audioKey ? (
         <audio controls src={`/audio/${card.id}?v=${encodeURIComponent(card.audioKey ?? '')}`} />
       ) : card.status === 'ready' && outOfCredits ? (
-        <p className="muted">No audio. {NO_CREDITS_MESSAGE}</p>
+        <p className="muted">{t.card.noAudio} {t.common.noCredits}</p>
       ) : card.status === 'ready' ? (
         <Form method="post">
           <input type="hidden" name="intent" value="retry-audio" />
-          <button type="submit" disabled={busy}>Generate audio</button>
+          <button type="submit" disabled={busy}>{t.card.generateAudio}</button>
           {busy && <span className="pending"> ⏳</span>}
         </Form>
       ) : null}
 
       <Form method="post" key={contentKey}>
         <input type="hidden" name="intent" value="save" />
-        <label>Polish word <input name="wordPl" maxLength={MAX_WORD_CHARS} defaultValue={card.wordPl ?? ''} /></label>
-        <label>Explanation <textarea name="explanationEn" maxLength={MAX_TEXT_CHARS} defaultValue={card.explanationEn ?? ''} /></label>
-        <label>English sentence <textarea name="sentenceEn" className="study" maxLength={MAX_TEXT_CHARS} defaultValue={card.sentenceEn ?? ''} /></label>
-        <label>Polish sentence <textarea name="sentencePl" className="study" maxLength={MAX_TEXT_CHARS} defaultValue={card.sentencePl ?? ''} /></label>
+        <label>{t.card.polishWord} <input name="wordPl" maxLength={MAX_WORD_CHARS} defaultValue={card.wordPl ?? ''} /></label>
+        <label>{t.card.explanation} <textarea name="explanationEn" maxLength={MAX_TEXT_CHARS} defaultValue={card.explanationEn ?? ''} /></label>
+        <label>{t.card.englishSentence} <textarea name="sentenceEn" className="study" maxLength={MAX_TEXT_CHARS} defaultValue={card.sentenceEn ?? ''} /></label>
+        <label>{t.card.polishSentence} <textarea name="sentencePl" className="study" maxLength={MAX_TEXT_CHARS} defaultValue={card.sentencePl ?? ''} /></label>
         <label>
-          Literal decode <span className="muted">(English | Polish, one fragment per line)</span>
+          {t.card.literalDecode} <span className="muted">{t.card.decodeFormat}</span>
           <textarea name="decodeParts" rows={5} defaultValue={decodePartsToText(card.decodeParts)} />
         </label>
-        <button type="submit">Save</button>
-        {actionData && 'saved' in actionData && actionData.saved && <span className="ok"> Saved ✓</span>}
+        <button type="submit">{t.card.save}</button>
+        {actionData && 'saved' in actionData && actionData.saved && <span className="ok"> {t.card.saved}</span>}
         {actionData && 'error' in actionData && <p className="error">{actionData.error}</p>}
         {actionData && 'staleTranslation' in actionData && actionData.staleTranslation && (
-          <p className="pending">English sentence changed — update the Polish translation too, or tap Regenerate.</p>
+          <p className="pending">{t.card.staleTranslation}</p>
         )}
       </Form>
 
       {!outOfCredits && (
         <Form method="post" className="quick-add">
           <input type="hidden" name="intent" value="regenerate" />
-          <input name="hint" maxLength={MAX_TEXT_CHARS} placeholder="Hint (optional): e.g. business context" />
-          <button type="submit" disabled={busy}>Regenerate</button>
+          <input name="hint" maxLength={MAX_TEXT_CHARS} placeholder={t.card.hintPlaceholder} />
+          <button type="submit" disabled={busy}>{t.card.regenerate}</button>
           {busy && <span className="pending"> ⏳</span>}
         </Form>
       )}
 
       <Form
         method="post"
-        onSubmit={(e) => { if (!confirm('Delete this card?')) e.preventDefault() }}
+        onSubmit={(e) => { if (!confirm(t.card.deleteConfirm)) e.preventDefault() }}
       >
         <input type="hidden" name="intent" value="delete" />
-        <button type="submit" className="danger-button">Delete</button>
+        <button type="submit" className="danger-button">{t.card.delete}</button>
       </Form>
     </main>
   )
