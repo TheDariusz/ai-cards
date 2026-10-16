@@ -3,6 +3,7 @@ import {
   isEmailBlocked, type Db,
 } from '../db/repo'
 import { starterMicros } from './credits'
+import type { Locale } from './locale'
 import type { MailMessage } from './mailer'
 import { sha256Hex } from './session'
 import { startOfDay } from './streak'
@@ -44,7 +45,15 @@ async function canSignIn(db: Db, config: LoginConfig, email: string, now: number
   return (await countUsersCreatedSince(db, startOfDay(now))) < config.maxSignupsPerDay
 }
 
-export function buildLoginEmail(link: string): MailMessage {
+export function buildLoginEmail(link: string, locale: Locale): MailMessage {
+  if (locale === 'en') {
+    return {
+      subject: 'Login link · AI Cards',
+      text: `Log in to AI Cards:\n${link}\n\nThe link works for 15 minutes and only once. If this wasn't you, ignore this message.`,
+      html: `<p><a href="${link}">Log in to AI Cards</a></p>`
+        + "<p>The link works for 15 minutes and only once. If this wasn't you, ignore this message.</p>",
+    }
+  }
   return {
     subject: 'Link do logowania · AI Cards',
     text: `Zaloguj się do AI Cards:\n${link}\n\nLink działa 15 minut i tylko raz. Jeśli to nie Ty, zignoruj tę wiadomość.`,
@@ -68,7 +77,7 @@ export type LinkDeps = {
 export type LinkResult = 'sent' | 'blocked' | 'throttled' | 'signups-full' | 'invalid'
 
 export async function requestLoginLink(
-  deps: LinkDeps, rawEmail: unknown, origin: string, now: number,
+  deps: LinkDeps, rawEmail: unknown, origin: string, now: number, locale: Locale,
 ): Promise<LinkResult> {
   const email = normalizeEmail(rawEmail)
   if (!email) return 'invalid'
@@ -77,17 +86,17 @@ export async function requestLoginLink(
   if ((await countLoginTokensSince(deps.db, email, now - LINK_TTL_MS)) >= MAX_LINKS_PER_WINDOW) return 'throttled'
   const token = newToken()
   await createLoginToken(deps.db, await sha256Hex(token), email, now, now + LINK_TTL_MS)
-  await deps.send(email, buildLoginEmail(`${origin}/login/verify?token=${token}`))
+  await deps.send(email, buildLoginEmail(`${origin}/login/verify?token=${token}&lang=${locale}`, locale))
   return 'sent'
 }
 
 // Returns the user id to sign in, or null for an unknown/expired/used token, a blocked
 // address, or a new address once today's sign-up cap is reached.
 export async function verifyLoginLink(
-  deps: Pick<LinkDeps, 'db' | 'config'>, token: unknown, now: number,
+  deps: Pick<LinkDeps, 'db' | 'config'>, token: unknown, now: number, locale: Locale,
 ): Promise<number | null> {
   if (typeof token !== 'string' || !/^[0-9a-f]{64}$/.test(token)) return null
   const email = await consumeLoginToken(deps.db, await sha256Hex(token), now)
   if (!email || !(await canSignIn(deps.db, deps.config, email, now))) return null
-  return findOrCreateUser(deps.db, email, deps.config.ownerEmail, now, deps.config.starterMicros)
+  return findOrCreateUser(deps.db, email, deps.config.ownerEmail, now, deps.config.starterMicros, locale)
 }

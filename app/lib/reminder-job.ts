@@ -1,4 +1,4 @@
-import { completedDays, countDue, countNew, getSetting, isDayDone, listUsers, nextDueAt, setSetting, type Db } from '../db/repo'
+import { completedDays, countDue, countNew, getSetting, getUserLocale, isDayDone, listUsers, nextDueAt, setSetting, type Db } from '../db/repo'
 import { OWNER_USER_ID } from '../db/schema'
 import type { Mailer } from './mailer'
 import { buildReminder, shouldRemind, type SkipReason } from './reminder'
@@ -29,7 +29,7 @@ export async function runReminder(
   }
 
   const streak = computeStreak(await completedDays(db, userId), today)
-  const msg = buildReminder({ due, fresh, streak, appUrl, later })
+  const msg = buildReminder({ due, fresh, streak, appUrl, later, locale: await getUserLocale(db, userId) })
   if (force) msg.subject = `[Test] ${msg.subject}`
   // send first, then record: a failed send never blocks a later attempt
   await mailer.send(msg)

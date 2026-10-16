@@ -1,3 +1,4 @@
+import type { Locale } from './locale'
 import type { MailMessage } from './mailer'
 
 export function isReminderHour(nowMs: number, hour = 19): boolean {
@@ -60,9 +61,15 @@ function warsawTime(ms: number): string {
 }
 
 // `later` = the part of `due` that is not in /review yet, and when the first of it gets there
-function timingLine(due: number, later: { count: number; from: number }): string | null {
+function timingLine(due: number, later: { count: number; from: number }, locale: Locale): string | null {
   if (later.count <= 0) return null
   const t = warsawTime(later.from)
+  if (locale === 'en') {
+    if (later.count >= due) return due === 1 ? `It will be ready at ${t}.` : `The first one will be ready at ${t}.`
+    return later.count === 1
+      ? `You can review ${due - 1} now, the last one will be ready at ${t}.`
+      : `You can review ${due - later.count} now, the rest will be ready from ${t}.`
+  }
   if (later.count >= due) return due === 1 ? `Będzie gotowa o ${t}.` : `Pierwsza będzie gotowa o ${t}.`
   return later.count === 1
     ? `Teraz możesz powtórzyć ${due - 1}, ostatnia będzie gotowa o ${t}.`
@@ -70,34 +77,46 @@ function timingLine(due: number, later: { count: number; from: number }): string
 }
 
 export function buildReminder(input: {
-  due: number; fresh: number; streak: number; appUrl: string; later?: { count: number; from: number }
+  due: number; fresh: number; streak: number; appUrl: string; later?: { count: number; from: number }; locale: Locale
 }): MailMessage {
-  const { due, fresh, streak } = input
+  const { due, fresh, streak, locale } = input
+  const en = locale === 'en'
+  const cards = (n: number) => `${n} ${n === 1 ? 'card' : 'cards'}`
+  const newCards = (n: number) => `${n} new ${n === 1 ? 'card' : 'cards'}`
+  const days = (n: number) => `${n} ${n === 1 ? 'day' : 'days'}`
   const base = input.appUrl.replace(/\/$/, '')
 
   let subject: string
   let status: string
   let button: { label: string; url: string }
   if (due > 0) {
-    subject = `${karty(due)} do powtórki` + (streak >= 1 ? ` · streak ${dni(streak)}` : '')
-    status = fresh > 0
-      ? `Masz dziś ${kartyAcc(due)} do powtórki i ${noweKartyAcc(fresh)} do nauki.`
-      : `Masz dziś ${kartyAcc(due)} do powtórki.`
-    const timing = input.later ? timingLine(due, input.later) : null
+    subject = en
+      ? `${cards(due)} to review` + (streak >= 1 ? ` · ${days(streak)} streak` : '')
+      : `${karty(due)} do powtórki` + (streak >= 1 ? ` · streak ${dni(streak)}` : '')
+    status = en
+      ? (fresh > 0 ? `You have ${cards(due)} to review and ${newCards(fresh)} to learn today.` : `You have ${cards(due)} to review today.`)
+      : fresh > 0
+        ? `Masz dziś ${kartyAcc(due)} do powtórki i ${noweKartyAcc(fresh)} do nauki.`
+        : `Masz dziś ${kartyAcc(due)} do powtórki.`
+    const timing = input.later ? timingLine(due, input.later, locale) : null
     if (timing) status += ` ${timing}`
-    button = { label: 'Zacznij review', url: `${base}/review` }
+    button = { label: en ? 'Start review' : 'Zacznij review', url: `${base}/review` }
   } else if (fresh > 0) {
-    subject = `${noweKarty(fresh)} ${plForm(fresh) === 'few' ? 'czekają' : 'czeka'} na naukę`
-    status = `Masz dziś ${noweKartyAcc(fresh)} do nauki.`
-    button = { label: 'Zacznij naukę', url: `${base}/learn` }
+    subject = en
+      ? `${newCards(fresh)} to learn`
+      : `${noweKarty(fresh)} ${plForm(fresh) === 'few' ? 'czekają' : 'czeka'} na naukę`
+    status = en ? `You have ${newCards(fresh)} to learn today.` : `Masz dziś ${noweKartyAcc(fresh)} do nauki.`
+    button = { label: en ? 'Start learning' : 'Zacznij naukę', url: `${base}/learn` }
   } else {
-    subject = 'Brak kart na dziś'
-    status = 'Nie masz dziś kart do powtórki ani nowych kart.'
-    button = { label: 'Otwórz aplikację', url: `${base}/` }
+    subject = en ? 'No cards for today' : 'Brak kart na dziś'
+    status = en ? 'You have no cards to review or learn today.' : 'Nie masz dziś kart do powtórki ani nowych kart.'
+    button = { label: en ? 'Open the app' : 'Otwórz aplikację', url: `${base}/` }
   }
   // only reviews complete a day, so the streak is at stake only when cards are due
-  const streakLine = due > 0 && streak >= 1 ? `Twoja seria: ${dni(streak)} — nie przerywaj jej dziś.` : null
-  const footer = 'Przypomnienia wyłączysz na stronie głównej aplikacji.'
+  const streakLine = due > 0 && streak >= 1
+    ? (en ? `Your streak: ${days(streak)} — don't break it today.` : `Twoja seria: ${dni(streak)} — nie przerywaj jej dziś.`)
+    : null
+  const footer = en ? 'You can turn reminders off on the app home page.' : 'Przypomnienia wyłączysz na stronie głównej aplikacji.'
   const homeUrl = `${base}/`
 
   const text = [
@@ -111,7 +130,7 @@ export function buildReminder(input: {
 
   const font = "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif"
   const html = `<!doctype html>
-<html lang="pl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"></head>
+<html lang="${locale}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"></head>
 <body style="margin:0;padding:0;background:#f6f7fb;">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f6f7fb;font-family:${font};color:#1d2233;">
 <tr><td align="center" style="padding:32px 16px;">

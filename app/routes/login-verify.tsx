@@ -2,6 +2,7 @@ import { Form, Link, redirect, useActionData, useNavigation } from 'react-router
 import type { Route } from './+types/login-verify'
 import { getSessionStorage } from '../lib/session'
 import { createDb } from '../db/repo'
+import { toLocale } from '../lib/locale'
 import { loginConfigFromEnv, verifyLoginLink } from '../lib/login'
 
 // GET only renders a button: mail scanners that prefetch links must not burn the one-time token.
@@ -13,7 +14,7 @@ export async function action({ request, context }: Route.ActionArgs) {
   const env = context.cloudflare.env
   const form = await request.formData()
   const userId = await verifyLoginLink(
-    { db: createDb(env.DB), config: loginConfigFromEnv(env) }, form.get('token'), Date.now(),
+    { db: createDb(env.DB), config: loginConfigFromEnv(env) }, form.get('token'), Date.now(), toLocale(form.get('lang')),
   )
   if (userId === null) return { error: 'This link has expired or was already used.' }
   const { getSession, commitSession } = getSessionStorage(env.SESSION_SECRET)

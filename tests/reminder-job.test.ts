@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { eq } from 'drizzle-orm'
 import { testDb } from './helpers/db'
-import { insertPendingCard, markReady, completeFirstLearning, getSetting, setSetting, type Db } from '../app/db/repo'
+import { insertPendingCard, markReady, completeFirstLearning, getSetting, setSetting, setUserLocale, type Db } from '../app/db/repo'
 import { cards, dayLog, users, OWNER_USER_ID as U } from '../app/db/schema'
 import { reminderRecipient, runAllReminders, runReminder } from '../app/lib/reminder-job'
 import type { MailMessage, Mailer } from '../app/lib/mailer'
@@ -29,6 +29,15 @@ async function addDueCard(db: Db, userId = U) {
 const deps = (db: Db, mailer: Mailer) => ({ db, mailer, appUrl: 'https://x.dev' })
 
 describe('runReminder', () => {
+  it('mails in the user language', async () => {
+    const db = testDb()
+    const mailer = fakeMailer()
+    await addDueCard(db)
+    await setUserLocale(db, U, 'en')
+    await runReminder(deps(db, mailer), U, NOW)
+    expect(mailer.sent[0].subject).toBe('1 card to review')
+  })
+
   it('sends and records lastSent', async () => {
     const db = testDb()
     const mailer = fakeMailer()

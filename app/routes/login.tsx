@@ -2,6 +2,7 @@ import { Form, redirect, useActionData, useNavigation } from 'react-router'
 import type { Route } from './+types/login'
 import { getUserId } from '../lib/session'
 import { createDb } from '../db/repo'
+import { parseLocale } from '../lib/locale'
 import { mailSenderFromEnv } from '../lib/resend'
 import { loginConfigFromEnv, normalizeEmail, requestLoginLink } from '../lib/login'
 
@@ -20,7 +21,7 @@ export async function action({ request, context }: Route.ActionArgs) {
   const owner = config.ownerEmail === null ? 'OWNER_EMAIL missing/invalid' : email === config.ownerEmail ? 'is owner' : 'not owner'
   try {
     const deps = { db: createDb(env.DB), config, send: mailSenderFromEnv(env, origin) }
-    const result = await requestLoginLink(deps, form.get('email'), origin, Date.now())
+    const result = await requestLoginLink(deps, form.get('email'), origin, Date.now(), parseLocale(request.headers.get('Cookie')))
     console.log(`login: ${result} for ${email} (${owner})`)
     if (result === 'invalid') return { error: 'Enter a valid email address' }
   } catch (err) {
