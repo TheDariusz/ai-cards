@@ -28,7 +28,7 @@ export function shouldRemind(s: ReminderState): { send: true } | { send: false; 
 
 type PluralForm = 'one' | 'few' | 'many'
 
-function plForm(n: number): PluralForm {
+export function plForm(n: number): PluralForm {
   if (n === 1) return 'one'
   const last = n % 10
   const lastTwo = n % 100
