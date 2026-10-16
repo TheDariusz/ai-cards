@@ -3,6 +3,8 @@ import type { Route } from './+types/login'
 import { getUserId } from '../lib/session'
 import { createDb } from '../db/repo'
 import { parseLocale } from '../lib/locale'
+import { dict, useT } from '../lib/i18n'
+import { LocaleSwitch } from '../welcome/locale-switch'
 import { mailSenderFromEnv } from '../lib/resend'
 import { loginConfigFromEnv, normalizeEmail, requestLoginLink } from '../lib/login'
 
@@ -14,6 +16,7 @@ export async function loader({ request, context }: Route.LoaderArgs) {
 export async function action({ request, context }: Route.ActionArgs) {
   const env = context.cloudflare.env
   const form = await request.formData()
+  const locale = parseLocale(request.headers.get('Cookie'))
   const origin = new URL(request.url).origin
   const config = loginConfigFromEnv(env)
   const email = normalizeEmail(form.get('email')) ?? String(form.get('email'))
@@ -21,9 +24,9 @@ export async function action({ request, context }: Route.ActionArgs) {
   const owner = config.ownerEmail === null ? 'OWNER_EMAIL missing/invalid' : email === config.ownerEmail ? 'is owner' : 'not owner'
   try {
     const deps = { db: createDb(env.DB), config, send: mailSenderFromEnv(env, origin) }
-    const result = await requestLoginLink(deps, form.get('email'), origin, Date.now(), parseLocale(request.headers.get('Cookie')))
+    const result = await requestLoginLink(deps, form.get('email'), origin, Date.now(), locale)
     console.log(`login: ${result} for ${email} (${owner})`)
-    if (result === 'invalid') return { error: 'Enter a valid email address' }
+    if (result === 'invalid') return { error: dict[locale].login.invalidEmail }
   } catch (err) {
     // same answer as success, so a failure can't reveal which addresses are on the list
     console.error(`login: sending mail failed for ${email} (${owner})`, err)
@@ -34,16 +37,18 @@ export async function action({ request, context }: Route.ActionArgs) {
 export default function Login() {
   const data = useActionData<typeof action>()
   const busy = useNavigation().state !== 'idle'
+  const t = useT().login
   return (
     <main className="page">
+      <LocaleSwitch />
       <h1>AI Cards</h1>
-      <p className="muted">Enter your email to log in or create an account.</p>
+      <p className="muted">{t.intro}</p>
       {data && 'sent' in data ? (
-        <p className="ok">A login link is on its way (valid for 15 minutes). New here? The link creates your account.</p>
+        <p className="ok">{t.sent}</p>
       ) : (
         <Form method="post">
-          <input type="email" name="email" placeholder="Email" autoComplete="email" required autoFocus />
-          <button type="submit" disabled={busy}>{busy ? 'Sending…' : 'Email me a login link'}</button>
+          <input type="email" name="email" placeholder={t.emailPlaceholder} autoComplete="email" required autoFocus />
+          <button type="submit" disabled={busy}>{busy ? t.sending : t.send}</button>
           {data && 'error' in data && <p className="error">{data.error}</p>}
         </Form>
       )}

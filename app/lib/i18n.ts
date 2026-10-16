@@ -46,6 +46,20 @@ const pl = {
     closing: 'Zacznij od następnego słowa, które usłyszysz.',
     footer: 'AI Cards · Fiszki z angielskiego dla Polaków',
   },
+  login: {
+    intro: 'Podaj e-mail, żeby się zalogować lub założyć konto.',
+    sent: 'Link do logowania jest w drodze (ważny 15 minut). Jesteś tu pierwszy raz? Link założy Ci konto.',
+    emailPlaceholder: 'E-mail',
+    send: 'Wyślij mi link do logowania',
+    sending: 'Wysyłam…',
+    invalidEmail: 'Podaj poprawny adres e-mail',
+  },
+  verify: {
+    logIn: 'Zaloguj się',
+    loggingIn: 'Loguję…',
+    expired: 'Ten link wygasł albo został już użyty.',
+    sendNew: 'Wyślij nowy link',
+  },
 }
 
 export type Dict = typeof pl
@@ -89,6 +103,20 @@ const en: Dict = {
     factExport: ['Export', ' to Anki any time'],
     closing: 'Start with the next word you hear.',
     footer: 'AI Cards · English flashcards for Polish speakers',
+  },
+  login: {
+    intro: 'Enter your email to log in or create an account.',
+    sent: 'A login link is on its way (valid for 15 minutes). New here? The link creates your account.',
+    emailPlaceholder: 'Email',
+    send: 'Email me a login link',
+    sending: 'Sending…',
+    invalidEmail: 'Enter a valid email address',
+  },
+  verify: {
+    logIn: 'Log in',
+    loggingIn: 'Logging in…',
+    expired: 'This link has expired or was already used.',
+    sendNew: 'Send a new link',
   },
 }
 
