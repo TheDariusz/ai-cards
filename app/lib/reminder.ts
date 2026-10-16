@@ -114,7 +114,7 @@ export function buildReminder(input: {
   }
   // only reviews complete a day, so the streak is at stake only when cards are due
   const streakLine = due > 0 && streak >= 1
-    ? (en ? `Your streak: ${days(streak)} — don't break it today.` : `Twoja seria: ${dni(streak)} — nie przerywaj jej dziś.`)
+    ? (en ? `Your streak: ${days(streak)}. Don't break it today.` : `Twoja seria: ${dni(streak)}. Nie przerywaj jej dziś.`)
     : null
   const footer = en ? 'You can turn reminders off on the app home page.' : 'Przypomnienia wyłączysz na stronie głównej aplikacji.'
   const homeUrl = `${base}/`

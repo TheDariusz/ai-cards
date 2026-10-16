@@ -141,7 +141,7 @@ function FlipCard({ card }: { card: Route.ComponentProps['loaderData']['due'][nu
         <>
           <div className="card-face">
             <Sentence text={card.sentenceEn} headword={card.word} lang="en" bold />
-            <p className="muted">{card.word} = {card.wordPl} — {card.explanationEn}</p>
+            <p className="muted">{card.word} = {card.wordPl} · {card.explanationEn}</p>
             {card.audioKey && <audio ref={audioRef} controls src={`/audio/${card.id}?v=${encodeURIComponent(card.audioKey)}`} />}
           </div>
           <GradeButtons cardId={card.id} mode="flip" />
@@ -239,7 +239,7 @@ function WriteCard({ card }: { card: Route.ComponentProps['loaderData']['due'][n
             )}
             <Sentence text={card.sentenceEn} headword={card.word} lang="en" bold />
             <p className="muted">
-              {!evaluation && `${Math.round(local.diff.score * 100)}% — `}{t.suggested} <b>{suggested && t.grades[suggested].toLowerCase()}</b>
+              {!evaluation && `${Math.round(local.diff.score * 100)}% · `}{t.suggested} <b>{suggested && t.grades[suggested].toLowerCase()}</b>
             </p>
             {!evaluation && (
               <p className="muted">
