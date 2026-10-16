@@ -10,6 +10,8 @@ export const users = sqliteTable('users', {
   createdAt: integer('created_at').notNull(),
   // set by the owner on /admin; a blocked user can't log in and their session stops working
   blockedAt: integer('blocked_at'),
+  // interface language: 'pl' | 'en'
+  locale: text('locale').notNull().default('pl'),
 })
 
 export const cards = sqliteTable('cards', {

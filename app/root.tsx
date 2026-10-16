@@ -10,11 +10,14 @@ import {
 
 import type { Route } from "./+types/root";
 import { parseTheme, THEME_BG } from "./lib/theme";
+import { parseLocale } from "./lib/locale";
+import { useT } from "./lib/i18n";
 import "./app.css";
 
-// No requireAuth: this also runs for /login and returns only a non-sensitive preference
+// No requireAuth: this also runs for /login and returns only non-sensitive preferences
 export async function loader({ request }: Route.LoaderArgs) {
-  return { theme: parseTheme(request.headers.get("Cookie")) };
+  const cookie = request.headers.get("Cookie");
+  return { theme: parseTheme(cookie), locale: parseLocale(cookie) };
 }
 
 export const links: Route.LinksFunction = () => [
@@ -35,9 +38,10 @@ export const links: Route.LinksFunction = () => [
 
 export function Layout({ children }: { children: React.ReactNode }) {
   // undefined on error renders → auto
-  const theme = useRouteLoaderData<typeof loader>("root")?.theme ?? "auto";
+  const data = useRouteLoaderData<typeof loader>("root");
+  const theme = data?.theme ?? "auto";
   return (
-    <html lang="en" data-theme={theme === "auto" ? undefined : theme}>
+    <html lang={data?.locale ?? "pl"} data-theme={theme === "auto" ? undefined : theme}>
       <head>
         <meta charSet="utf-8" />
         <meta
@@ -70,15 +74,16 @@ export default function App() {
 }
 
 export function ErrorBoundary({ error }: Route.ErrorBoundaryProps) {
-  let message = "Oops!";
-  let details = "An unexpected error occurred.";
+  const t = useT().error;
+  let message = t.oops;
+  let details = t.unexpected;
   let stack: string | undefined;
 
   if (isRouteErrorResponse(error)) {
-    message = error.status === 404 ? "404" : "Error";
+    message = error.status === 404 ? "404" : t.error;
     details =
       error.status === 404
-        ? "The requested page could not be found."
+        ? t.notFound
         : error.statusText || details;
   } else if (import.meta.env.DEV && error && error instanceof Error) {
     details = error.message;

@@ -78,10 +78,10 @@ form > input:not([type="hidden"]) + button, form > textarea + button { margin-to
 .settings-links { display: flex; flex-wrap: wrap; gap: 0.5rem 1rem; }
 .logout { text-align: center; margin-top: 0.5rem; }
 .logout .link-button { color: var(--muted); }
-.theme-switch, .reminder-segment { display: inline-flex; gap: 2px; padding: 3px; border-radius: 14px; background: var(--accent-soft); }
+.theme-switch, .reminder-segment, .locale-switch { display: inline-flex; gap: 2px; padding: 3px; border-radius: 14px; background: var(--accent-soft); }
 .theme-switch { margin-top: 1rem; }
-.theme-switch button, .reminder-segment button { background: transparent; color: var(--text); border-radius: 11px; padding: 0.35rem 0.9rem; font-size: 0.9rem; }
-.theme-switch button[aria-pressed="true"], .reminder-segment button[aria-pressed="true"] { background: var(--surface); color: var(--accent); }
+.theme-switch button, .reminder-segment button, .locale-switch button { background: transparent; color: var(--text); border-radius: 11px; padding: 0.35rem 0.9rem; font-size: 0.9rem; }
+.theme-switch button[aria-pressed="true"], .reminder-segment button[aria-pressed="true"], .locale-switch button[aria-pressed="true"] { background: var(--surface); color: var(--accent); }
 .reminder-switch { display: flex; flex-wrap: wrap; align-items: center; gap: 0.6rem; margin-top: 0.75rem; font-size: 0.9rem; }
 .link-button { background: transparent; color: var(--accent); padding: 0.35rem 0.2rem; font-size: 0.9rem; text-decoration: underline; }
 .link-button:disabled { opacity: 0.6; }
@@ -153,6 +153,7 @@ form > input:not([type="hidden"]) + button, form > textarea + button { margin-to
 }
 :root[data-theme="dark"] .landing-header .logo-light { display: none; }
 :root[data-theme="dark"] .landing-header .logo-dark { display: block; }
+.landing-header-actions { display: flex; align-items: center; gap: 16px; }
 .landing-login { color: var(--text); font-weight: 500; text-underline-offset: 4px; }
 .landing-title { font-family: "Literata", Georgia, serif; font-size: clamp(2rem, 5vw, 3.4rem); line-height: 1.1; letter-spacing: -0.015em; margin: 0 0 14px; max-width: 44rem; text-wrap: balance; }
 .landing-pitch { color: var(--muted); font-size: 1.1rem; margin: 0; max-width: 32rem; }

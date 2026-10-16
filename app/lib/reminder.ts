@@ -1,3 +1,5 @@
+import { dict } from './i18n'
+import type { Locale } from './locale'
 import type { MailMessage } from './mailer'
 
 export function isReminderHour(nowMs: number, hour = 19): boolean {
@@ -25,30 +27,6 @@ export function shouldRemind(s: ReminderState): { send: true } | { send: false; 
   return { send: true }
 }
 
-type PluralForm = 'one' | 'few' | 'many'
-
-function plForm(n: number): PluralForm {
-  if (n === 1) return 'one'
-  const last = n % 10
-  const lastTwo = n % 100
-  return last >= 2 && last <= 4 && (lastTwo < 12 || lastTwo > 14) ? 'few' : 'many'
-}
-
-export function pluralKarty(n: number): 'karta' | 'karty' | 'kart' {
-  return ({ one: 'karta', few: 'karty', many: 'kart' } as const)[plForm(n)]
-}
-
-export function pluralNowa(n: number): 'nowa' | 'nowe' | 'nowych' {
-  return ({ one: 'nowa', few: 'nowe', many: 'nowych' } as const)[plForm(n)]
-}
-
-const karty = (n: number) => `${n} ${pluralKarty(n)}`
-const noweKarty = (n: number) => `${n} ${pluralNowa(n)} ${pluralKarty(n)}`
-// after "Masz" the noun is accusative; only the singular differs from the plural forms
-const kartyAcc = (n: number) => (n === 1 ? '1 kartę' : karty(n))
-const noweKartyAcc = (n: number) => (n === 1 ? '1 nową kartę' : noweKarty(n))
-const dni = (n: number) => `${n} ${n === 1 ? 'dzień' : 'dni'}`
-
 function escapeHtml(s: string): string {
   return s.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c]!)
 }
@@ -59,45 +37,34 @@ function warsawTime(ms: number): string {
   }).format(new Date(ms))
 }
 
-// `later` = the part of `due` that is not in /review yet, and when the first of it gets there
-function timingLine(due: number, later: { count: number; from: number }): string | null {
-  if (later.count <= 0) return null
-  const t = warsawTime(later.from)
-  if (later.count >= due) return due === 1 ? `Będzie gotowa o ${t}.` : `Pierwsza będzie gotowa o ${t}.`
-  return later.count === 1
-    ? `Teraz możesz powtórzyć ${due - 1}, ostatnia będzie gotowa o ${t}.`
-    : `Teraz możesz powtórzyć ${due - later.count}, pozostałe będą gotowe od ${t}.`
-}
-
 export function buildReminder(input: {
-  due: number; fresh: number; streak: number; appUrl: string; later?: { count: number; from: number }
+  due: number; fresh: number; streak: number; appUrl: string; later?: { count: number; from: number }; locale: Locale
 }): MailMessage {
-  const { due, fresh, streak } = input
+  const { due, fresh, streak, locale } = input
+  const t = dict[locale].mail
   const base = input.appUrl.replace(/\/$/, '')
 
   let subject: string
   let status: string
   let button: { label: string; url: string }
   if (due > 0) {
-    subject = `${karty(due)} do powtórki` + (streak >= 1 ? ` · streak ${dni(streak)}` : '')
-    status = fresh > 0
-      ? `Masz dziś ${kartyAcc(due)} do powtórki i ${noweKartyAcc(fresh)} do nauki.`
-      : `Masz dziś ${kartyAcc(due)} do powtórki.`
-    const timing = input.later ? timingLine(due, input.later) : null
-    if (timing) status += ` ${timing}`
-    button = { label: 'Zacznij review', url: `${base}/review` }
+    subject = t.dueSubject(due, streak)
+    status = t.dueStatus(due, fresh)
+    // `later` = the part of `due` that is not in /review yet, and when the first of it gets there
+    if (input.later && input.later.count > 0) status += ` ${t.timing(due, input.later.count, warsawTime(input.later.from))}`
+    button = { label: t.startReview, url: `${base}/review` }
   } else if (fresh > 0) {
-    subject = `${noweKarty(fresh)} ${plForm(fresh) === 'few' ? 'czekają' : 'czeka'} na naukę`
-    status = `Masz dziś ${noweKartyAcc(fresh)} do nauki.`
-    button = { label: 'Zacznij naukę', url: `${base}/learn` }
+    subject = t.freshSubject(fresh)
+    status = t.freshStatus(fresh)
+    button = { label: t.startLearning, url: `${base}/learn` }
   } else {
-    subject = 'Brak kart na dziś'
-    status = 'Nie masz dziś kart do powtórki ani nowych kart.'
-    button = { label: 'Otwórz aplikację', url: `${base}/` }
+    subject = t.noneSubject
+    status = t.noneStatus
+    button = { label: t.openApp, url: `${base}/` }
   }
   // only reviews complete a day, so the streak is at stake only when cards are due
-  const streakLine = due > 0 && streak >= 1 ? `Twoja seria: ${dni(streak)} — nie przerywaj jej dziś.` : null
-  const footer = 'Przypomnienia wyłączysz na stronie głównej aplikacji.'
+  const streakLine = due > 0 && streak >= 1 ? t.streakLine(streak) : null
+  const footer = t.footer
   const homeUrl = `${base}/`
 
   const text = [
@@ -111,7 +78,7 @@ export function buildReminder(input: {
 
   const font = "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif"
   const html = `<!doctype html>
-<html lang="pl"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"></head>
+<html lang="${locale}"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1"></head>
 <body style="margin:0;padding:0;background:#f6f7fb;">
 <table role="presentation" width="100%" cellpadding="0" cellspacing="0" style="background:#f6f7fb;font-family:${font};color:#1d2233;">
 <tr><td align="center" style="padding:32px 16px;">

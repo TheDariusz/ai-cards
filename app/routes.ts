@@ -14,5 +14,6 @@ export default [
   route('audio/:id', 'routes/audio.ts'),
   route('export/:format', 'routes/export.ts'),
   route('theme', 'routes/theme.ts'),
+  route('locale', 'routes/locale.ts'),
   route('reminder', 'routes/reminder.ts'),
 ] satisfies RouteConfig

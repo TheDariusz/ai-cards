@@ -1,3 +1,5 @@
+import { readCookie } from './cookie'
+
 export type ThemePref = 'auto' | 'light' | 'dark'
 
 // Page background per theme; mirrors --bg in app/app.css for the theme-color meta
@@ -8,11 +10,7 @@ export function toThemePref(value: unknown): ThemePref {
 }
 
 export function parseTheme(cookieHeader: string | null): ThemePref {
-  for (const part of (cookieHeader ?? '').split(';')) {
-    const [name, ...rest] = part.trim().split('=')
-    if (name === 'theme') return toThemePref(rest.join('='))
-  }
-  return 'auto'
+  return toThemePref(readCookie(cookieHeader, 'theme'))
 }
 
 export function themeCookie(pref: ThemePref): string {

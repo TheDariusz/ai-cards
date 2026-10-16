@@ -10,6 +10,7 @@ import type { Grade } from '../lib/srs'
 import { computeStreak, dayKey } from '../lib/streak'
 import type { CheckResult } from './review-check'
 import { MAX_TEXT_CHARS } from '../lib/limits'
+import { useT } from '../lib/i18n'
 
 const KEY_TO_GRADE: Record<string, 'again' | 'good' | 'easy'> = { '1': 'again', '2': 'good', '3': 'easy' }
 
@@ -69,6 +70,7 @@ function Sentence({ text, headword, lang, bold }: {
 // useFetcher (not a navigating Form) so a network failure keeps the revealed card
 // on screen — the grade is "held in memory" (spec) and the user just taps again.
 function GradeButtons({ cardId, mode, typed, suggested }: { cardId: number; mode: string; typed?: string; suggested?: Grade }) {
+  const t = useT().review
   const fetcher = useFetcher<typeof action>()
   const failed = fetcher.state === 'idle' && fetcher.data?.ok === false
   useEffect(() => {
@@ -101,15 +103,16 @@ function GradeButtons({ cardId, mode, typed, suggested }: { cardId: number; mode
           className={grade === suggested ? 'grade-suggested' : undefined}
           disabled={fetcher.state !== 'idle'}
         >
-          {grade[0].toUpperCase() + grade.slice(1)} <kbd>{i + 1}</kbd>
+          {t.grades[grade]} <kbd>{i + 1}</kbd>
         </button>
       ))}
-      {failed && <p className="error">Didn’t reach the server — tap your grade again.</p>}
+      {failed && <p className="error">{t.gradeFailed}</p>}
     </fetcher.Form>
   )
 }
 
 function FlipCard({ card }: { card: Route.ComponentProps['loaderData']['due'][number] }) {
+  const t = useT().review
   const [revealed, setRevealed] = useState(false)
   const audioRef = useRef<HTMLAudioElement>(null)
   useEffect(() => {
@@ -133,12 +136,12 @@ function FlipCard({ card }: { card: Route.ComponentProps['loaderData']['due'][nu
     <>
       <div className="card-face"><Sentence text={card.sentencePl} headword={card.wordPl} lang="pl" /></div>
       {!revealed ? (
-        <button onClick={() => setRevealed(true)}>Show answer</button>
+        <button onClick={() => setRevealed(true)}>{t.showAnswer}</button>
       ) : (
         <>
           <div className="card-face">
             <Sentence text={card.sentenceEn} headword={card.word} lang="en" bold />
-            <p className="muted">{card.word} = {card.wordPl} — {card.explanationEn}</p>
+            <p className="muted">{card.word} = {card.wordPl} · {card.explanationEn}</p>
             {card.audioKey && <audio ref={audioRef} controls src={`/audio/${card.id}?v=${encodeURIComponent(card.audioKey)}`} />}
           </div>
           <GradeButtons cardId={card.id} mode="flip" />
@@ -149,6 +152,7 @@ function FlipCard({ card }: { card: Route.ComponentProps['loaderData']['due'][nu
 }
 
 function WriteCard({ card }: { card: Route.ComponentProps['loaderData']['due'][number] }) {
+  const t = useT().review
   const [typed, setTyped] = useState('')
   // Computed on Check: instant, and the fallback when AI feedback is unavailable
   const [local, setLocal] = useState<{ diff: DiffResult; headword: HeadwordStatus } | null>(null)
@@ -197,17 +201,17 @@ function WriteCard({ card }: { card: Route.ComponentProps['loaderData']['due'][n
                 check()
               }
             }}
-            placeholder="Write the English sentence…"
+            placeholder={t.writePlaceholder}
             maxLength={MAX_TEXT_CHARS}
             autoFocus
             rows={3}
           />
-          <button type="submit" disabled={!typed.trim()}>Check</button>
+          <button type="submit" disabled={!typed.trim()}>{t.check}</button>
         </form>
       ) : !done ? (
         <div className="card-face">
           <p lang="en" className="typed-answer">{typed}</p>
-          <p className="muted">Checking…</p>
+          <p className="muted">{t.checking}</p>
         </div>
       ) : (
         <>
@@ -224,7 +228,7 @@ function WriteCard({ card }: { card: Route.ComponentProps['loaderData']['due'][n
                     {evaluation.notesPl.map((note, i) => <li key={i}>{note}</li>)}
                   </ul>
                 )}
-                <p className="alt-label">Another correct version</p>
+                <p className="alt-label">{t.alternative}</p>
               </div>
             ) : (
               <p>
@@ -235,15 +239,15 @@ function WriteCard({ card }: { card: Route.ComponentProps['loaderData']['due'][n
             )}
             <Sentence text={card.sentenceEn} headword={card.word} lang="en" bold />
             <p className="muted">
-              {!evaluation && `${Math.round(local.diff.score * 100)}% — `}suggested: <b>{suggested}</b>
+              {!evaluation && `${Math.round(local.diff.score * 100)}% · `}{t.suggested} <b>{suggested && t.grades[suggested].toLowerCase()}</b>
             </p>
             {!evaluation && (
               <p className="muted">
-                {checked && !checked.ok && checked.reason === 'no-credits' ? 'AI feedback unavailable — out of credits' : 'AI feedback unavailable'}
+                {checked && !checked.ok && checked.reason === 'no-credits' ? t.aiNoCredits : t.aiUnavailable}
               </p>
             )}
-            {local.headword === 'missing' && <p className="error">Main word missing: <b>{card.word}</b></p>}
-            {local.headword === 'typo' && <p className="muted">Main word had a typo.</p>}
+            {local.headword === 'missing' && <p className="error">{t.headwordMissing} <b>{card.word}</b></p>}
+            {local.headword === 'typo' && <p className="muted">{t.headwordTypo}</p>}
             {card.audioKey && <audio ref={audioRef} controls src={`/audio/${card.id}?v=${encodeURIComponent(card.audioKey)}`} />}
           </div>
           <GradeButtons cardId={card.id} mode="write" typed={typed} suggested={suggested ?? undefined} />
@@ -254,6 +258,7 @@ function WriteCard({ card }: { card: Route.ComponentProps['loaderData']['due'][n
 }
 
 export default function Review({ loaderData }: Route.ComponentProps) {
+  const t = useT().review
   const [params, setParams] = useSearchParams()
   const mode = params.get('mode') === 'flip' ? 'flip' : 'write'
   const card = loaderData.due[0] // action revalidates the loader → next card appears
@@ -261,8 +266,8 @@ export default function Review({ loaderData }: Route.ComponentProps) {
   if (!card) {
     return (
       <main className="page">
-        <h1><Link to="/">←</Link> Review</h1>
-        <p className="ok">All done for today 🎉</p>
+        <h1><Link to="/">←</Link> {t.title}</h1>
+        <p className="ok">{t.allDone}</p>
       </main>
     )
   }
@@ -275,12 +280,12 @@ export default function Review({ loaderData }: Route.ComponentProps) {
   return (
     <main className="page">
       <h1 className="review-head">
-        <Link to="/">←</Link> Review <span className="muted">· {left} left{streak > 0 ? ` · 🔥 ${streak}` : ''}</span>
+        <Link to="/">←</Link> {t.title} <span className="muted">· {t.left(left)}{streak > 0 ? ` · 🔥 ${streak}` : ''}</span>
       </h1>
       <div
         className="progress"
         role="progressbar"
-        aria-label="Today's reviews"
+        aria-label={t.progress}
         aria-valuemin={0}
         aria-valuemax={doneToday + left}
         aria-valuenow={doneToday}
@@ -291,7 +296,7 @@ export default function Review({ loaderData }: Route.ComponentProps) {
         className="muted-toggle"
         onClick={() => setParams({ mode: mode === 'flip' ? 'write' : 'flip' })}
       >
-        Mode: {mode === 'flip' ? 'Flip' : 'Write it'}
+        {t.mode} {mode === 'flip' ? t.modeFlip : t.modeWrite}
       </button>
       {mode === 'flip'
         ? <FlipCard key={card.id} card={card} />
@@ -301,10 +306,11 @@ export default function Review({ loaderData }: Route.ComponentProps) {
 }
 
 export function ErrorBoundary() {
+  const t = useT().review
   return (
     <main className="page">
-      <p className="error">Something went wrong submitting your review.</p>
-      <a href="/review">Back to review</a>
+      <p className="error">{t.submitError}</p>
+      <a href="/review">{t.backToReview}</a>
     </main>
   )
 }
