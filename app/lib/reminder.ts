@@ -91,8 +91,8 @@ export function buildReminder(input: {
   let button: { label: string; url: string }
   if (due > 0) {
     subject = en
-      ? `${cards(due)} to review` + (streak >= 1 ? ` · ${days(streak)} streak` : '')
-      : `${karty(due)} do powtórki` + (streak >= 1 ? ` · streak ${dni(streak)}` : '')
+      ? `${cards(due)} to review` + (streak >= 1 ? ` · ${streak}-day streak` : '')
+      : `${karty(due)} do powtórki` + (streak >= 1 ? ` · seria ${dni(streak)}` : '')
     status = en
       ? (fresh > 0 ? `You have ${cards(due)} to review and ${newCards(fresh)} to learn today.` : `You have ${cards(due)} to review today.`)
       : fresh > 0
@@ -100,7 +100,7 @@ export function buildReminder(input: {
         : `Masz dziś ${kartyAcc(due)} do powtórki.`
     const timing = input.later ? timingLine(due, input.later, locale) : null
     if (timing) status += ` ${timing}`
-    button = { label: en ? 'Start review' : 'Zacznij review', url: `${base}/review` }
+    button = { label: en ? 'Start review' : 'Zacznij powtórkę', url: `${base}/review` }
   } else if (fresh > 0) {
     subject = en
       ? `${newCards(fresh)} to learn`

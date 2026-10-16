@@ -7,13 +7,15 @@ export function LocaleSwitch() {
   const t = useT()
   const locale = useRouteLoaderData<typeof rootLoader>('root')?.locale ?? 'pl'
   return (
-    <Form method="post" action="/locale" className="locale-switch" aria-label={t.common.language}>
+    <Form method="post" action="/locale" className="locale-switch">
       <input type="hidden" name="redirectTo" value={location.pathname + location.search} />
-      {(['pl', 'en'] as const).map((value) => (
-        <button key={value} type="submit" name="locale" value={value} aria-pressed={locale === value}>
-          {value.toUpperCase()}
-        </button>
-      ))}
+      <div role="group" aria-label={t.common.language}>
+        {(['pl', 'en'] as const).map((value) => (
+          <button key={value} type="submit" name="locale" value={value} aria-pressed={locale === value}>
+            {value.toUpperCase()}
+          </button>
+        ))}
+      </div>
     </Form>
   )
 }

@@ -119,7 +119,7 @@ describe('runReminder', () => {
     await addDueCard(db)
     await db.insert(dayLog).values({ date: '2026-09-26' })
     await runReminder(deps(db, mailer), U, NOW)
-    expect(mailer.sent[0].subject.endsWith(' · streak 1 dzień')).toBe(true)
+    expect(mailer.sent[0].subject.endsWith(' · seria 1 dzień')).toBe(true)
   })
 
   it('leaves lastSent unset when sending fails', async () => {

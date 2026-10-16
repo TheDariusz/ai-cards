@@ -51,13 +51,13 @@ describe('buildReminder', () => {
   })
   it('due cards with a streak', () => {
     const m = buildReminder({ due: 12, fresh: 0, streak: 7, appUrl: url, locale: 'pl' })
-    expect(m.subject).toBe('12 kart do powtórki · streak 7 dni')
+    expect(m.subject).toBe('12 kart do powtórki · seria 7 dni')
     expect(m.text).toContain('Twoja seria: 7 dni — nie przerywaj jej dziś.')
     expect(m.text).toContain('https://x.dev/review')
   })
   it('due and new cards, streak of one day', () => {
     const m = buildReminder({ due: 2, fresh: 3, streak: 1, appUrl: url, locale: 'pl' })
-    expect(m.subject).toBe('2 karty do powtórki · streak 1 dzień')
+    expect(m.subject).toBe('2 karty do powtórki · seria 1 dzień')
     expect(m.text).toContain('Masz dziś 2 karty do powtórki i 3 nowe karty do nauki.')
   })
   it('uses the accusative for exactly one card in the body', () => {
