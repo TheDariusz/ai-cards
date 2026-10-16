@@ -207,7 +207,7 @@ export async function findOrCreateUser(
   if (ownerEmail && email === ownerEmail) {
     const [claimed] = await db
       .update(users)
-      .set({ email })
+      .set({ email, locale })
       .where(and(eq(users.id, OWNER_USER_ID), isNull(users.email)))
       .returning({ id: users.id })
     if (claimed) return claimed.id
@@ -225,6 +225,12 @@ export async function findOrCreateUser(
 export async function getUserLocale(db: Db, userId: number): Promise<Locale> {
   const [row] = await db.select({ locale: users.locale }).from(users).where(eq(users.id, userId))
   return toLocale(row?.locale)
+}
+
+// null for an address with no account yet
+export async function getLocaleByEmail(db: Db, email: string): Promise<Locale | null> {
+  const [row] = await db.select({ locale: users.locale }).from(users).where(eq(users.email, email))
+  return row ? toLocale(row.locale) : null
 }
 
 export async function setUserLocale(db: Db, userId: number, locale: Locale): Promise<void> {
@@ -291,8 +297,9 @@ export async function listUsersWithUsage(db: Db): Promise<UserWithUsage[]> {
 }
 
 // Reminder recipients: blocked users get no mail.
-export async function listUsers(db: Db): Promise<{ id: number; email: string | null }[]> {
-  return db.select({ id: users.id, email: users.email }).from(users).where(isNull(users.blockedAt)).orderBy(asc(users.id))
+export async function listUsers(db: Db): Promise<{ id: number; email: string | null; locale: Locale }[]> {
+  const rows = await db.select({ id: users.id, email: users.email, locale: users.locale }).from(users).where(isNull(users.blockedAt)).orderBy(asc(users.id))
+  return rows.map((u) => ({ ...u, locale: toLocale(u.locale) }))
 }
 
 export async function getUserEmail(db: Db, userId: number): Promise<string | null> {

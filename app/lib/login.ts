@@ -1,8 +1,9 @@
 import {
   consumeLoginToken, countLoginTokensSince, countUsersCreatedSince, createLoginToken, findOrCreateUser, hasAccount,
-  isEmailBlocked, type Db,
+  getLocaleByEmail, isEmailBlocked, type Db,
 } from '../db/repo'
 import { starterMicros } from './credits'
+import { dict } from './i18n'
 import type { Locale } from './locale'
 import type { MailMessage } from './mailer'
 import { sha256Hex } from './session'
@@ -46,19 +47,11 @@ async function canSignIn(db: Db, config: LoginConfig, email: string, now: number
 }
 
 export function buildLoginEmail(link: string, locale: Locale): MailMessage {
-  if (locale === 'en') {
-    return {
-      subject: 'Login link · AI Cards',
-      text: `Log in to AI Cards:\n${link}\n\nThe link works for 15 minutes and only once. If this wasn't you, ignore this message.`,
-      html: `<p><a href="${link}">Log in to AI Cards</a></p>`
-        + "<p>The link works for 15 minutes and only once. If this wasn't you, ignore this message.</p>",
-    }
-  }
+  const t = dict[locale].mail
   return {
-    subject: 'Link do logowania · AI Cards',
-    text: `Zaloguj się do AI Cards:\n${link}\n\nLink działa 15 minut i tylko raz. Jeśli to nie Ty, zignoruj tę wiadomość.`,
-    html: `<p><a href="${link}">Zaloguj się do AI Cards</a></p>`
-      + '<p>Link działa 15 minut i tylko raz. Jeśli to nie Ty, zignoruj tę wiadomość.</p>',
+    subject: t.loginSubject,
+    text: `${t.loginCta}:\n${link}\n\n${t.loginNote}`,
+    html: `<p><a href="${link}">${t.loginCta}</a></p><p>${t.loginNote}</p>`,
   }
 }
 
@@ -86,7 +79,9 @@ export async function requestLoginLink(
   if ((await countLoginTokensSince(deps.db, email, now - LINK_TTL_MS)) >= MAX_LINKS_PER_WINDOW) return 'throttled'
   const token = newToken()
   await createLoginToken(deps.db, await sha256Hex(token), email, now, now + LINK_TTL_MS)
-  await deps.send(email, buildLoginEmail(`${origin}/login/verify?token=${token}&lang=${locale}`, locale))
+  // an existing account keeps its saved language; `locale` (the visitor's UI) only picks it for a new one
+  const lang = (await getLocaleByEmail(deps.db, email)) ?? locale
+  await deps.send(email, buildLoginEmail(`${origin}/login/verify?token=${token}&lang=${lang}`, lang))
   return 'sent'
 }
 

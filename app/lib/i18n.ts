@@ -1,9 +1,17 @@
 import { useRouteLoaderData } from 'react-router'
 import type { loader as rootLoader } from '../root'
 import type { Locale } from './locale'
-import { plForm, pluralKarty, pluralNowa } from './reminder'
+import { plForm, pluralKarty, pluralNowa } from './plural'
 
 const kredyty = (n: number) => ({ one: '1 darmowy kredyt', few: `${n} darmowe kredyty`, many: `${n} darmowych kredytów` })[plForm(n)]
+const karty = (n: number) => `${n} ${pluralKarty(n)}`
+const noweKarty = (n: number) => `${n} ${pluralNowa(n)} ${pluralKarty(n)}`
+// after "Masz" the noun is accusative; only the singular differs from the plural forms
+const kartyAcc = (n: number) => (n === 1 ? '1 kartę' : karty(n))
+const noweKartyAcc = (n: number) => (n === 1 ? '1 nową kartę' : noweKarty(n))
+const dni = (n: number) => `${n} ${n === 1 ? 'dzień' : 'dni'}`
+const cards = (n: number) => `${n} ${n === 1 ? 'card' : 'cards'}`
+const newCards = (n: number) => `${n} new ${n === 1 ? 'card' : 'cards'}`
 const znakow = (n: number) => `${n} ${({ one: 'znak', few: 'znaki', many: 'znaków' })[plForm(n)]}`
 
 // [bold part, rest] pairs render as <b>{bold}</b>{rest}
@@ -94,6 +102,7 @@ const pl = {
     sending: 'Wysyłam…',
     sent: 'Wysłano ✓',
     reminderNotConfigured: 'Brak adresu e-mail albo nie skonfigurowano RESEND_API_KEY/REMINDER_FROM',
+    reminderFailed: 'Nie udało się wysłać testowego przypomnienia.',
     logOut: 'Wyloguj się',
   },
   cards: {
@@ -117,7 +126,7 @@ const pl = {
     deleteConfirm: 'Usunąć tę kartę?',
     delete: 'Usuń',
     hintTooLong: (n: number) => `Wskazówka może mieć najwyżej ${znakow(n)}`,
-    invalidDecode: 'Nieprawidłowy rozbiór dosłowny',
+    invalidDecode: 'Nieprawidłowy rozbiór dosłowny: każda linia to „angielski | polski”, a angielskie fragmenty po kolei (najwyżej trzy słowa w jednym) muszą dać angielskie zdanie.',
     needsDecode: 'Nowa karta potrzebuje rozbioru dosłownego przed pierwszą nauką',
     textTooLong: (word: number, text: number) => `Słowo może mieć najwyżej ${znakow(word)}, a każdy tekst ${znakow(text)}`,
   },
@@ -180,6 +189,30 @@ const pl = {
     block: 'Zablokuj',
     unblock: 'Odblokuj',
     noUser: (id: number) => `Nie ma użytkownika #${id}`,
+  },
+  mail: {
+    loginSubject: 'Link do logowania · AI Cards',
+    loginCta: 'Zaloguj się do AI Cards',
+    loginNote: 'Link działa 15 minut i tylko raz. Jeśli to nie Ty, zignoruj tę wiadomość.',
+    dueSubject: (due: number, streak: number) => `${karty(due)} do powtórki` + (streak >= 1 ? ` · seria ${dni(streak)}` : ''),
+    dueStatus: (due: number, fresh: number) => fresh > 0
+      ? `Masz dziś ${kartyAcc(due)} do powtórki i ${noweKartyAcc(fresh)} do nauki.`
+      : `Masz dziś ${kartyAcc(due)} do powtórki.`,
+    // laterCount of the due cards are not ready yet; the first of them is ready at `time`
+    timing: (due: number, laterCount: number, time: string) => laterCount >= due
+      ? (due === 1 ? `Będzie gotowa o ${time}.` : `Pierwsza będzie gotowa o ${time}.`)
+      : laterCount === 1
+        ? `Teraz możesz powtórzyć ${due - 1}, ostatnia będzie gotowa o ${time}.`
+        : `Teraz możesz powtórzyć ${due - laterCount}, pozostałe będą gotowe od ${time}.`,
+    startReview: 'Zacznij powtórkę',
+    freshSubject: (fresh: number) => `${noweKarty(fresh)} ${plForm(fresh) === 'few' ? 'czekają' : 'czeka'} na naukę`,
+    freshStatus: (fresh: number) => `Masz dziś ${noweKartyAcc(fresh)} do nauki.`,
+    startLearning: 'Zacznij naukę',
+    noneSubject: 'Brak kart na dziś',
+    noneStatus: 'Nie masz dziś kart do powtórki ani nowych kart.',
+    openApp: 'Otwórz aplikację',
+    streakLine: (streak: number) => `Twoja seria: ${dni(streak)}. Nie przerywaj jej dziś.`,
+    footer: 'Przypomnienia wyłączysz na stronie głównej aplikacji.',
   },
   error: {
     oops: 'Ups!',
@@ -278,6 +311,7 @@ const en: Dict = {
     sending: 'Sending…',
     sent: 'Sent ✓',
     reminderNotConfigured: 'No email address or RESEND_API_KEY/REMINDER_FROM not configured',
+    reminderFailed: "Couldn't send the test reminder.",
     logOut: 'Log out',
   },
   cards: {
@@ -301,7 +335,7 @@ const en: Dict = {
     deleteConfirm: 'Delete this card?',
     delete: 'Delete',
     hintTooLong: (n) => `Keep the hint within ${n} characters`,
-    invalidDecode: 'Invalid literal decode',
+    invalidDecode: 'Invalid literal decode: each line is "English | Polish", and the English fragments in order (at most three words each) must make up the English sentence.',
     needsDecode: 'A new card needs a literal decode before first learning',
     textTooLong: (word, text) => `Keep the word within ${word} and each text within ${text} characters`,
   },
@@ -364,6 +398,29 @@ const en: Dict = {
     block: 'Block',
     unblock: 'Unblock',
     noUser: (id) => `No user #${id}`,
+  },
+  mail: {
+    loginSubject: 'Login link · AI Cards',
+    loginCta: 'Log in to AI Cards',
+    loginNote: "The link works for 15 minutes and only once. If this wasn't you, ignore this message.",
+    dueSubject: (due, streak) => `${cards(due)} to review` + (streak >= 1 ? ` · ${streak}-day streak` : ''),
+    dueStatus: (due, fresh) => fresh > 0
+      ? `You have ${cards(due)} to review and ${newCards(fresh)} to learn today.`
+      : `You have ${cards(due)} to review today.`,
+    timing: (due, laterCount, time) => laterCount >= due
+      ? (due === 1 ? `It will be ready at ${time}.` : `The first one will be ready at ${time}.`)
+      : laterCount === 1
+        ? `You can review ${due - 1} now; the last one will be ready at ${time}.`
+        : `You can review ${due - laterCount} now; the rest will be ready from ${time}.`,
+    startReview: 'Start review',
+    freshSubject: (fresh) => `${newCards(fresh)} to learn`,
+    freshStatus: (fresh) => `You have ${newCards(fresh)} to learn today.`,
+    startLearning: 'Start learning',
+    noneSubject: 'No cards for today',
+    noneStatus: 'You have no cards to review or learn today.',
+    openApp: 'Open the app',
+    streakLine: (streak) => `Your streak: ${streak} ${streak === 1 ? 'day' : 'days'}. Don't break it today.`,
+    footer: 'You can turn reminders off on the app home page.',
   },
   error: {
     oops: 'Oops!',

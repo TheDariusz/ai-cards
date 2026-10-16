@@ -1,3 +1,5 @@
+import { readCookie } from './cookie'
+
 export type Locale = 'pl' | 'en'
 
 export function toLocale(value: unknown): Locale {
@@ -5,11 +7,7 @@ export function toLocale(value: unknown): Locale {
 }
 
 export function parseLocale(cookieHeader: string | null): Locale {
-  for (const part of (cookieHeader ?? '').split(';')) {
-    const [name, ...rest] = part.trim().split('=')
-    if (name === 'locale') return toLocale(rest.join('='))
-  }
-  return 'pl'
+  return toLocale(readCookie(cookieHeader, 'locale'))
 }
 
 export function localeCookie(locale: Locale): string {

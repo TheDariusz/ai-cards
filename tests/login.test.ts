@@ -61,6 +61,23 @@ describe('magic link login', () => {
     expect(await getUserLocale(db, userId!)).toBe('en')
   })
 
+  it('an existing account keeps its saved language whatever the visitor UI is', async () => {
+    const { db, sent, deps, tokenOf } = await setup()
+    await requestLoginLink(deps, 'en@example.com', ORIGIN, NOW, 'en')
+    const userId = await verifyLoginLink(deps, tokenOf(), NOW, 'en')
+    await requestLoginLink(deps, 'en@example.com', ORIGIN, NOW + 1, 'pl')
+    expect(sent[1].msg.subject).toBe('Login link · AI Cards')
+    expect(sent[1].msg.text).toMatch(/&lang=en\b/)
+    expect(await getUserLocale(db, userId!)).toBe('en')
+  })
+
+  it('the owner claiming their account saves the language', async () => {
+    const { db, deps, tokenOf } = await setup()
+    await requestLoginLink(deps, 'owner@example.com', ORIGIN, NOW, 'en')
+    await verifyLoginLink(deps, tokenOf(), NOW, 'en')
+    expect(await getUserLocale(db, OWNER_USER_ID)).toBe('en')
+  })
+
   it('mails a one-time link to a new address and signs it up with the starter pool', async () => {
     const { db, sent, deps, tokenOf } = await setup()
     expect(await requestLoginLink(deps, ' Friend@example.com', ORIGIN, NOW, 'pl')).toBe('sent')

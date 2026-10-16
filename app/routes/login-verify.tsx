@@ -1,7 +1,7 @@
 import { Form, Link, redirect, useActionData, useNavigation } from 'react-router'
 import type { Route } from './+types/login-verify'
 import { getSessionStorage } from '../lib/session'
-import { createDb } from '../db/repo'
+import { createDb, getUserLocale } from '../db/repo'
 import { dict } from '../lib/i18n'
 import { localeCookie, toLocale } from '../lib/locale'
 import { loginConfigFromEnv, verifyLoginLink } from '../lib/login'
@@ -16,16 +16,15 @@ export async function action({ request, context }: Route.ActionArgs) {
   const env = context.cloudflare.env
   const form = await request.formData()
   const lang = toLocale(form.get('lang'))
-  const userId = await verifyLoginLink(
-    { db: createDb(env.DB), config: loginConfigFromEnv(env) }, form.get('token'), Date.now(), lang,
-  )
+  const db = createDb(env.DB)
+  const userId = await verifyLoginLink({ db, config: loginConfigFromEnv(env) }, form.get('token'), Date.now(), lang)
   if (userId === null) return { error: dict[lang].verify.expired }
   const { getSession, commitSession } = getSessionStorage(env.SESSION_SECRET)
   const session = await getSession()
   session.set('userId', userId)
   const headers = new Headers()
   headers.append('Set-Cookie', await commitSession(session))
-  headers.append('Set-Cookie', localeCookie(lang))
+  headers.append('Set-Cookie', localeCookie(await getUserLocale(db, userId)))
   return redirect('/', { headers })
 }
 
@@ -34,7 +33,7 @@ export default function LoginVerify({ loaderData }: Route.ComponentProps) {
   const busy = useNavigation().state !== 'idle'
   const t = dict[loaderData.lang].verify
   return (
-    <main className="page">
+    <main className="page" lang={loaderData.lang}>
       <h1>AI Cards</h1>
       {data?.error ? (
         <>

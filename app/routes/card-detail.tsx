@@ -68,8 +68,8 @@ export async function action({ request, params, context }: Route.ActionArgs) {
     let decodeParts
     try {
       decodeParts = decodePartsFromText(String(form.get('decodeParts') ?? ''), sentenceEn)
-    } catch (err) {
-      return { saved: false, error: err instanceof Error ? err.message : t.card.invalidDecode }
+    } catch {
+      return { saved: false, error: t.card.invalidDecode }
     }
     if (card.firstLearnedAt === null && !decodeParts) {
       return { saved: false, error: t.card.needsDecode }

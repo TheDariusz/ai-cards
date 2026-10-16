@@ -1,4 +1,5 @@
 import { completedDays, countDue, countNew, getSetting, getUserLocale, isDayDone, listUsers, nextDueAt, setSetting, type Db } from '../db/repo'
+import type { Locale } from './locale'
 import { OWNER_USER_ID } from '../db/schema'
 import type { Mailer } from './mailer'
 import { buildReminder, shouldRemind, type SkipReason } from './reminder'
@@ -10,7 +11,7 @@ export type ReminderResult =
   | { send: true; due: number; fresh: number; streak: number }
 
 export async function runReminder(
-  deps: ReminderDeps, userId: number, now: number, { force = false }: { force?: boolean } = {},
+  deps: ReminderDeps, userId: number, now: number, { force = false, locale }: { force?: boolean; locale?: Locale } = {},
 ): Promise<ReminderResult> {
   const { db, mailer, appUrl } = deps
   const today = dayKey(now)
@@ -29,7 +30,7 @@ export async function runReminder(
   }
 
   const streak = computeStreak(await completedDays(db, userId), today)
-  const msg = buildReminder({ due, fresh, streak, appUrl, later, locale: await getUserLocale(db, userId) })
+  const msg = buildReminder({ due, fresh, streak, appUrl, later, locale: locale ?? await getUserLocale(db, userId) })
   if (force) msg.subject = `[Test] ${msg.subject}`
   // send first, then record: a failed send never blocks a later attempt
   await mailer.send(msg)
@@ -60,7 +61,7 @@ export async function runAllReminders(deps: AllRemindersDeps, now: number) {
       continue
     }
     try {
-      results.push({ userId: user.id, result: await runReminder({ db: deps.db, mailer, appUrl: deps.appUrl }, user.id, now) })
+      results.push({ userId: user.id, result: await runReminder({ db: deps.db, mailer, appUrl: deps.appUrl }, user.id, now, { locale: user.locale }) })
     } catch (err) {
       results.push({ userId: user.id, error: err instanceof Error ? err.message : String(err) })
     }

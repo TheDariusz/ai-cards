@@ -11,6 +11,7 @@ export async function action({ request, context }: Route.ActionArgs) {
   const userId = await requireAuth(request, env)
   const db = createDb(env.DB)
   const intent = (await request.formData()).get('intent')
+  const t = dict[parseLocale(request.headers.get('Cookie'))]
 
   if (intent === 'on' || intent === 'off') {
     await setSetting(db, userId, 'reminderEnabled', intent === 'on' ? 'true' : 'false')
@@ -19,13 +20,13 @@ export async function action({ request, context }: Route.ActionArgs) {
   if (intent === 'test') {
     const to = reminderRecipient({ id: userId, email: await getUserEmail(db, userId) }, env.REMINDER_TO)
     const mailer = to ? mailerFromEnv(env, to) : null
-    if (!mailer) return { reminderError: dict[parseLocale(request.headers.get('Cookie'))].home.reminderNotConfigured }
+    if (!mailer) return { reminderError: t.home.reminderNotConfigured }
     try {
       await runReminder({ db, mailer, appUrl: env.APP_URL }, userId, Date.now(), { force: true })
       return { reminderSent: true as const }
     } catch (err) {
       console.error('reminder: test failed', err)
-      return { reminderError: err instanceof Error ? err.message : String(err) }
+      return { reminderError: t.home.reminderFailed }
     }
   }
   throw new Response('Bad Request', { status: 400 })

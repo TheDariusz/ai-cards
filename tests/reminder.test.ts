@@ -1,5 +1,6 @@
 import { describe, it, expect } from 'vitest'
-import { isReminderHour, shouldRemind, pluralKarty, pluralNowa, buildReminder, type ReminderState } from '../app/lib/reminder'
+import { isReminderHour, shouldRemind, buildReminder, type ReminderState } from '../app/lib/reminder'
+import { pluralKarty, pluralNowa } from '../app/lib/plural'
 
 const at = (iso: string) => Date.parse(iso)
 
