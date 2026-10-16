@@ -15,7 +15,7 @@ const pl = {
   landing: {
     logIn: 'Zaloguj się',
     title: 'Trzy dni od usłyszanego słowa do słowa, które naprawdę znasz.',
-    pitch: 'Fiszki z angielskiego dla Polaków. Wpisujesz słowo, AI tworzy fiszkę, a powtórki rozłożone w czasie decydują, kiedy znów ją zobaczysz.',
+    pitch: 'Fiszki z angielskiego dla Polaków. Wpisujesz słowo, AI tworzy fiszkę, a algorytm powtórek decyduje, kiedy znów ją zobaczysz.',
     startFree: 'Zacznij za darmo',
     howItWorks: 'Jak to działa',
     day0: 'Dzień 0',
@@ -50,7 +50,7 @@ const pl = {
   },
   login: {
     intro: 'Podaj e-mail, żeby się zalogować lub założyć konto.',
-    sent: 'Link do logowania jest w drodze (ważny 15 minut). Jesteś tu pierwszy raz? Link założy Ci konto.',
+    sent: 'Wysłaliśmy Ci link do logowania (ważny 15 minut). Jesteś tu pierwszy raz? Link założy Ci konto.',
     emailPlaceholder: 'E-mail',
     send: 'Wyślij mi link do logowania',
     sending: 'Wysyłam…',
@@ -162,7 +162,7 @@ const pl = {
     hideExplanation: 'Ukryj dodatkowe wyjaśnienie',
     speakHint: 'Odtwórz nagranie raz czy dwa i mów razem z nim.',
     readAloudOnce: 'Przeczytaj zdanie raz na głos.',
-    spokeAlong: 'Gotowe, powiedziane na głos',
+    spokeAlong: 'Powtórzone za nagraniem',
     backToDecode: 'Wróć do rozbioru',
     backToListen: 'Wróć do słuchania',
     backToUnderstanding: 'Wróć do rozumienia',

@@ -67,8 +67,8 @@ function timingLine(due: number, later: { count: number; from: number }, locale:
   if (locale === 'en') {
     if (later.count >= due) return due === 1 ? `It will be ready at ${t}.` : `The first one will be ready at ${t}.`
     return later.count === 1
-      ? `You can review ${due - 1} now, the last one will be ready at ${t}.`
-      : `You can review ${due - later.count} now, the rest will be ready from ${t}.`
+      ? `You can review ${due - 1} now; the last one will be ready at ${t}.`
+      : `You can review ${due - later.count} now; the rest will be ready from ${t}.`
   }
   if (later.count >= due) return due === 1 ? `Będzie gotowa o ${t}.` : `Pierwsza będzie gotowa o ${t}.`
   return later.count === 1
