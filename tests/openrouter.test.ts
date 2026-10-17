@@ -185,6 +185,24 @@ describe('usage metering', () => {
     }])
   })
 
+  it('charges the upstream cost on top of the fee for BYOK responses', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(chat(CONTENT, {
+      usage: { cost: 0, is_byok: true, cost_details: { upstream_inference_cost: 0.0031234 } },
+    })))
+    const usage: UsageEvent[] = []
+    await provider(usage).generateCard('reluctant')
+    expect(usage.map((e) => e.costMicros)).toEqual([3124])
+  })
+
+  it('ignores upstream cost on non-BYOK responses so it is not charged twice', async () => {
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(chat(CONTENT, {
+      usage: { cost: 0.002, is_byok: false, cost_details: { upstream_inference_cost: 0.002 } },
+    })))
+    const usage: UsageEvent[] = []
+    await provider(usage).generateCard('reluctant')
+    expect(usage.map((e) => e.costMicros)).toEqual([2000])
+  })
+
   it('charges the fallback when usage.cost is missing', async () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(chat({ verdict: 'correct', summaryPl: 'Dobrze.', corrected: 'x', notesPl: [] })))
     vi.spyOn(console, 'error').mockImplementation(() => {})
