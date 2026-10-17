@@ -6,7 +6,7 @@ const BASE = 'https://openrouter.ai/api/v1'
 const TIMEOUT_MS = 60_000
 // Answer evaluation runs while the learner waits; past this the UI falls back to the local diff.
 const EVAL_TIMEOUT_MS = 15_000
-// Charged when a chat response lacks usage.cost, so a format change never makes calls free.
+// Charged when a chat response has neither usage.cost nor an upstream cost, so a format change never makes calls free.
 export const FALLBACK_CHAT_COST_MICROS = 20_000
 // microsoft/mai-voice-2; overridden by TTS_USD_PER_MILLION_CHARS when the model changes
 export const DEFAULT_TTS_USD_PER_MILLION_CHARS = 22
@@ -78,14 +78,23 @@ export function createOpenRouter(opts: {
     const data = (await res.json()) as {
       id?: string
       choices: { message: { content: string } }[]
-      usage?: { cost?: number; prompt_tokens?: number; completion_tokens?: number }
+      usage?: {
+        cost?: number
+        is_byok?: boolean
+        cost_details?: { upstream_inference_cost?: number | null }
+        prompt_tokens?: number
+        completion_tokens?: number
+      }
     }
-    const cost = data.usage?.cost
-    if (typeof cost !== 'number') console.error('OpenRouter chat response has no usage.cost; charging the fallback')
+    // With BYOK, `cost` is only OpenRouter's fee; the provider bills our key the upstream cost directly.
+    const upstream = data.usage?.is_byok === false ? undefined : data.usage?.cost_details?.upstream_inference_cost
+    const parts = [data.usage?.cost, upstream].filter((n): n is number => typeof n === 'number')
+    const cost = parts.length ? parts.reduce((a, b) => a + b) : undefined
+    if (cost === undefined) console.error('OpenRouter chat response has no usage.cost; charging the fallback')
     await opts.onUsage({
       kind,
       model: opts.cardModel,
-      costMicros: typeof cost === 'number' ? Math.ceil(cost * 1e6) : FALLBACK_CHAT_COST_MICROS,
+      costMicros: cost === undefined ? FALLBACK_CHAT_COST_MICROS : Math.ceil(cost * 1e6),
       promptTokens: data.usage?.prompt_tokens ?? null,
       completionTokens: data.usage?.completion_tokens ?? null,
       characters: null,
