@@ -3,7 +3,7 @@ import { useEffect } from 'react'
 import type { Route } from './+types/home'
 import { getUserId, requireAuth } from '../lib/session'
 import { Landing } from '../welcome/landing'
-import { createDb, insertPendingCard, getCard, listCards, countDue, completedDays, getNewCards, getSetting, getBalance } from '../db/repo'
+import { createDb, insertPendingCard, markPending, getCard, listCards, countDue, completedDays, getNewCards, getSetting, getBalance } from '../db/repo'
 import { runCardPipeline } from '../lib/pipeline'
 import { OWNER_USER_ID } from '../db/schema'
 import { aiFromEnv } from '../lib/openrouter'
@@ -84,6 +84,8 @@ export async function action({ request, context }: Route.ActionArgs) {
     const card = await getCard(db, userId, id)
     if (!(await hasCredits(db, userId))) return { error: t.common.noCredits }
     if (card && (card.status === 'failed' || isStuck(card, Date.now()))) {
+      // shortcut: a stuck card stays shown as failed (isStuck keys off createdAt) until its retry finishes
+      await markPending(db, userId, id)
       context.cloudflare.ctx.waitUntil(
         runCardPipeline({ db, ai: aiFromEnv(env, usageRecorder(db, userId)), audio: env.AUDIO }, userId, id, card.word),
       )

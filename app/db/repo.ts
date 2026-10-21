@@ -35,6 +35,11 @@ export async function markFailed(db: Db, id: number) {
   await db.update(cards).set({ status: 'failed' }).where(eq(cards.id, id))
 }
 
+// Retry: back to pending so home shows it as generating and polls until the pipeline settles.
+export async function markPending(db: Db, userId: number, id: number) {
+  await db.update(cards).set({ status: 'pending' }).where(ownCard(userId, id))
+}
+
 export async function getCard(db: Db, userId: number, id: number): Promise<Card | undefined> {
   return (await db.select().from(cards).where(ownCard(userId, id)))[0]
 }
