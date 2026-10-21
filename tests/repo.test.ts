@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { testDb } from './helpers/db'
 import { eq } from 'drizzle-orm'
-import { insertPendingCard, getDueCards, countDue, getCard, listCards, markReady, applyReview, completedDays, updateCardContent, deleteCard, getNewCards, completeFirstLearning, countReviewsOn, getSetting, setSetting, isDayDone, countNew, nextDueAt, setAudioKey, listReviewLog, findOrCreateUser, getUserLocale, setUserLocale, type Db } from '../app/db/repo'
+import { insertPendingCard, getDueCards, countDue, getCard, listCards, markReady, markFailed, markPending, applyReview, completedDays, updateCardContent, deleteCard, getNewCards, completeFirstLearning, countReviewsOn, getSetting, setSetting, isDayDone, countNew, nextDueAt, setAudioKey, listReviewLog, findOrCreateUser, getUserLocale, setUserLocale, type Db } from '../app/db/repo'
 import { reviewLog, dayLog, users, OWNER_USER_ID as U } from '../app/db/schema'
 import { dayKey } from '../app/lib/streak'
 
@@ -53,6 +53,17 @@ describe('repo', () => {
     await insertPendingCard(db, U, 'second', NOW + 1000)
     const all = await listCards(db, U, U)
     expect(all.map((c) => c.word)).toEqual(['second', 'first'])
+  })
+
+  it('markPending puts a failed card back to pending, only for its owner', async () => {
+    const db = testDb()
+    const id = await insertPendingCard(db, U, 'reluctant', NOW)
+    await markFailed(db, id)
+    const [other] = await db.insert(users).values({ email: 'other@example.com', createdAt: NOW }).returning()
+    await markPending(db, other.id, id)
+    expect((await getCard(db, U, id))!.status).toBe('failed')
+    await markPending(db, U, id)
+    expect((await getCard(db, U, id))!.status).toBe('pending')
   })
 })
 
