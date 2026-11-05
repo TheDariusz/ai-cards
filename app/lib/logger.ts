@@ -40,7 +40,7 @@ export function createLogger(sink: LogSink | null, logger: string, now: () => nu
   const buffer: LogEntry[] = []
   const make = (name: string): Logger => {
     const push = (level: Level, msg: string, fields?: Fields) => {
-      buffer.push({ ts: now(), level, msg, logger: name, ...fields })
+      buffer.push({ ...fields, ts: now(), level, msg, logger: name }) // a field can't overwrite the envelope (level is a Loki label)
     }
     return {
       info: (msg, fields) => push('info', msg, fields),

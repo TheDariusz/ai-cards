@@ -34,6 +34,14 @@ describe('createLogger', () => {
     expect(writes[0].map((e) => e.logger)).toEqual(['pipeline', 'http'])
   })
 
+  it('fields cannot overwrite the envelope', async () => {
+    const { sink, writes } = fakeSink()
+    const log = createLogger(sink, 'http', () => 1)
+    log.info('real', { level: 'error', msg: 'fake', logger: 'x', ts: 0 })
+    await log.flush()
+    expect(writes[0][0]).toMatchObject({ ts: 1, level: 'info', msg: 'real', logger: 'http' })
+  })
+
   it('error formats err into the err field', async () => {
     const { sink, writes } = fakeSink()
     const log = createLogger(sink, 'http', () => 1)

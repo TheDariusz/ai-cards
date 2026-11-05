@@ -20,9 +20,11 @@ export default {
     context.cloudflare = { env, ctx };
     // one Loki push per request, after the response is on its way
     context.log = createLogger(lokiSinkFromEnv(env), "http");
-    const response = await requestHandler(request, context);
-    ctx.waitUntil(context.log.flush());
-    return response;
+    try {
+      return await requestHandler(request, context);
+    } finally {
+      ctx.waitUntil(context.log.flush());
+    }
   },
 
   // Daily review reminder. Two crons (17:00 and 18:00 UTC) cover CEST and CET;

@@ -21,18 +21,19 @@ export async function action({ request, context }: Route.ActionArgs) {
   const config = loginConfigFromEnv(env)
   const email = normalizeEmail(form.get('email')) ?? String(form.get('email'))
   // the visitor sees the same answer either way, so this log is the only place outcomes show up
-  const owner = config.ownerEmail === null ? 'OWNER_EMAIL missing/invalid' : email === config.ownerEmail ? 'is owner' : 'not owner'
+  const isOwner = email === config.ownerEmail
+  const owner = config.ownerEmail === null ? 'OWNER_EMAIL missing/invalid' : isOwner ? 'is owner' : 'not owner'
   try {
     const deps = { db: createDb(env.DB), config, send: mailSenderFromEnv(env, origin) }
     const result = await requestLoginLink(deps, form.get('email'), origin, Date.now(), locale)
     console.log(`login: ${result} for ${email} (${owner})`)
     // the outcome without the address: enough to see blocked/throttled/full sign-up patterns in Loki
-    context.log.info('login link requested', { event: 'login_link_requested', result, owner: email === config.ownerEmail })
+    context.log.info('login link requested', { event: 'login_link_requested', result, owner: isOwner })
     if (result === 'invalid') return { error: dict[locale].login.invalidEmail }
   } catch (err) {
     // same answer as success, so a failure can't reveal which addresses are on the list
     console.error(`login: sending mail failed for ${email} (${owner})`, err)
-    context.log.error('login mail failed', { event: 'login_link_requested', owner: email === config.ownerEmail }, err)
+    context.log.error('login mail failed', { event: 'login_link_requested', owner: isOwner }, err)
   }
   return { sent: true as const }
 }
