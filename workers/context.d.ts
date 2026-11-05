@@ -1,4 +1,5 @@
 import "react-router";
+import type { Logger } from "../app/lib/logger";
 
 declare module "react-router" {
   interface RouterContextProvider {
@@ -6,6 +7,7 @@ declare module "react-router" {
       env: Env;
       ctx: ExecutionContext;
     };
+    log: Logger;
   }
 }
 
@@ -21,5 +23,6 @@ declare module "../node_modules/react-router/dist/development/lib/router/utils.j
       env: Env;
       ctx: ExecutionContext;
     };
+    log: Logger;
   }
 }

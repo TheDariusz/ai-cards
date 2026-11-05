@@ -3,8 +3,10 @@ import { createDb } from "../app/db/repo";
 import { mailerFromEnv } from "../app/lib/resend";
 import { isReminderHour } from "../app/lib/reminder";
 import { runAllReminders } from "../app/lib/reminder-job";
+import { createLogger } from "../app/lib/logger";
+import { lokiSinkFromEnv } from "../app/lib/loki";
 
-// `./context.d.ts` augments `RouterContextProvider` with `cloudflare`; it is
+// `./context.d.ts` augments `RouterContextProvider` with `cloudflare` and `log`; it is
 // an ambient type-only file picked up via tsconfig's "include", not imported.
 
 const requestHandler = createRequestHandler(
@@ -16,7 +18,11 @@ export default {
   async fetch(request, env, ctx) {
     const context = new RouterContextProvider();
     context.cloudflare = { env, ctx };
-    return requestHandler(request, context);
+    // one Loki push per request, after the response is on its way
+    context.log = createLogger(lokiSinkFromEnv(env), "http");
+    const response = await requestHandler(request, context);
+    ctx.waitUntil(context.log.flush());
+    return response;
   },
 
   // Daily review reminder. Two crons (17:00 and 18:00 UTC) cover CEST and CET;
