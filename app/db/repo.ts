@@ -203,28 +203,29 @@ export async function consumeLoginToken(db: Db, tokenHash: string, now: number):
 }
 
 // The owner's row predates emails; the first login with ownerEmail claims it.
-// A brand-new account starts with `starterMicros` of credit.
+// A brand-new account starts with `starterMicros` of credit. `created` is true only for that
+// genuinely new row: never for the owner claiming the seeded one or for a lost insert race.
 export async function findOrCreateUser(
   db: Db, email: string, ownerEmail: string | null, now: number, starterMicros: number, locale: Locale = 'pl',
-): Promise<number> {
+): Promise<{ id: number; created: boolean }> {
   const [existing] = await db.select({ id: users.id }).from(users).where(eq(users.email, email))
-  if (existing) return existing.id
+  if (existing) return { id: existing.id, created: false }
   if (ownerEmail && email === ownerEmail) {
     const [claimed] = await db
       .update(users)
       .set({ email, locale })
       .where(and(eq(users.id, OWNER_USER_ID), isNull(users.email)))
       .returning({ id: users.id })
-    if (claimed) return claimed.id
+    if (claimed) return { id: claimed.id, created: false }
   }
   const inserted = await db.insert(users).values({ email, createdAt: now, locale }).onConflictDoNothing().returning({ id: users.id })
   if (inserted.length === 0) { // lost a race with a parallel first login; that one granted the pool
     const [created] = await db.select({ id: users.id }).from(users).where(eq(users.email, email))
-    return created.id
+    return { id: created.id, created: false }
   }
   const id = inserted[0].id
   if (id !== OWNER_USER_ID) await grantCredits(db, id, starterMicros, 'starter', now)
-  return id
+  return { id, created: true }
 }
 
 export async function getUserLocale(db: Db, userId: number): Promise<Locale> {

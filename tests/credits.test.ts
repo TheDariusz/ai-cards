@@ -29,7 +29,7 @@ describe('starterMicros / toCredits', () => {
 describe('credit balance', () => {
   it('a new account starts with the starter pool, spends it, and a top-up restores access', async () => {
     const db = testDb()
-    const id = await findOrCreateUser(db, 'new@example.com', 'owner@example.com', NOW, STARTER)
+    const { id } = await findOrCreateUser(db, 'new@example.com', 'owner@example.com', NOW, STARTER)
     expect(await getBalance(db, id)).toEqual({ grantedMicros: STARTER, spentMicros: 0, balanceMicros: STARTER })
     expect(await hasCredits(db, id)).toBe(true)
 
@@ -45,14 +45,14 @@ describe('credit balance', () => {
 
   it('logging in again does not grant a second pool', async () => {
     const db = testDb()
-    const id = await findOrCreateUser(db, 'new@example.com', null, NOW, STARTER)
-    expect(await findOrCreateUser(db, 'new@example.com', null, NOW + 1, STARTER)).toBe(id)
+    const { id } = await findOrCreateUser(db, 'new@example.com', null, NOW, STARTER)
+    expect((await findOrCreateUser(db, 'new@example.com', null, NOW + 1, STARTER)).id).toBe(id)
     expect((await getBalance(db, id)).grantedMicros).toBe(STARTER)
   })
 
   it('the owner gets no pool, is never limited, but usage is still logged', async () => {
     const db = testDb()
-    expect(await findOrCreateUser(db, 'owner@example.com', 'owner@example.com', NOW, STARTER)).toBe(OWNER_USER_ID)
+    expect((await findOrCreateUser(db, 'owner@example.com', 'owner@example.com', NOW, STARTER)).id).toBe(OWNER_USER_ID)
     await recordUsage(db, OWNER_USER_ID, event(9_000_000), NOW)
     expect(await getBalance(db, OWNER_USER_ID)).toEqual({ grantedMicros: 0, spentMicros: 9_000_000, balanceMicros: -9_000_000 })
     expect(await hasCredits(db, OWNER_USER_ID)).toBe(true)
@@ -60,7 +60,7 @@ describe('credit balance', () => {
 
   it('usageRecorder charges the given user and swallows write failures', async () => {
     const db = testDb()
-    const id = await findOrCreateUser(db, 'new@example.com', null, NOW, STARTER)
+    const { id } = await findOrCreateUser(db, 'new@example.com', null, NOW, STARTER)
     await usageRecorder(db, id)(event(1_500))
     expect((await getBalance(db, id)).spentMicros).toBe(1_500)
     vi.spyOn(console, 'error').mockImplementation(() => {})
@@ -71,7 +71,7 @@ describe('credit balance', () => {
 describe('blocking', () => {
   it('blocks and unblocks a user, never the owner; blocked users get no reminders', async () => {
     const db = testDb()
-    const id = await findOrCreateUser(db, 'new@example.com', null, NOW, STARTER)
+    const { id } = await findOrCreateUser(db, 'new@example.com', null, NOW, STARTER)
     expect(await setBlocked(db, OWNER_USER_ID, NOW)).toBe(false)
     expect(await setBlocked(db, id, NOW)).toBe(true)
     expect(await isUserBlocked(db, id)).toBe(true)
@@ -82,7 +82,7 @@ describe('blocking', () => {
 
   it('lists users with spend and balance for /admin', async () => {
     const db = testDb()
-    const id = await findOrCreateUser(db, 'new@example.com', null, NOW, STARTER)
+    const { id } = await findOrCreateUser(db, 'new@example.com', null, NOW, STARTER)
     await recordUsage(db, id, event(2_000), NOW)
     const row = (await listUsersWithUsage(db)).find((u) => u.id === id)
     expect(row).toMatchObject({ email: 'new@example.com', spentMicros: 2_000, balanceMicros: 498_000, blockedAt: null })

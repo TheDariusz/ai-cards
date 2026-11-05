@@ -9,13 +9,13 @@ Cloudflare Workers · D1 + Drizzle · R2 audio · OpenRouter for LLM + TTS. Prod
 - `npm test` — Vitest; single file: `npx vitest run tests/<name>.test.ts`
 - `npm run typecheck` — `wrangler types && react-router typegen && tsc -b`; **requires `.dev.vars` with every key from `.dev.vars.example`** (values can be empty) or `Env` won't resolve — after pulling, add any new keys
 - `npx drizzle-kit generate` then `npx wrangler d1 migrations apply DB --local`
-- `npx wrangler tail ai-cards` — prod logs; where LLM/TTS, login-mail and reminder failures actually show up
+- Prod logs: Grafana Cloud Loki, `{service="ai-cards"}` (structured lines from `context.log`); `npx wrangler tail ai-cards` is the raw fallback where every `console.*` line, including LLM/TTS, login-mail and reminder failures, shows up
 - Never run `npm run deploy` — deploy is CI-only, and every push to `master` deploys once tests pass
 
 ## Architecture
 
 - Ports & adapters: `app/lib/ai.ts` is the port (`AiProvider`), `app/lib/openrouter.ts` the only adapter. `pipeline`/`repo` take a `deps` object — that's what makes them testable; keep it.
-- Mail follows the same pattern: `app/lib/mailer.ts` is the port, `app/lib/resend.ts` the only adapter. The daily reminder cron is `scheduled` in `workers/app.ts` — the one intentional edit to that template file.
+- Mail follows the same pattern: `app/lib/mailer.ts` is the port, `app/lib/resend.ts` the only adapter. Logs too: `app/lib/logger.ts` is the port (buffering `Logger`, `context.log` on every request), `app/lib/loki.ts` the only adapter; blank Loki config means a null sink, and a push failure never fails a request. `workers/app.ts` has two intentional edits to the template: the daily reminder cron (`scheduled`) and the per-request logger flushed with `ctx.waitUntil`.
 - `app/db/repo.ts` is the only file that touches Drizzle. Routes call repo functions, never build queries.
 - Generation is fire-and-forget: `context.cloudflare.ctx.waitUntil(runCardPipeline(...))`. Cards go `pending → ready | failed`; home polls every 3s while pending.
 - Auth is a magic link (`app/lib/login.ts`): open sign-up capped by `MAX_SIGNUPS_PER_DAY`, owner blocks users on `/admin` (`users.blocked_at`, enforced in `requireAuth`); the session cookie holds `userId`.

@@ -47,6 +47,7 @@ npm run dev                            # http://localhost:5173
 | `OWNER_EMAIL` | Your address; its first login takes over the original single-user account and data |
 | `RESEND_API_KEY` | Resend API key for login links and the daily reminder email; without it nobody can log in on production |
 | `REMINDER_TO` | Optional: the owner's reminder address until their first email login (everyone else gets reminders at their login email) |
+| `LOKI_TOKEN` | Optional: Grafana Cloud access policy token with `logs:write` (the `ai-cards` token); empty disables log shipping |
 
 Locally, leave `RESEND_API_KEY` empty to get login links printed to the dev-server terminal instead of mailed.
 
@@ -57,7 +58,7 @@ npm test            # Vitest: scheduling, answer check, login, credits, reminder
 npm run typecheck
 ```
 
-Pure logic (scheduling, diffing, answer grading, streaks, CSV, login, credits, quota, reminders, themes) is unit-tested, adapters (OpenRouter, Resend) against a stubbed `fetch`; DB tests run against in-memory SQLite with the real migrations.
+Pure logic (scheduling, diffing, answer grading, streaks, CSV, login, credits, quota, reminders, themes) is unit-tested, adapters (OpenRouter, Resend, Loki) against a stubbed `fetch`; DB tests run against in-memory SQLite with the real migrations.
 
 ### First-learning flow
 
@@ -92,6 +93,7 @@ npx wrangler secret put SESSION_SECRET
 npx wrangler secret put OWNER_EMAIL
 npx wrangler secret put RESEND_API_KEY
 npx wrangler secret put REMINDER_TO
+npx wrangler secret put LOKI_TOKEN
 ```
 
 Every deploy after that:
@@ -144,6 +146,17 @@ mail is really sent via Resend, so put a real `RESEND_API_KEY` in `.dev.vars` to
 ```bash
 curl "http://localhost:5173/cdn-cgi/handler/scheduled?cron=0+17+*+*+*&time=1790614800000"   # 2026-09-28 17:00 UTC = 19:00 Warsaw
 ```
+
+### Production logs
+
+The Worker ships structured JSON logs to Grafana Cloud Loki under `service="ai-cards"` (labels `env` and
+`level`; `env="dev"` under `npm run dev`, so a local `LOKI_TOKEN` never feeds prod alerts): one push per request and per cron run, sent with `ctx.waitUntil` after the response. The port is
+`app/lib/logger.ts` (`context.log` in every loader/action), the adapter `app/lib/loki.ts`. Shipping needs
+`LOKI_PUSH_URL` and `LOKI_USER` in `wrangler.jsonc` `vars` and the `LOKI_TOKEN` secret; if any is blank nothing is
+sent, and a Loki outage never fails a request. Events alert rules key on: `user_registered` (a verified login
+created the account) and `reminders_run` (`count`, `failed`, `users`). Lines never carry an email address or card
+text: upstream error bodies and unparseable model output go to the console only. `npx wrangler tail ai-cards`
+remains the raw fallback.
 
 ### AI model configuration
 

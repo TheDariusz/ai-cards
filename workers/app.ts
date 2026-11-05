@@ -2,9 +2,12 @@ import { createRequestHandler, RouterContextProvider } from "react-router";
 import { createDb } from "../app/db/repo";
 import { mailerFromEnv } from "../app/lib/resend";
 import { isReminderHour } from "../app/lib/reminder";
-import { runAllReminders } from "../app/lib/reminder-job";
+import { runReminderCron } from "../app/lib/reminder-cron";
+import { createLogger } from "../app/lib/logger";
+import { lokiSinkFromEnv } from "../app/lib/loki";
+import { flushingContext } from "../app/lib/background";
 
-// `./context.d.ts` augments `RouterContextProvider` with `cloudflare`; it is
+// `./context.d.ts` augments `RouterContextProvider` with `cloudflare` and `log`; it is
 // an ambient type-only file picked up via tsconfig's "include", not imported.
 
 const requestHandler = createRequestHandler(
@@ -15,8 +18,15 @@ const requestHandler = createRequestHandler(
 export default {
   async fetch(request, env, ctx) {
     const context = new RouterContextProvider();
-    context.cloudflare = { env, ctx };
-    return requestHandler(request, context);
+    // one Loki push per request, after the response is on its way, plus one per background task
+    const log = createLogger(lokiSinkFromEnv(env), "http");
+    context.log = log;
+    context.cloudflare = { env, ctx: flushingContext(ctx, () => log.flush()) };
+    try {
+      return await requestHandler(request, context);
+    } finally {
+      ctx.waitUntil(context.log.flush());
+    }
   },
 
   // Daily review reminder. Two crons (17:00 and 18:00 UTC) cover CEST and CET;
@@ -24,17 +34,17 @@ export default {
   async scheduled(controller, env, ctx) {
     const t = controller.scheduledTime;
     if (!isReminderHour(t)) return;
-    const db = createDb(env.DB);
     ctx.waitUntil(
-      runAllReminders(
-        { db, appUrl: env.APP_URL, mailerFor: (to) => mailerFromEnv(env, to), ownerFallback: env.REMINDER_TO },
+      runReminderCron(
+        {
+          db: createDb(env.DB),
+          appUrl: env.APP_URL,
+          mailerFor: (to) => mailerFromEnv(env, to),
+          ownerFallback: env.REMINDER_TO,
+          log: createLogger(lokiSinkFromEnv(env), "cron"),
+        },
         t,
-      ).then((results) => {
-        for (const r of results) {
-          if (r.error) console.error(`reminder: user ${r.userId} failed ${r.error}`);
-          else console.log(`reminder: user ${r.userId} ${JSON.stringify(r.result)}`);
-        }
-      }, (err) => console.error(`reminder: run failed ${err instanceof Error ? err.message : String(err)}`)),
+      ),
     );
   },
 } satisfies ExportedHandler<Env>;

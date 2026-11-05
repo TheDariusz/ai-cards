@@ -1,5 +1,6 @@
 import type { AiProvider } from './ai'
 import { markReady, markFailed, getCard, type Db } from '../db/repo'
+import type { Logger } from './logger'
 
 export interface AudioStore {
   put(key: string, value: ArrayBuffer): Promise<unknown>
@@ -18,7 +19,7 @@ export async function generateAudio(
 }
 
 export async function runCardPipeline(
-  deps: { db: Db; ai: AiProvider; audio: AudioStore },
+  deps: { db: Db; ai: AiProvider; audio: AudioStore; log?: Logger },
   userId: number,
   cardId: number,
   word: string,
@@ -38,6 +39,7 @@ export async function runCardPipeline(
       audioKey = newKey
     } catch (err) {
       console.error(`TTS failed for card ${cardId}: ${err}`)
+      deps.log?.error('tts failed', { user_id: userId, card_id: cardId }, err)
       // Old audio, if any, no longer matches the newly generated sentence —
       // the card must be text-only so the "Generate audio" retry button appears.
       if (prev?.audioKey) {
@@ -48,6 +50,7 @@ export async function runCardPipeline(
     await markReady(db, cardId, content, audioKey)
   } catch (err) {
     console.error(`Card generation failed for card ${cardId}: ${err}`)
+    deps.log?.error('card generation failed', { user_id: userId, card_id: cardId }, err)
     if (prev?.status !== 'ready') await markFailed(db, cardId)
     // a ready card being regenerated keeps its existing content and status
   }

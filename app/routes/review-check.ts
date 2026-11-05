@@ -23,7 +23,7 @@ export async function action({ request, context }: Route.ActionArgs) {
   if (!card || card.status !== 'ready' || !card.sentencePl || !card.sentenceEn) return json({ ok: false }, 404)
   if (!(await hasCredits(db, userId))) return json({ ok: false, reason: 'no-credits' })
   try {
-    const evaluation = await aiFromEnv(env, usageRecorder(db, userId)).evaluateAnswer({
+    const evaluation = await aiFromEnv(env, usageRecorder(db, userId, context.log)).evaluateAnswer({
       word: card.word,
       wordPl: card.wordPl,
       sentencePl: card.sentencePl,
@@ -33,6 +33,7 @@ export async function action({ request, context }: Route.ActionArgs) {
     return json({ ok: true, evaluation })
   } catch (err) {
     console.error(`answer evaluation failed: ${err}`)
+    context.log.error('answer evaluation failed', { user_id: userId, card_id: card.id }, err)
     return json({ ok: false })
   }
 }

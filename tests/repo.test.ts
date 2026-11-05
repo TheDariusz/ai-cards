@@ -256,26 +256,26 @@ describe('per-user isolation', () => {
 describe('user locale', () => {
   it('stores the locale a new user signs up with', async () => {
     const db = testDb()
-    const id = await findOrCreateUser(db, 'a@x.dev', null, NOW, 0, 'en')
+    const { id } = await findOrCreateUser(db, 'a@x.dev', null, NOW, 0, 'en')
     expect(await getUserLocale(db, id)).toBe('en')
   })
 
   it('defaults a new user to pl', async () => {
     const db = testDb()
-    const id = await findOrCreateUser(db, 'a@x.dev', null, NOW, 0)
+    const { id } = await findOrCreateUser(db, 'a@x.dev', null, NOW, 0)
     expect(await getUserLocale(db, id)).toBe('pl')
   })
 
   it('leaves an existing user locale alone on later logins', async () => {
     const db = testDb()
-    const id = await findOrCreateUser(db, 'a@x.dev', null, NOW, 0)
+    const { id } = await findOrCreateUser(db, 'a@x.dev', null, NOW, 0)
     await findOrCreateUser(db, 'a@x.dev', null, NOW, 0, 'en')
     expect(await getUserLocale(db, id)).toBe('pl')
   })
 
   it('setUserLocale changes it; a missing user reads as pl', async () => {
     const db = testDb()
-    const id = await findOrCreateUser(db, 'a@x.dev', null, NOW, 0)
+    const { id } = await findOrCreateUser(db, 'a@x.dev', null, NOW, 0)
     await setUserLocale(db, id, 'en')
     expect(await getUserLocale(db, id)).toBe('en')
     expect(await getUserLocale(db, 9999)).toBe('pl')

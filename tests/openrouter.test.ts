@@ -112,6 +112,23 @@ describe('generateCard', () => {
     vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response('nope', { status: 500 })))
     await expect(provider().generateCard('reluctant')).rejects.toThrow(/500/)
   })
+
+  it('keeps the upstream body (which can echo card text) out of the thrown error', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    const body = JSON.stringify({ error: { code: 403, message: 'flagged', metadata: { flagged_input: 'reluctant' } } })
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response(body, { status: 403 })))
+    const err = await provider().generateCard('reluctant').catch((e: Error) => e)
+    expect(err.message).toBe('OpenRouter chat failed: 403')
+  })
+
+  it('keeps unparseable model output out of the thrown error', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(
+      new Response(JSON.stringify({ choices: [{ message: { content: '{ She was reluctant to speak. }' } }] })),
+    ))
+    const err = await provider().generateCard('reluctant').catch((e: Error) => e)
+    expect(err.message).toBe('OpenRouter chat returned invalid JSON')
+  })
 })
 
 describe('tts', () => {
@@ -125,6 +142,13 @@ describe('tts', () => {
     expect(url).toBe('https://openrouter.ai/api/v1/audio/speech')
     const body = JSON.parse(init.body)
     expect(body).toMatchObject({ model: 'openai/gpt-4o-mini-tts', input: 'Hello.', voice: 'alloy', response_format: 'mp3' })
+  })
+
+  it('keeps the upstream body out of the thrown error', async () => {
+    vi.spyOn(console, 'error').mockImplementation(() => {})
+    vi.stubGlobal('fetch', vi.fn().mockResolvedValue(new Response('bad input: Hello.', { status: 400 })))
+    const err = await provider().tts('Hello.').catch((e: Error) => e)
+    expect(err.message).toBe('OpenRouter TTS failed: 400')
   })
 })
 

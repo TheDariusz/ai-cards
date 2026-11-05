@@ -26,6 +26,7 @@ export async function action({ request, context }: Route.ActionArgs) {
       return { reminderSent: true as const }
     } catch (err) {
       console.error('reminder: test failed', err)
+      context.log.error('reminder test failed', { user_id: userId }, err)
       return { reminderError: t.home.reminderFailed }
     }
   }
