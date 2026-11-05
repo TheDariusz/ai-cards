@@ -75,8 +75,7 @@ export async function action({ request, context }: Route.ActionArgs) {
     }
     const id = await insertPendingCard(db, userId, word, Date.now())
     context.cloudflare.ctx.waitUntil(
-      runCardPipeline({ db, ai: aiFromEnv(env, usageRecorder(db, userId, log)), audio: env.AUDIO, log }, userId, id, word)
-        .finally(() => log.flush()), // the request's flush ran when the response left
+      runCardPipeline({ db, ai: aiFromEnv(env, usageRecorder(db, userId, log)), audio: env.AUDIO, log }, userId, id, word),
     )
     return { added: word }
   }
@@ -89,8 +88,7 @@ export async function action({ request, context }: Route.ActionArgs) {
       // shortcut: a stuck card stays shown as failed (isStuck keys off createdAt) until its retry finishes
       await markPending(db, userId, id)
       context.cloudflare.ctx.waitUntil(
-        runCardPipeline({ db, ai: aiFromEnv(env, usageRecorder(db, userId, log)), audio: env.AUDIO, log }, userId, id, card.word)
-          .finally(() => log.flush()),
+        runCardPipeline({ db, ai: aiFromEnv(env, usageRecorder(db, userId, log)), audio: env.AUDIO, log }, userId, id, card.word),
       )
     }
     return { retried: id }

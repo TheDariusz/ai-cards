@@ -114,7 +114,7 @@ export async function action({ request, params, context }: Route.ActionArgs) {
             await env.AUDIO.delete(card.audioKey).catch(() => {})
             await setAudioKey(db, userId, id, null)
           }
-        }).finally(() => log.flush()), // the request's flush ran when the response left
+        }),
       )
     }
     // spec: "offers to re-translate" — surface a sync hint when EN changed but PL didn't

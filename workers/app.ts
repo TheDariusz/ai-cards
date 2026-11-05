@@ -5,6 +5,7 @@ import { isReminderHour } from "../app/lib/reminder";
 import { runReminderCron } from "../app/lib/reminder-cron";
 import { createLogger } from "../app/lib/logger";
 import { lokiSinkFromEnv } from "../app/lib/loki";
+import { flushingContext } from "../app/lib/background";
 
 // `./context.d.ts` augments `RouterContextProvider` with `cloudflare` and `log`; it is
 // an ambient type-only file picked up via tsconfig's "include", not imported.
@@ -17,9 +18,10 @@ const requestHandler = createRequestHandler(
 export default {
   async fetch(request, env, ctx) {
     const context = new RouterContextProvider();
-    context.cloudflare = { env, ctx };
-    // one Loki push per request, after the response is on its way
-    context.log = createLogger(lokiSinkFromEnv(env), "http");
+    // one Loki push per request, after the response is on its way, plus one per background task
+    const log = createLogger(lokiSinkFromEnv(env), "http");
+    context.log = log;
+    context.cloudflare = { env, ctx: flushingContext(ctx, () => log.flush()) };
     try {
       return await requestHandler(request, context);
     } finally {
