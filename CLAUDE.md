@@ -9,7 +9,8 @@ Cloudflare Workers · D1 + Drizzle · R2 audio · OpenRouter for LLM + TTS. Prod
 - `npm test` — Vitest; single file: `npx vitest run tests/<name>.test.ts`
 - `npm run typecheck` — `wrangler types && react-router typegen && tsc -b`; **requires `.dev.vars` with every key from `.dev.vars.example`** (values can be empty) or `Env` won't resolve — after pulling, add any new keys
 - `npx drizzle-kit generate` then `npx wrangler d1 migrations apply DB --local`
-- Prod logs: Grafana Cloud Loki, `{service="ai-cards"}` (structured lines from `context.log`); `npx wrangler tail ai-cards` is the raw fallback where every `console.*` line, including LLM/TTS, login-mail and reminder failures, shows up
+- Prod logs: Grafana Cloud Loki, `{service="ai-cards"}` (plus `env=prod`, `level`; structured lines from `context.log`), queried through the read-only `grafana` MCP server in `.mcp.json` (cookbook: `../thedariusz-ops/docs/querying-logs.md`)
+  `npx wrangler tail ai-cards` is the raw fallback where every `console.*` line, including LLM/TTS, login-mail and reminder failures, shows up
 - Never run `npm run deploy` — deploy is CI-only, and every push to `master` deploys once tests pass
 
 ## Architecture
