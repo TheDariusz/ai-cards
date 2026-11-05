@@ -4,7 +4,7 @@ import type { LogEntry } from '../app/lib/logger'
 
 afterEach(() => vi.unstubAllGlobals())
 
-const opts = { url: 'https://logs.example/loki/api/v1/push', user: 'u', token: 't' }
+const opts = { url: 'https://logs.example/loki/api/v1/push', user: 'u', token: 't', env: 'prod' as const }
 const entries: LogEntry[] = [
   { ts: 1000, level: 'info', msg: 'a', logger: 'http' },
   { ts: 1001, level: 'error', msg: 'b', logger: 'http', err: 'Error: x' },
@@ -74,5 +74,20 @@ describe('lokiSinkFromEnv', () => {
 
   it('builds a sink otherwise', () => {
     expect(lokiSinkFromEnv(env)).not.toBeNull()
+  })
+
+  it('labels streams with the given env', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(null, { status: 204 }))
+    vi.stubGlobal('fetch', fetchMock)
+    await lokiSinkFromEnv(env, 'dev')!.write(entries)
+    const { streams } = JSON.parse(fetchMock.mock.calls[0][1].body)
+    expect(streams.map((s: { stream: { env: string } }) => s.stream.env)).toEqual(['dev', 'dev'])
+  })
+
+  it('defaults to dev under vite dev (as vitest runs)', async () => {
+    const fetchMock = vi.fn().mockResolvedValue(new Response(null, { status: 204 }))
+    vi.stubGlobal('fetch', fetchMock)
+    await lokiSinkFromEnv(env)!.write(entries)
+    expect(JSON.parse(fetchMock.mock.calls[0][1].body).streams[0].stream.env).toBe('dev')
   })
 })

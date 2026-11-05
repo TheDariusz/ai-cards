@@ -149,13 +149,14 @@ curl "http://localhost:5173/cdn-cgi/handler/scheduled?cron=0+17+*+*+*&time=17906
 
 ### Production logs
 
-The Worker ships structured JSON logs to Grafana Cloud Loki under `service="ai-cards"` (labels `env="prod"` and
-`level`): one push per request and per cron run, sent with `ctx.waitUntil` after the response. The port is
+The Worker ships structured JSON logs to Grafana Cloud Loki under `service="ai-cards"` (labels `env` and
+`level`; `env="dev"` under `npm run dev`, so a local `LOKI_TOKEN` never feeds prod alerts): one push per request and per cron run, sent with `ctx.waitUntil` after the response. The port is
 `app/lib/logger.ts` (`context.log` in every loader/action), the adapter `app/lib/loki.ts`. Shipping needs
 `LOKI_PUSH_URL` and `LOKI_USER` in `wrangler.jsonc` `vars` and the `LOKI_TOKEN` secret; if any is blank nothing is
 sent, and a Loki outage never fails a request. Events alert rules key on: `user_registered` (a verified login
 created the account) and `reminders_run` (`count`, `failed`, `users`). Lines never carry an email address or card
-text. `npx wrangler tail ai-cards` remains the raw fallback.
+text: upstream error bodies and unparseable model output go to the console only. `npx wrangler tail ai-cards`
+remains the raw fallback.
 
 ### AI model configuration
 
