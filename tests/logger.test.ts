@@ -63,4 +63,9 @@ describe('formatErr', () => {
     expect(formatErr(new RangeError('r'))).toBe('RangeError: r')
     expect(formatErr('plain')).toBe('plain')
   })
+
+  it('masks email addresses and caps the length', () => {
+    expect(formatErr(new Error('Resend 422: invalid `to` field "a.b+c@ex-ample.co.uk", see docs'))).toBe('Error: Resend 422: invalid `to` field "<email>", see docs')
+    expect(formatErr('x'.repeat(2000))).toHaveLength(500)
+  })
 })

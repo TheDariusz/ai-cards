@@ -1,6 +1,7 @@
 import { getBalance, recordUsage, type Db } from '../db/repo'
 import { OWNER_USER_ID } from '../db/schema'
 import type { UsageEvent } from './ai'
+import type { Logger } from './logger'
 
 export const MICROS_PER_CREDIT = 1_000 // 1 credit = $0.001
 export const DEFAULT_STARTER_CREDITS = 500
@@ -23,12 +24,13 @@ export async function hasCredits(db: Db, userId: number): Promise<boolean> {
 
 // The onUsage callback for aiFromEnv: charges `userId`. A failed write is logged, never surfaced —
 // the user's action already happened and shouldn't fail on bookkeeping.
-export function usageRecorder(db: Db, userId: number) {
+export function usageRecorder(db: Db, userId: number, log?: Logger) {
   return async (event: UsageEvent) => {
     try {
       await recordUsage(db, userId, event, Date.now())
     } catch (err) {
       console.error(`usage: recording failed for user ${userId}`, event, err)
+      log?.error('usage recording failed', { user_id: userId, kind: event.kind }, err)
     }
   }
 }

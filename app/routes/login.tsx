@@ -26,10 +26,13 @@ export async function action({ request, context }: Route.ActionArgs) {
     const deps = { db: createDb(env.DB), config, send: mailSenderFromEnv(env, origin) }
     const result = await requestLoginLink(deps, form.get('email'), origin, Date.now(), locale)
     console.log(`login: ${result} for ${email} (${owner})`)
+    // the outcome without the address: enough to see blocked/throttled/full sign-up patterns in Loki
+    context.log.info('login link requested', { event: 'login_link_requested', result, owner: email === config.ownerEmail })
     if (result === 'invalid') return { error: dict[locale].login.invalidEmail }
   } catch (err) {
     // same answer as success, so a failure can't reveal which addresses are on the list
     console.error(`login: sending mail failed for ${email} (${owner})`, err)
+    context.log.error('login mail failed', { event: 'login_link_requested', owner: email === config.ownerEmail }, err)
   }
   return { sent: true as const }
 }

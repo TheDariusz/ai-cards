@@ -25,8 +25,14 @@ export type Logger = {
   flush(): Promise<void>
 }
 
+const EMAIL = /[^\s@"'<>(),;:]+@[^\s@"'<>(),;:]+\.[^\s@"'<>(),;:]+/g
+const MAX_ERR_CHARS = 500
+
+// Upstream error text (Resend, OpenRouter) can quote a recipient address: masked here, at the
+// port, so no call site has to remember. Long bodies are cut.
 export function formatErr(err: unknown): string {
-  return err instanceof Error ? `${err.name}: ${err.message}` : String(err)
+  const text = err instanceof Error ? `${err.name}: ${err.message}` : String(err)
+  return text.replace(EMAIL, '<email>').slice(0, MAX_ERR_CHARS)
 }
 
 // `sink` null (no Loki config) keeps the same API and drops everything on flush.

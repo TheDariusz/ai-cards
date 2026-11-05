@@ -58,7 +58,7 @@ npm test            # Vitest: scheduling, answer check, login, credits, reminder
 npm run typecheck
 ```
 
-Pure logic (scheduling, diffing, answer grading, streaks, CSV, login, credits, quota, reminders, themes) is unit-tested, adapters (OpenRouter, Resend) against a stubbed `fetch`; DB tests run against in-memory SQLite with the real migrations.
+Pure logic (scheduling, diffing, answer grading, streaks, CSV, login, credits, quota, reminders, themes) is unit-tested, adapters (OpenRouter, Resend, Loki) against a stubbed `fetch`; DB tests run against in-memory SQLite with the real migrations.
 
 ### First-learning flow
 

@@ -20,6 +20,7 @@ export async function loader({ request, params, context }: Route.LoaderArgs) {
 
 export async function action({ request, params, context }: Route.ActionArgs) {
   const env = context.cloudflare.env
+  const log = context.log
   const userId = await requireAuth(request, env)
   const db = createDb(env.DB)
   const id = Number(params.id)
@@ -28,7 +29,7 @@ export async function action({ request, params, context }: Route.ActionArgs) {
   const form = await request.formData()
   const intent = form.get('intent')
   const t = dict[parseLocale(request.headers.get('Cookie'))]
-  const ai = aiFromEnv(env, usageRecorder(db, userId))
+  const ai = aiFromEnv(env, usageRecorder(db, userId, log))
 
   if (intent === 'delete') {
     await deleteCard(db, userId, id)
@@ -43,7 +44,7 @@ export async function action({ request, params, context }: Route.ActionArgs) {
   if (intent === 'regenerate') {
     const hint = String(form.get('hint') ?? '').trim() || undefined
     if (hint && hint.length > MAX_TEXT_CHARS) return { error: t.card.hintTooLong(MAX_TEXT_CHARS) }
-    await runCardPipeline({ db, ai, audio: env.AUDIO }, userId, id, card.word, hint)
+    await runCardPipeline({ db, ai, audio: env.AUDIO, log }, userId, id, card.word, hint)
     return { regenerated: true }
   }
 
@@ -57,6 +58,7 @@ export async function action({ request, params, context }: Route.ActionArgs) {
         await setAudioKey(db, userId, id, newKey) // a text-only card gains audio here
       } catch (err) {
         console.error(`audio refresh failed for card ${id}:`, err)
+        log.error('audio refresh failed', { user_id: userId, card_id: id }, err)
         return { audioRetried: false }
       }
     }
@@ -105,13 +107,14 @@ export async function action({ request, params, context }: Route.ActionArgs) {
           await setAudioKey(db, userId, id, newKey)
         })().catch(async (err) => {
           console.error(`audio refresh failed for card ${id}:`, err)
+          log.error('audio refresh failed', { user_id: userId, card_id: id }, err)
           // TTS failed for the new sentence — the old audio (if any) no longer
           // matches, so clear it and fall back to a text-only card with retry.
           if (card.audioKey) {
             await env.AUDIO.delete(card.audioKey).catch(() => {})
             await setAudioKey(db, userId, id, null)
           }
-        }),
+        }).finally(() => log.flush()), // the request's flush ran when the response left
       )
     }
     // spec: "offers to re-translate" — surface a sync hint when EN changed but PL didn't

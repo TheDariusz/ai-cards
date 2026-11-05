@@ -4,6 +4,7 @@ import { insertPendingCard, getCard, markReady } from '../app/db/repo'
 import { runCardPipeline } from '../app/lib/pipeline'
 import type { AiProvider } from '../app/lib/ai'
 import { OWNER_USER_ID as U } from '../app/db/schema'
+import { createLogger, type LogEntry } from '../app/lib/logger'
 
 const NOW = 1_750_000_000_000
 const CONTENT = {
@@ -51,6 +52,22 @@ describe('runCardPipeline', () => {
     const ai = { ...okAi, generateCard: async () => { throw new Error('boom') } }
     await runCardPipeline({ db, ai, audio: fakeAudio() }, U, id, 'reluctant')
     expect((await getCard(db, U, id))!.status).toBe('failed')
+  })
+
+  it('logs content and TTS failures with ids only, never the word', async () => {
+    const db = testDb()
+    const entries: LogEntry[] = []
+    const log = createLogger({ write: async (e) => { entries.push(...e) } }, 'http')
+    const a = await insertPendingCard(db, U, 'reluctant', NOW)
+    await runCardPipeline({ db, ai: { ...okAi, generateCard: async () => { throw new Error('boom') } }, audio: fakeAudio(), log }, U, a, 'reluctant')
+    const b = await insertPendingCard(db, U, 'reluctant', NOW)
+    await runCardPipeline({ db, ai: { ...okAi, tts: async () => { throw new Error('no audio') } }, audio: fakeAudio(), log }, U, b, 'reluctant')
+    await log.flush()
+    expect(entries).toEqual([
+      expect.objectContaining({ level: 'error', msg: 'card generation failed', user_id: U, card_id: a, err: 'Error: boom' }),
+      expect.objectContaining({ level: 'error', msg: 'tts failed', user_id: U, card_id: b, err: 'Error: no audio' }),
+    ])
+    expect(JSON.stringify(entries)).not.toContain('reluctant')
   })
 
   it('TTS failure on a new card still yields a ready text-only card', async () => {
