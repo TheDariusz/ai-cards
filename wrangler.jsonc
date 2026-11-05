@@ -22,9 +22,9 @@
 		// TTS is billed per input character; microsoft/mai-voice-2 costs $22 per 1M
 		"TTS_USD_PER_MILLION_CHARS": "22",
 		// Grafana Cloud Loki push endpoint (full URL); blank disables shipping
-		"LOKI_PUSH_URL": "",
+		"LOKI_PUSH_URL": "https://logs-prod-025.grafana.net/loki/api/v1/push",
 		// Grafana Cloud Loki tenant id (the "User" on the Loki details page); blank disables shipping
-		"LOKI_USER": ""
+		"LOKI_USER": "1865276"
 	},
 	// the zone lives in this Cloudflare account; deploy creates the DNS record and certificate
 	"routes": [
