@@ -14,11 +14,15 @@ export async function loader({ request }: Route.LoaderArgs) {
 
 export async function action({ request, context }: Route.ActionArgs) {
   const env = context.cloudflare.env
+  const log = context.log
   const form = await request.formData()
   const lang = toLocale(form.get('lang'))
   const db = createDb(env.DB)
-  const userId = await verifyLoginLink({ db, config: loginConfigFromEnv(env) }, form.get('token'), Date.now(), lang)
-  if (userId === null) return { error: dict[lang].verify.expired }
+  const verified = await verifyLoginLink({ db, config: loginConfigFromEnv(env) }, form.get('token'), Date.now(), lang)
+  if (verified === null) return { error: dict[lang].verify.expired }
+  const { userId, created } = verified
+  // never the email: the id is enough to find the account on /admin
+  if (created) log.info('user registered', { event: 'user_registered', user_id: userId })
   const { getSession, commitSession } = getSessionStorage(env.SESSION_SECRET)
   const session = await getSession()
   session.set('userId', userId)

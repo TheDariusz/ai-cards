@@ -85,13 +85,14 @@ export async function requestLoginLink(
   return 'sent'
 }
 
-// Returns the user id to sign in, or null for an unknown/expired/used token, a blocked
-// address, or a new address once today's sign-up cap is reached.
+// Returns the user id to sign in (and whether this login created the account), or null for an
+// unknown/expired/used token, a blocked address, or a new address once today's sign-up cap is reached.
 export async function verifyLoginLink(
   deps: Pick<LinkDeps, 'db' | 'config'>, token: unknown, now: number, locale: Locale,
-): Promise<number | null> {
+): Promise<{ userId: number; created: boolean } | null> {
   if (typeof token !== 'string' || !/^[0-9a-f]{64}$/.test(token)) return null
   const email = await consumeLoginToken(deps.db, await sha256Hex(token), now)
   if (!email || !(await canSignIn(deps.db, deps.config, email, now))) return null
-  return findOrCreateUser(deps.db, email, deps.config.ownerEmail, now, deps.config.starterMicros, locale)
+  const { id, created } = await findOrCreateUser(deps.db, email, deps.config.ownerEmail, now, deps.config.starterMicros, locale)
+  return { userId: id, created }
 }

@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { testDb } from './helpers/db'
 import { users, OWNER_USER_ID } from '../app/db/schema'
-import { getBalance, getUserLocale, setBlocked } from '../app/db/repo'
+import { findOrCreateUser, getBalance, getUserLocale, setBlocked, type Db } from '../app/db/repo'
 import type { MailMessage } from '../app/lib/mailer'
 import {
   DEFAULT_MAX_SIGNUPS_PER_DAY, LINK_TTL_MS, MAX_LINKS_PER_WINDOW, buildLoginEmail, loginConfigFromEnv, normalizeEmail, requestLoginLink, verifyLoginLink,
@@ -57,14 +57,14 @@ describe('magic link login', () => {
     const { db, sent, deps, tokenOf } = await setup()
     await requestLoginLink(deps, 'en@example.com', ORIGIN, NOW, 'en')
     expect(sent[0].msg.text).toMatch(/&lang=en\b/)
-    const userId = await verifyLoginLink(deps, tokenOf(), NOW, 'en')
+    const userId = (await verifyLoginLink(deps, tokenOf(), NOW, 'en'))?.userId
     expect(await getUserLocale(db, userId!)).toBe('en')
   })
 
   it('an existing account keeps its saved language whatever the visitor UI is', async () => {
     const { db, sent, deps, tokenOf } = await setup()
     await requestLoginLink(deps, 'en@example.com', ORIGIN, NOW, 'en')
-    const userId = await verifyLoginLink(deps, tokenOf(), NOW, 'en')
+    const userId = (await verifyLoginLink(deps, tokenOf(), NOW, 'en'))?.userId
     await requestLoginLink(deps, 'en@example.com', ORIGIN, NOW + 1, 'pl')
     expect(sent[1].msg.subject).toBe('Login link · AI Cards')
     expect(sent[1].msg.text).toMatch(/&lang=en\b/)
@@ -85,7 +85,7 @@ describe('magic link login', () => {
     expect(sent[0].to).toBe('friend@example.com')
     expect(sent[0].msg.text).toContain(`${ORIGIN}/login/verify?token=`)
 
-    const userId = await verifyLoginLink(deps, tokenOf(), NOW + 60_000, 'pl')
+    const userId = (await verifyLoginLink(deps, tokenOf(), NOW + 60_000, 'pl'))?.userId
     expect(userId).not.toBeNull()
     expect(userId).not.toBe(OWNER_USER_ID)
     expect((await getBalance(db, userId!)).grantedMicros).toBe(500_000)
@@ -93,14 +93,14 @@ describe('magic link login', () => {
 
     // a second link for the same address signs into the same account
     await requestLoginLink(deps, 'friend@example.com', ORIGIN, NOW + 120_000, 'pl')
-    expect(await verifyLoginLink(deps, tokenOf(), NOW + 121_000, 'pl')).toBe(userId)
+    expect((await verifyLoginLink(deps, tokenOf(), NOW + 121_000, 'pl'))?.userId).toBe(userId)
     expect(await db.select().from(users)).toHaveLength(2) // owner + friend
   })
 
   it('a blocked address gets no link and its old link stops working', async () => {
     const { sent, deps, tokenOf } = await setup()
     await requestLoginLink(deps, 'pal@example.com', ORIGIN, NOW, 'pl')
-    const palId = await verifyLoginLink(deps, tokenOf(), NOW, 'pl')
+    const palId = (await verifyLoginLink(deps, tokenOf(), NOW, 'pl'))?.userId
     await requestLoginLink(deps, 'pal@example.com', ORIGIN, NOW + 1, 'pl')
     const stale = tokenOf()
     await setBlocked(deps.db, palId!, NOW + 2)
@@ -134,7 +134,7 @@ describe('magic link login', () => {
   it('the owner email claims the pre-existing owner account', async () => {
     const { deps, tokenOf } = await setup()
     await requestLoginLink(deps, 'owner@example.com', ORIGIN, NOW, 'pl')
-    expect(await verifyLoginLink(deps, tokenOf(), NOW, 'pl')).toBe(OWNER_USER_ID)
+    expect((await verifyLoginLink(deps, tokenOf(), NOW, 'pl'))?.userId).toBe(OWNER_USER_ID)
   })
 
   it('rejects expired, malformed and unknown tokens', async () => {
@@ -155,5 +155,47 @@ describe('magic link login', () => {
     expect(await requestLoginLink(deps, 'pal@example.com', ORIGIN, NOW + 10, 'pl')).toBe('sent')
     expect(await requestLoginLink(deps, 'friend@example.com', ORIGIN, NOW + LINK_TTL_MS + 1, 'pl')).toBe('sent')
     expect(sent).toHaveLength(MAX_LINKS_PER_WINDOW + 2)
+  })
+})
+
+describe('registration reporting', () => {
+  it('verifyLoginLink reports created=true for a brand-new address', async () => {
+    const { deps, tokenOf } = await setup()
+    await requestLoginLink(deps, 'new@example.com', ORIGIN, NOW, 'pl')
+    const r = await verifyLoginLink(deps, tokenOf(), NOW, 'pl')
+    expect(r).toMatchObject({ created: true })
+    expect(r!.userId).not.toBe(OWNER_USER_ID)
+  })
+
+  it('verifyLoginLink reports created=false for an existing user', async () => {
+    const { deps, tokenOf } = await setup()
+    await requestLoginLink(deps, 'new@example.com', ORIGIN, NOW, 'pl')
+    const first = await verifyLoginLink(deps, tokenOf(), NOW, 'pl')
+    await requestLoginLink(deps, 'new@example.com', ORIGIN, NOW + 1, 'pl')
+    expect(await verifyLoginLink(deps, tokenOf(), NOW + 1, 'pl')).toEqual({ userId: first!.userId, created: false })
+  })
+
+  it('verifyLoginLink reports created=false when the owner claims the seeded row', async () => {
+    const { deps, tokenOf } = await setup()
+    await requestLoginLink(deps, 'owner@example.com', ORIGIN, NOW, 'pl')
+    expect(await verifyLoginLink(deps, tokenOf(), NOW, 'pl')).toEqual({ userId: OWNER_USER_ID, created: false })
+  })
+
+  it('findOrCreateUser reports created=false when it loses the insert race', async () => {
+    const { db } = await setup()
+    const { id } = await findOrCreateUser(db, 'race@example.com', null, NOW, 0)
+    // the first lookup misses, as if a parallel first login inserted the row right after it
+    let missed = false
+    const racing = new Proxy(db, {
+      get(target, prop, receiver) {
+        if (prop === 'select' && !missed) {
+          missed = true
+          return () => ({ from: () => ({ where: async () => [] }) })
+        }
+        return Reflect.get(target, prop, receiver)
+      },
+    }) as Db
+    expect(await findOrCreateUser(racing, 'race@example.com', null, NOW + 1, 0)).toEqual({ id, created: false })
+    expect(missed).toBe(true)
   })
 })
