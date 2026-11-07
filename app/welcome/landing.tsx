@@ -36,7 +36,7 @@ export function Landing({ starterCredits, dailyCardLimit }: { starterCredits: nu
           {t.pitch}
         </p>
         <div className="landing-actions">
-          <Link to="/login" className="landing-cta">{t.startFree}</Link>
+          <Link to="/login?new=1" className="landing-cta">{t.startFree}</Link>
           <Link to="#how" className="landing-login">{t.howItWorks}</Link>
         </div>
 
@@ -122,7 +122,7 @@ export function Landing({ starterCredits, dailyCardLimit }: { starterCredits: nu
 
         <section className="landing-closing">
           <h2>{t.closing}</h2>
-          <Link to="/login" className="landing-cta">{t.startFree}</Link>
+          <Link to="/login?new=1" className="landing-cta">{t.startFree}</Link>
         </section>
       </main>
       <footer className="landing-footer muted">{t.footer}</footer>

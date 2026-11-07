@@ -1,4 +1,4 @@
-import { Form, redirect, useActionData, useNavigation } from 'react-router'
+import { Form, redirect, useActionData, useNavigation, useSearchParams } from 'react-router'
 import type { Route } from './+types/login'
 import { getUserId } from '../lib/session'
 import { createDb } from '../db/repo'
@@ -41,19 +41,26 @@ export async function action({ request, context }: Route.ActionArgs) {
 export default function Login() {
   const data = useActionData<typeof action>()
   const busy = useNavigation().state !== 'idle'
+  // landing's "start free" links here with ?new=1; same flow, wording for someone without an account
+  const [params] = useSearchParams()
+  const isNew = params.has('new')
   const t = useT().login
   return (
     <main className="page">
       <LocaleSwitch />
       <h1>AI Cards</h1>
-      <p className="muted">{t.intro}</p>
+      <h2>{isNew ? t.signUpTitle : t.logInTitle}</h2>
       {data && 'sent' in data ? (
-        <p className="ok">{t.sent}</p>
+        <>
+          <p className="ok">{t.sent}</p>
+          <p className="muted">{t.checkSpam}</p>
+        </>
       ) : (
         <Form method="post">
           <input type="email" name="email" placeholder={t.emailPlaceholder} autoComplete="email" required autoFocus />
           <button type="submit" disabled={busy}>{busy ? t.sending : t.send}</button>
           {data && 'error' in data && <p className="error">{data.error}</p>}
+          <p className="muted">{isNew ? t.signUpHint : t.logInHint}</p>
         </Form>
       )}
     </main>
