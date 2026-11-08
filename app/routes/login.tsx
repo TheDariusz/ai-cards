@@ -1,4 +1,4 @@
-import { Form, redirect, useActionData, useNavigation, useSearchParams } from 'react-router'
+import { Form, data, redirect, useActionData, useNavigation, useSearchParams } from 'react-router'
 import type { Route } from './+types/login'
 import { getUserId } from '../lib/session'
 import { createDb } from '../db/repo'
@@ -6,7 +6,7 @@ import { parseLocale } from '../lib/locale'
 import { dict, useT } from '../lib/i18n'
 import { LocaleSwitch } from '../welcome/locale-switch'
 import { mailSenderFromEnv } from '../lib/resend'
-import { loginConfigFromEnv, normalizeEmail, requestLoginLink } from '../lib/login'
+import { browserKeyCookie, loginConfigFromEnv, normalizeEmail, requestLoginLink } from '../lib/login'
 
 export async function loader({ request, context }: Route.LoaderArgs) {
   if ((await getUserId(request, context.cloudflare.env)) !== null) throw redirect('/')
@@ -25,11 +25,16 @@ export async function action({ request, context }: Route.ActionArgs) {
   const owner = config.ownerEmail === null ? 'OWNER_EMAIL missing/invalid' : isOwner ? 'is owner' : 'not owner'
   try {
     const deps = { db: createDb(env.DB), config, send: mailSenderFromEnv(env, origin) }
-    const result = await requestLoginLink(deps, form.get('email'), origin, Date.now(), locale)
+    const outcome = await requestLoginLink(deps, form.get('email'), origin, Date.now(), locale)
+    const { result } = outcome
     console.log(`login: ${result} for ${email} (${owner})`)
     // the outcome without the address: enough to see blocked/throttled/full sign-up patterns in Loki
     context.log.info('login link requested', { event: 'login_link_requested', result, owner: isOwner })
     if (result === 'invalid') return { error: dict[locale].login.invalidEmail }
+    // lets this browser open the link without a second click; the visible answer stays the same
+    if (outcome.result === 'sent') {
+      return data({ sent: true as const }, { headers: { 'Set-Cookie': browserKeyCookie(outcome.browserKey) } })
+    }
   } catch (err) {
     // same answer as success, so a failure can't reveal which addresses are on the list
     console.error(`login: sending mail failed for ${email} (${owner})`, err)

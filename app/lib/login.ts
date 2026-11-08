@@ -2,6 +2,7 @@ import {
   consumeLoginToken, countLoginTokensSince, countUsersCreatedSince, createLoginToken, findOrCreateUser, hasAccount,
   getLocaleByEmail, isEmailBlocked, type Db,
 } from '../db/repo'
+import { readCookie } from './cookie'
 import { starterMicros } from './credits'
 import { dict } from './i18n'
 import type { Locale } from './locale'
@@ -68,21 +69,46 @@ export type LinkDeps = {
 // everything but 'invalid' must look the same to the visitor, so nobody can probe who is blocked;
 // the route logs the result so the owner can tell them apart in Workers Logs
 export type LinkResult = 'sent' | 'blocked' | 'throttled' | 'signups-full' | 'invalid'
+// a sent link comes with the key the route stores in the requesting browser (see browserKeyCookie)
+export type LinkOutcome = { result: 'sent'; browserKey: string } | { result: Exclude<LinkResult, 'sent'> }
 
 export async function requestLoginLink(
   deps: LinkDeps, rawEmail: unknown, origin: string, now: number, locale: Locale,
-): Promise<LinkResult> {
+): Promise<LinkOutcome> {
   const email = normalizeEmail(rawEmail)
-  if (!email) return 'invalid'
-  if (!(await isAllowed(deps.db, deps.config, email))) return 'blocked'
-  if (!(await canSignIn(deps.db, deps.config, email, now))) return 'signups-full'
-  if ((await countLoginTokensSince(deps.db, email, now - LINK_TTL_MS)) >= MAX_LINKS_PER_WINDOW) return 'throttled'
+  if (!email) return { result: 'invalid' }
+  if (!(await isAllowed(deps.db, deps.config, email))) return { result: 'blocked' }
+  if (!(await canSignIn(deps.db, deps.config, email, now))) return { result: 'signups-full' }
+  if ((await countLoginTokensSince(deps.db, email, now - LINK_TTL_MS)) >= MAX_LINKS_PER_WINDOW) return { result: 'throttled' }
   const token = newToken()
   await createLoginToken(deps.db, await sha256Hex(token), email, now, now + LINK_TTL_MS)
   // an existing account keeps its saved language; `locale` (the visitor's UI) only picks it for a new one
   const lang = (await getLocaleByEmail(deps.db, email)) ?? locale
   await deps.send(email, buildLoginEmail(`${origin}/login/verify?token=${token}&lang=${lang}`, lang))
-  return 'sent'
+  return { result: 'sent', browserKey: await browserKey(token) }
+}
+
+// The verify page's GET normally only renders a button, so mail scanners that prefetch the link
+// can't burn the one-time token. The browser that asked for the link gets this cookie, and opening
+// the link there signs in straight away: scanners and other devices don't carry it and still get the
+// button. It is useless without the mailed token, and differs from the stored token hash.
+const BROWSER_COOKIE = 'login_browser'
+
+function browserKey(token: string): Promise<string> {
+  return sha256Hex(`browser:${token}`)
+}
+
+export function browserKeyCookie(key: string): string {
+  return `${BROWSER_COOKIE}=${key}; Path=/login/verify; Max-Age=${LINK_TTL_MS / 1000}; HttpOnly; SameSite=Lax; Secure`
+}
+
+export function clearBrowserKeyCookie(): string {
+  return `${BROWSER_COOKIE}=; Path=/login/verify; Max-Age=0; HttpOnly; SameSite=Lax; Secure`
+}
+
+export async function isRequestingBrowser(cookieHeader: string | null, token: unknown): Promise<boolean> {
+  const key = readCookie(cookieHeader, BROWSER_COOKIE)
+  return !!key && typeof token === 'string' && /^[0-9a-f]{64}$/.test(token) && key === (await browserKey(token))
 }
 
 // Returns the user id to sign in (and whether this login created the account), or null for an

@@ -3,23 +3,35 @@ import type { Route } from './+types/login-verify'
 import { getSessionStorage } from '../lib/session'
 import { createDb, getUserLocale } from '../db/repo'
 import { dict } from '../lib/i18n'
-import { localeCookie, toLocale } from '../lib/locale'
-import { loginConfigFromEnv, verifyLoginLink } from '../lib/login'
+import { localeCookie, toLocale, type Locale } from '../lib/locale'
+import type { Logger } from '../lib/logger'
+import { clearBrowserKeyCookie, isRequestingBrowser, loginConfigFromEnv, verifyLoginLink } from '../lib/login'
 
-// GET only renders a button: mail scanners that prefetch links must not burn the one-time token.
-export async function loader({ request }: Route.LoaderArgs) {
+// GET signs in only in the browser that asked for the link; anywhere else (mail scanners that
+// prefetch links, another device) it renders a button, so a prefetch can't burn the one-time token.
+export async function loader({ request, context }: Route.LoaderArgs) {
   const params = new URL(request.url).searchParams
-  return { token: params.get('token') ?? '', lang: toLocale(params.get('lang')) }
+  const token = params.get('token') ?? ''
+  const lang = toLocale(params.get('lang'))
+  if (await isRequestingBrowser(request.headers.get('Cookie'), token)) {
+    const signedIn = await signIn(context.cloudflare.env, context.log, token, lang)
+    if (signedIn) throw signedIn
+    return { token, lang, error: dict[lang].verify.expired }
+  }
+  return { token, lang, error: null }
 }
 
 export async function action({ request, context }: Route.ActionArgs) {
-  const env = context.cloudflare.env
-  const log = context.log
   const form = await request.formData()
   const lang = toLocale(form.get('lang'))
+  return (await signIn(context.cloudflare.env, context.log, form.get('token'), lang)) ?? { error: dict[lang].verify.expired }
+}
+
+// A redirect home with the session set, or null for an unusable link.
+async function signIn(env: Env, log: Logger, token: unknown, lang: Locale): Promise<Response | null> {
   const db = createDb(env.DB)
-  const verified = await verifyLoginLink({ db, config: loginConfigFromEnv(env) }, form.get('token'), Date.now(), lang)
-  if (verified === null) return { error: dict[lang].verify.expired }
+  const verified = await verifyLoginLink({ db, config: loginConfigFromEnv(env) }, token, Date.now(), lang)
+  if (verified === null) return null
   const { userId, created } = verified
   // never the email: the id is enough to find the account on /admin
   if (created) log.info('user registered', { event: 'user_registered', user_id: userId })
@@ -29,6 +41,7 @@ export async function action({ request, context }: Route.ActionArgs) {
   const headers = new Headers()
   headers.append('Set-Cookie', await commitSession(session))
   headers.append('Set-Cookie', localeCookie(await getUserLocale(db, userId)))
+  headers.append('Set-Cookie', clearBrowserKeyCookie())
   return redirect('/', { headers })
 }
 
@@ -36,12 +49,13 @@ export default function LoginVerify({ loaderData }: Route.ComponentProps) {
   const data = useActionData<typeof action>()
   const busy = useNavigation().state !== 'idle'
   const t = dict[loaderData.lang].verify
+  const error = data?.error ?? loaderData.error
   return (
     <main className="page" lang={loaderData.lang}>
       <h1>AI Cards</h1>
-      {data?.error ? (
+      {error ? (
         <>
-          <p className="error">{data.error}</p>
+          <p className="error">{error}</p>
           <Link to="/login">{t.sendNew}</Link>
         </>
       ) : (
