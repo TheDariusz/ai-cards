@@ -1,4 +1,4 @@
-import { Form, Link, redirect, useActionData, useNavigation } from 'react-router'
+import { Form, Link, data, redirect, useActionData, useNavigation } from 'react-router'
 import type { Route } from './+types/login-verify'
 import { getSessionStorage } from '../lib/session'
 import { createDb, getUserLocale } from '../db/repo'
@@ -16,7 +16,9 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   if (await isRequestingBrowser(request.headers.get('Cookie'), token)) {
     const signedIn = await signIn(context.cloudflare.env, context.log, token, lang)
     if (signedIn) throw signedIn
-    return { token, lang, error: dict[lang].verify.expired }
+    // the link is spent: drop the cookie so a reload doesn't try it again
+    const headers = { 'Set-Cookie': clearBrowserKeyCookie() }
+    return data({ token, lang, error: dict[lang].verify.expired }, { headers })
   }
   return { token, lang, error: null }
 }
@@ -46,10 +48,10 @@ async function signIn(env: Env, log: Logger, token: unknown, lang: Locale): Prom
 }
 
 export default function LoginVerify({ loaderData }: Route.ComponentProps) {
-  const data = useActionData<typeof action>()
+  const answer = useActionData<typeof action>()
   const busy = useNavigation().state !== 'idle'
   const t = dict[loaderData.lang].verify
-  const error = data?.error ?? loaderData.error
+  const error = answer?.error ?? loaderData.error
   return (
     <main className="page" lang={loaderData.lang}>
       <h1>AI Cards</h1>

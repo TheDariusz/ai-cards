@@ -98,17 +98,26 @@ function browserKey(token: string): Promise<string> {
   return sha256Hex(`browser:${token}`)
 }
 
+// set and clear share every attribute: a clear with a different Path would leave the cookie behind
+function browserCookie(value: string, maxAgeSeconds: number): string {
+  return `${BROWSER_COOKIE}=${value}; Path=/login/verify; Max-Age=${maxAgeSeconds}; HttpOnly; SameSite=Lax; Secure`
+}
+
 export function browserKeyCookie(key: string): string {
-  return `${BROWSER_COOKIE}=${key}; Path=/login/verify; Max-Age=${LINK_TTL_MS / 1000}; HttpOnly; SameSite=Lax; Secure`
+  return browserCookie(key, LINK_TTL_MS / 1000)
 }
 
 export function clearBrowserKeyCookie(): string {
-  return `${BROWSER_COOKIE}=; Path=/login/verify; Max-Age=0; HttpOnly; SameSite=Lax; Secure`
+  return browserCookie('', 0)
 }
 
 export async function isRequestingBrowser(cookieHeader: string | null, token: unknown): Promise<boolean> {
   const key = readCookie(cookieHeader, BROWSER_COOKIE)
-  return !!key && typeof token === 'string' && /^[0-9a-f]{64}$/.test(token) && key === (await browserKey(token))
+  return !!key && isTokenShape(token) && key === (await browserKey(token))
+}
+
+function isTokenShape(token: unknown): token is string {
+  return typeof token === 'string' && /^[0-9a-f]{64}$/.test(token)
 }
 
 // Returns the user id to sign in (and whether this login created the account), or null for an
@@ -116,7 +125,7 @@ export async function isRequestingBrowser(cookieHeader: string | null, token: un
 export async function verifyLoginLink(
   deps: Pick<LinkDeps, 'db' | 'config'>, token: unknown, now: number, locale: Locale,
 ): Promise<{ userId: number; created: boolean } | null> {
-  if (typeof token !== 'string' || !/^[0-9a-f]{64}$/.test(token)) return null
+  if (!isTokenShape(token)) return null
   const email = await consumeLoginToken(deps.db, await sha256Hex(token), now)
   if (!email || !(await canSignIn(deps.db, deps.config, email, now))) return null
   const { id, created } = await findOrCreateUser(deps.db, email, deps.config.ownerEmail, now, deps.config.starterMicros, locale)

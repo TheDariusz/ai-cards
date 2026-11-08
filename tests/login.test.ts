@@ -239,7 +239,11 @@ describe('same-browser login', () => {
     expect(cookie).toContain(`Max-Age=${LINK_TTL_MS / 1000}`)
     expect(cookie).toContain('HttpOnly')
     expect(cookie).toContain('SameSite=Lax')
-    expect(clearBrowserKeyCookie()).toContain('Max-Age=0')
+    const clear = clearBrowserKeyCookie()
+    expect(clear).toMatch(/^login_browser=;/)
+    expect(clear).toContain('Max-Age=0')
+    // a clear only removes the cookie when its Path matches the one it was set with
+    expect(clear).toContain('Path=/login/verify')
   })
 
   it('no browser key when no link went out', async () => {

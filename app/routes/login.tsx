@@ -26,11 +26,10 @@ export async function action({ request, context }: Route.ActionArgs) {
   try {
     const deps = { db: createDb(env.DB), config, send: mailSenderFromEnv(env, origin) }
     const outcome = await requestLoginLink(deps, form.get('email'), origin, Date.now(), locale)
-    const { result } = outcome
-    console.log(`login: ${result} for ${email} (${owner})`)
+    console.log(`login: ${outcome.result} for ${email} (${owner})`)
     // the outcome without the address: enough to see blocked/throttled/full sign-up patterns in Loki
-    context.log.info('login link requested', { event: 'login_link_requested', result, owner: isOwner })
-    if (result === 'invalid') return { error: dict[locale].login.invalidEmail }
+    context.log.info('login link requested', { event: 'login_link_requested', result: outcome.result, owner: isOwner })
+    if (outcome.result === 'invalid') return { error: dict[locale].login.invalidEmail }
     // lets this browser open the link without a second click; the visible answer stays the same
     if (outcome.result === 'sent') {
       return data({ sent: true as const }, { headers: { 'Set-Cookie': browserKeyCookie(outcome.browserKey) } })
@@ -44,7 +43,7 @@ export async function action({ request, context }: Route.ActionArgs) {
 }
 
 export default function Login() {
-  const data = useActionData<typeof action>()
+  const answer = useActionData<typeof action>()
   const busy = useNavigation().state !== 'idle'
   // landing's "start free" links here with ?new=1; same flow, wording for someone without an account
   const [params] = useSearchParams()
@@ -55,7 +54,7 @@ export default function Login() {
       <LocaleSwitch />
       <h1>AI Cards</h1>
       <h2>{isNew ? t.signUpTitle : t.logInTitle}</h2>
-      {data && 'sent' in data ? (
+      {answer && 'sent' in answer ? (
         <>
           <p className="ok">{t.sent}</p>
           <p className="muted">{t.checkSpam}</p>
@@ -64,7 +63,7 @@ export default function Login() {
         <Form method="post">
           <input type="email" name="email" placeholder={t.emailPlaceholder} autoComplete="email" required autoFocus />
           <button type="submit" disabled={busy}>{busy ? t.sending : t.send}</button>
-          {data && 'error' in data && <p className="error">{data.error}</p>}
+          {answer && 'error' in answer && <p className="error">{answer.error}</p>}
           <p className="muted">{isNew ? t.signUpHint : t.logInHint}</p>
         </Form>
       )}
