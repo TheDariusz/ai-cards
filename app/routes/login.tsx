@@ -1,4 +1,4 @@
-import { Form, redirect, useActionData, useNavigation, useSearchParams } from 'react-router'
+import { Form, data, redirect, useActionData, useNavigation, useSearchParams } from 'react-router'
 import type { Route } from './+types/login'
 import { getUserId } from '../lib/session'
 import { createDb } from '../db/repo'
@@ -6,7 +6,7 @@ import { parseLocale } from '../lib/locale'
 import { dict, useT } from '../lib/i18n'
 import { LocaleSwitch } from '../welcome/locale-switch'
 import { mailSenderFromEnv } from '../lib/resend'
-import { loginConfigFromEnv, normalizeEmail, requestLoginLink } from '../lib/login'
+import { browserKeyCookie, loginConfigFromEnv, normalizeEmail, requestLoginLink } from '../lib/login'
 
 export async function loader({ request, context }: Route.LoaderArgs) {
   if ((await getUserId(request, context.cloudflare.env)) !== null) throw redirect('/')
@@ -25,11 +25,15 @@ export async function action({ request, context }: Route.ActionArgs) {
   const owner = config.ownerEmail === null ? 'OWNER_EMAIL missing/invalid' : isOwner ? 'is owner' : 'not owner'
   try {
     const deps = { db: createDb(env.DB), config, send: mailSenderFromEnv(env, origin) }
-    const result = await requestLoginLink(deps, form.get('email'), origin, Date.now(), locale)
-    console.log(`login: ${result} for ${email} (${owner})`)
+    const outcome = await requestLoginLink(deps, form.get('email'), origin, Date.now(), locale)
+    console.log(`login: ${outcome.result} for ${email} (${owner})`)
     // the outcome without the address: enough to see blocked/throttled/full sign-up patterns in Loki
-    context.log.info('login link requested', { event: 'login_link_requested', result, owner: isOwner })
-    if (result === 'invalid') return { error: dict[locale].login.invalidEmail }
+    context.log.info('login link requested', { event: 'login_link_requested', result: outcome.result, owner: isOwner })
+    if (outcome.result === 'invalid') return { error: dict[locale].login.invalidEmail }
+    // lets this browser open the link without a second click; the visible answer stays the same
+    if (outcome.result === 'sent') {
+      return data({ sent: true as const }, { headers: { 'Set-Cookie': browserKeyCookie(outcome.browserKey) } })
+    }
   } catch (err) {
     // same answer as success, so a failure can't reveal which addresses are on the list
     console.error(`login: sending mail failed for ${email} (${owner})`, err)
@@ -39,7 +43,7 @@ export async function action({ request, context }: Route.ActionArgs) {
 }
 
 export default function Login() {
-  const data = useActionData<typeof action>()
+  const answer = useActionData<typeof action>()
   const busy = useNavigation().state !== 'idle'
   // landing's "start free" links here with ?new=1; same flow, wording for someone without an account
   const [params] = useSearchParams()
@@ -50,7 +54,7 @@ export default function Login() {
       <LocaleSwitch />
       <h1>AI Cards</h1>
       <h2>{isNew ? t.signUpTitle : t.logInTitle}</h2>
-      {data && 'sent' in data ? (
+      {answer && 'sent' in answer ? (
         <>
           <p className="ok">{t.sent}</p>
           <p className="muted">{t.checkSpam}</p>
@@ -59,7 +63,7 @@ export default function Login() {
         <Form method="post">
           <input type="email" name="email" placeholder={t.emailPlaceholder} autoComplete="email" required autoFocus />
           <button type="submit" disabled={busy}>{busy ? t.sending : t.send}</button>
-          {data && 'error' in data && <p className="error">{data.error}</p>}
+          {answer && 'error' in answer && <p className="error">{answer.error}</p>}
           <p className="muted">{isNew ? t.signUpHint : t.logInHint}</p>
         </Form>
       )}

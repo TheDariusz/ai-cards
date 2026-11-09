@@ -4,7 +4,8 @@ import { users, OWNER_USER_ID } from '../app/db/schema'
 import { findOrCreateUser, getBalance, getUserLocale, setBlocked, type Db } from '../app/db/repo'
 import type { MailMessage } from '../app/lib/mailer'
 import {
-  DEFAULT_MAX_SIGNUPS_PER_DAY, LINK_TTL_MS, MAX_LINKS_PER_WINDOW, buildLoginEmail, loginConfigFromEnv, normalizeEmail, requestLoginLink, verifyLoginLink,
+  DEFAULT_MAX_SIGNUPS_PER_DAY, LINK_TTL_MS, MAX_LINKS_PER_WINDOW, browserKeyCookie, buildLoginEmail, clearBrowserKeyCookie, isRequestingBrowser, loginConfigFromEnv, normalizeEmail,
+  requestLoginLink, verifyLoginLink,
 } from '../app/lib/login'
 
 const NOW = Date.parse('2026-10-01T10:00:00Z')
@@ -80,7 +81,7 @@ describe('magic link login', () => {
 
   it('mails a one-time link to a new address and signs it up with the starter pool', async () => {
     const { db, sent, deps, tokenOf } = await setup()
-    expect(await requestLoginLink(deps, ' Friend@example.com', ORIGIN, NOW, 'pl')).toBe('sent')
+    expect((await requestLoginLink(deps, ' Friend@example.com', ORIGIN, NOW, 'pl')).result).toBe('sent')
     expect(sent).toHaveLength(1)
     expect(sent[0].to).toBe('friend@example.com')
     expect(sent[0].msg.text).toContain(`${ORIGIN}/login/verify?token=`)
@@ -105,21 +106,21 @@ describe('magic link login', () => {
     const stale = tokenOf()
     await setBlocked(deps.db, palId!, NOW + 2)
     expect(await verifyLoginLink(deps, stale, NOW + 3, 'pl')).toBeNull()
-    expect(await requestLoginLink(deps, 'pal@example.com', ORIGIN, NOW + 4, 'pl')).toBe('blocked')
+    expect((await requestLoginLink(deps, 'pal@example.com', ORIGIN, NOW + 4, 'pl')).result).toBe('blocked')
     expect(sent).toHaveLength(2)
-    expect(await requestLoginLink(deps, 'not-an-email', ORIGIN, NOW, 'pl')).toBe('invalid')
+    expect((await requestLoginLink(deps, 'not-an-email', ORIGIN, NOW, 'pl')).result).toBe('invalid')
   })
 
   it('caps new accounts per Warsaw day, but existing users and the owner still get in', async () => {
     const { sent, deps, tokenOf } = await setup(loginConfigFromEnv({ OWNER_EMAIL: 'owner@example.com', MAX_SIGNUPS_PER_DAY: '1' }))
     await requestLoginLink(deps, 'first@example.com', ORIGIN, NOW, 'pl')
     expect(await verifyLoginLink(deps, tokenOf(), NOW, 'pl')).not.toBeNull()
-    expect(await requestLoginLink(deps, 'second@example.com', ORIGIN, NOW + 1, 'pl')).toBe('signups-full')
-    expect(await requestLoginLink(deps, 'first@example.com', ORIGIN, NOW + 2, 'pl')).toBe('sent')
-    expect(await requestLoginLink(deps, 'owner@example.com', ORIGIN, NOW + 3, 'pl')).toBe('sent')
+    expect((await requestLoginLink(deps, 'second@example.com', ORIGIN, NOW + 1, 'pl')).result).toBe('signups-full')
+    expect((await requestLoginLink(deps, 'first@example.com', ORIGIN, NOW + 2, 'pl')).result).toBe('sent')
+    expect((await requestLoginLink(deps, 'owner@example.com', ORIGIN, NOW + 3, 'pl')).result).toBe('sent')
     expect(sent.map((m) => m.to)).toEqual(['first@example.com', 'first@example.com', 'owner@example.com'])
     // the next Warsaw day opens up again
-    expect(await requestLoginLink(deps, 'second@example.com', ORIGIN, NOW + 86_400_000, 'pl')).toBe('sent')
+    expect((await requestLoginLink(deps, 'second@example.com', ORIGIN, NOW + 86_400_000, 'pl')).result).toBe('sent')
   })
 
   it('a link requested while the cap was open fails once the cap filled up', async () => {
@@ -149,11 +150,11 @@ describe('magic link login', () => {
   it('caps links per address within the TTL window', async () => {
     const { sent, deps } = await setup()
     for (let i = 0; i < MAX_LINKS_PER_WINDOW; i++) {
-      expect(await requestLoginLink(deps, 'friend@example.com', ORIGIN, NOW + i, 'pl')).toBe('sent')
+      expect((await requestLoginLink(deps, 'friend@example.com', ORIGIN, NOW + i, 'pl')).result).toBe('sent')
     }
-    expect(await requestLoginLink(deps, 'friend@example.com', ORIGIN, NOW + 10, 'pl')).toBe('throttled')
-    expect(await requestLoginLink(deps, 'pal@example.com', ORIGIN, NOW + 10, 'pl')).toBe('sent')
-    expect(await requestLoginLink(deps, 'friend@example.com', ORIGIN, NOW + LINK_TTL_MS + 1, 'pl')).toBe('sent')
+    expect((await requestLoginLink(deps, 'friend@example.com', ORIGIN, NOW + 10, 'pl')).result).toBe('throttled')
+    expect((await requestLoginLink(deps, 'pal@example.com', ORIGIN, NOW + 10, 'pl')).result).toBe('sent')
+    expect((await requestLoginLink(deps, 'friend@example.com', ORIGIN, NOW + LINK_TTL_MS + 1, 'pl')).result).toBe('sent')
     expect(sent).toHaveLength(MAX_LINKS_PER_WINDOW + 2)
   })
 })
@@ -197,5 +198,56 @@ describe('registration reporting', () => {
     }) as Db
     expect(await findOrCreateUser(racing, 'race@example.com', null, NOW + 1, 0)).toEqual({ id, created: false })
     expect(missed).toBe(true)
+  })
+})
+
+describe('same-browser login', () => {
+  const cookieHeader = (setCookie: string) => `locale=pl; ${setCookie.split(';')[0]}`
+
+  it('marks the browser that asked for the link, and only for that link', async () => {
+    const { deps, tokenOf } = await setup()
+    const first = await requestLoginLink(deps, 'friend@example.com', ORIGIN, NOW, 'pl')
+    const firstToken = tokenOf()
+    const second = await requestLoginLink(deps, 'friend@example.com', ORIGIN, NOW + 1, 'pl')
+    if (first.result !== 'sent' || second.result !== 'sent') throw new Error('expected sent')
+    expect(await isRequestingBrowser(cookieHeader(browserKeyCookie(second.browserKey)), tokenOf())).toBe(true)
+    // the newer request replaced the cookie, so the older link falls back to the button
+    expect(await isRequestingBrowser(cookieHeader(browserKeyCookie(second.browserKey)), firstToken)).toBe(false)
+    expect(await isRequestingBrowser(cookieHeader(browserKeyCookie(first.browserKey)), firstToken)).toBe(true)
+  })
+
+  it('a browser without the cookie (a mail scanner, another device) is not the requesting one', async () => {
+    const { deps, tokenOf } = await setup()
+    await requestLoginLink(deps, 'friend@example.com', ORIGIN, NOW, 'pl')
+    expect(await isRequestingBrowser(null, tokenOf())).toBe(false)
+    expect(await isRequestingBrowser('locale=pl', tokenOf())).toBe(false)
+    expect(await isRequestingBrowser(cookieHeader(clearBrowserKeyCookie()), tokenOf())).toBe(false)
+  })
+
+  it('the cookie is not the stored token hash and never matches a malformed token', async () => {
+    const { deps, tokenOf } = await setup()
+    const out = await requestLoginLink(deps, 'friend@example.com', ORIGIN, NOW, 'pl')
+    if (out.result !== 'sent') throw new Error('expected sent')
+    expect(out.browserKey).toMatch(/^[0-9a-f]{64}$/)
+    expect(out.browserKey).not.toBe(tokenOf())
+    expect(await isRequestingBrowser(cookieHeader(browserKeyCookie(out.browserKey)), '')).toBe(false)
+  })
+
+  it('the cookie is scoped to the verify page and lives as long as the link', () => {
+    const cookie = browserKeyCookie('a'.repeat(64))
+    expect(cookie).toContain('Path=/login/verify')
+    expect(cookie).toContain(`Max-Age=${LINK_TTL_MS / 1000}`)
+    expect(cookie).toContain('HttpOnly')
+    expect(cookie).toContain('SameSite=Lax')
+    const clear = clearBrowserKeyCookie()
+    expect(clear).toMatch(/^login_browser=;/)
+    expect(clear).toContain('Max-Age=0')
+    // a clear only removes the cookie when its Path matches the one it was set with
+    expect(clear).toContain('Path=/login/verify')
+  })
+
+  it('no browser key when no link went out', async () => {
+    const { deps } = await setup()
+    expect(await requestLoginLink(deps, 'not-an-email', ORIGIN, NOW, 'pl')).toEqual({ result: 'invalid' })
   })
 })
