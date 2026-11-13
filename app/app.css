@@ -197,17 +197,20 @@ form > input:not([type="hidden"]) + button, form > textarea + button { margin-to
   .landing-title em { animation: landing-sheen 9s ease-in-out infinite alternate; }
   .landing-rise { animation: landing-rise 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) both; animation-delay: calc(var(--i, 0) * 110ms); }
   .landing-cta { transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease; }
-  .landing-cta:hover { transform: translateY(-2px); box-shadow: 0 16px 30px -14px var(--accent); filter: brightness(1.08); }
   .landing-cta:active { transform: translateY(0) scale(0.98); }
-  .landing-screen { transition: opacity 0.6s ease, transform 0.6s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.3s ease; }
-  .landing-screen:hover { transform: translateY(-4px); box-shadow: 0 22px 44px -24px rgba(0, 0, 0, 0.5); }
   .landing-screen .pending { transition: opacity 0.4s ease, transform 0.4s ease; }
   .landing-screen .quick-add button[data-on="true"] { animation: landing-press 0.4s ease; }
   .landing [data-reveal] { transition: opacity 0.6s ease, transform 0.6s cubic-bezier(0.2, 0.8, 0.2, 1); }
+  .landing .landing-screen { transition: opacity 0.6s ease, transform 0.6s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.3s ease; }
   .landing .beat { transition: opacity 0.45s ease, transform 0.45s cubic-bezier(0.2, 0.8, 0.2, 1); transition-delay: calc(var(--i, 0) * var(--beat, 110ms) + 250ms); }
   .landing .beat-pop { transition-timing-function: ease, cubic-bezier(0.3, 1.5, 0.5, 1); }
   .landing-screen-slow { --beat: 190ms; }
   .landing .seen .grade-suggested { animation: landing-pulse 1s ease-out calc(13 * var(--beat, 110ms) + 700ms) 2; }
+}
+/* Hover lifts only where hover is real; a tap on a phone would leave them stuck raised. */
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  .landing-cta:hover { transform: translateY(-2px); box-shadow: 0 16px 30px -14px var(--accent); filter: brightness(1.08); }
+  .landing .landing-screen:hover { transform: translateY(-4px); box-shadow: 0 22px 44px -24px rgba(0, 0, 0, 0.5); }
 }
 @media (scripting: enabled) and (prefers-reduced-motion: no-preference) {
   .landing [data-reveal]:not(.seen) { opacity: 0; transform: translateY(18px); }

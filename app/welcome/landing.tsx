@@ -24,8 +24,8 @@ export function Landing({ starterCredits, dailyCardLimit }: { starterCredits: nu
   const t = useT().landing
   const fact = ([bold, rest]: [string, string]) => <span><b>{bold}</b>{rest}</span>
   const root = useRef<HTMLDivElement>(null)
-  const [typed, setTyped] = useState(WORD)
-  const [added, setAdded] = useState(true)
+  // Day 0 typing progress: 0 = empty, WORD.length = fully typed, past that = added.
+  const [step, setStep] = useState(WORD.length + 1)
 
   // Marks each [data-reveal] element `seen` the first time it scrolls into view (app.css
   // does the rest) and types the word into the Day 0 screen. Server markup is the finished
@@ -34,13 +34,17 @@ export function Landing({ starterCredits, dailyCardLimit }: { starterCredits: nu
     const el = root.current
     if (!el || !('IntersectionObserver' in window)) return
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
+    // Hydrated after the failsafe already showed everything: leave the page finished rather
+    // than cancel it and hide what the visitor is reading.
+    const failsafeDone = el.querySelector('[data-reveal]')?.getAnimations()
+      .some((a) => a instanceof CSSAnimation && a.animationName === 'landing-failsafe' && a.playState === 'finished')
+    if (failsafeDone) return
     el.classList.add('live')
-    setTyped('')
-    setAdded(false)
+    setStep(0)
     const timers: number[] = []
     const type = () => {
-      for (let i = 1; i <= WORD.length; i++) timers.push(window.setTimeout(() => setTyped(WORD.slice(0, i)), 500 + i * 95))
-      timers.push(window.setTimeout(() => setAdded(true), 500 + WORD.length * 95 + 400))
+      // One letter every 95ms, then a short pause before Add presses.
+      for (let i = 1; i <= WORD.length + 1; i++) timers.push(window.setTimeout(() => setStep(i), 500 + i * 95 + (i > WORD.length ? 300 : 0)))
     }
     const io = new IntersectionObserver((entries) => {
       for (const entry of entries) {
@@ -56,6 +60,8 @@ export function Landing({ starterCredits, dailyCardLimit }: { starterCredits: nu
       timers.forEach((id) => window.clearTimeout(id))
     }
   }, [])
+
+  const added = step > WORD.length
 
   return (
     <div className="landing" ref={root}>
@@ -90,7 +96,7 @@ export function Landing({ starterCredits, dailyCardLimit }: { starterCredits: nu
           <div className="landing-screen" aria-hidden="true" data-reveal="type">
             <h3>AI Cards <span className="streak-chip">🔥 12</span></h3>
             <div className="quick-add">
-              <input value={typed} readOnly tabIndex={-1} />
+              <input value={WORD.slice(0, step)} readOnly tabIndex={-1} />
               <button type="button" tabIndex={-1} data-on={added}>{t.demoAdd}</button>
             </div>
             <p className="pending" data-on={added}>⏳ {t.demoGenerating} reluctant</p>
