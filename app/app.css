@@ -3,21 +3,21 @@
   color-scheme: light;
   --bg: #f6f7fb; --surface: #ffffff; --text: #1d2233; --muted: #6a7187;
   --accent: #4b5bdc; --on-accent: #ffffff; --accent-soft: #eceefb; --edge: #e4e7f0;
-  --accent-2: #a43cc4; --ok: #17805a; --warn: #9a6412; --bad: #c53a3a; --focus: #4b5bdc;
+  --ok: #17805a; --warn: #9a6412; --bad: #c53a3a; --focus: #4b5bdc;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     color-scheme: dark;
     --bg: #111421; --surface: #1a1e2e; --text: #e6e8f2; --muted: #8e95ad;
     --accent: #8c98ff; --on-accent: #111421; --accent-soft: #242a44; --edge: #262b3f;
-    --accent-2: #de8cff; --ok: #43c793; --warn: #e2b25a; --bad: #f07a7a; --focus: #aab3ff;
+    --ok: #43c793; --warn: #e2b25a; --bad: #f07a7a; --focus: #aab3ff;
   }
 }
 :root[data-theme="dark"] {
   color-scheme: dark;
   --bg: #111421; --surface: #1a1e2e; --text: #e6e8f2; --muted: #8e95ad;
   --accent: #8c98ff; --on-accent: #111421; --accent-soft: #242a44; --edge: #262b3f;
-  --accent-2: #de8cff; --ok: #43c793; --warn: #e2b25a; --bad: #f07a7a; --focus: #aab3ff;
+  --ok: #43c793; --warn: #e2b25a; --bad: #f07a7a; --focus: #aab3ff;
 }
 
 * { box-sizing: border-box; }
@@ -221,7 +221,7 @@ form > input:not([type="hidden"]) + button, form > textarea + button { margin-to
   .landing:not(.still) .landing-hero-answer del::after { transform-origin: left; animation: landing-strike 0.45s cubic-bezier(0.2, 0.8, 0.2, 1) 1.3s both; }
   .landing:not(.still) .landing-hero-answer ins { display: inline-block; animation: landing-rise 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) 1.75s both; }
   .landing:not(.still) .landing-hero-note { animation: landing-rise 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) 2.2s both; }
-  .landing-screen .quick-add button[data-on="true"] { animation: landing-press 0.4s ease; }
+  .landing.live .landing-screen .quick-add button[data-on="true"] { animation: landing-press 0.4s ease; }
   .landing [data-reveal] { transition: opacity 0.6s ease, transform 0.6s cubic-bezier(0.2, 0.8, 0.2, 1); }
   .landing .landing-screen { transition: opacity 0.6s ease, transform 0.6s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.3s ease; }
   .landing .beat { transition: opacity 0.45s ease, transform 0.45s cubic-bezier(0.2, 0.8, 0.2, 1); transition-delay: calc(var(--i, 0) * var(--beat, 110ms) + 250ms); }

@@ -43,11 +43,12 @@ export function Landing({ starterCredits, dailyCardLimit }: { starterCredits: nu
     if (still || !el || !('IntersectionObserver' in window)) return
     played = true
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
-    // Hydrated after the failsafe already showed everything: leave the page finished rather
-    // than cancel it and hide what the visitor is reading.
-    const failsafeDone = el.querySelector('[data-reveal]')?.getAnimations()
-      .some((a) => a instanceof CSSAnimation && a.animationName === 'landing-failsafe' && a.playState === 'finished')
-    if (failsafeDone) return
+    // Hydrated once the failsafe had started showing everything (its 5s delay is part of
+    // currentTime): leave the page finished rather than cancel it and hide what the visitor
+    // is reading. getAnimations is optional: browsers without it just play the intro.
+    const failsafe = el.querySelector('[data-reveal]')?.getAnimations?.()
+      .find((a) => (a as CSSAnimation).animationName === 'landing-failsafe')
+    if (failsafe && Number(failsafe.currentTime) >= 5000) return
     el.classList.add('live')
     setStep(0)
     const timers: number[] = []
