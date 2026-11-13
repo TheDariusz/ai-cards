@@ -3,21 +3,21 @@
   color-scheme: light;
   --bg: #f6f7fb; --surface: #ffffff; --text: #1d2233; --muted: #6a7187;
   --accent: #4b5bdc; --on-accent: #ffffff; --accent-soft: #eceefb; --edge: #e4e7f0;
-  --ok: #17805a; --warn: #9a6412; --bad: #c53a3a; --focus: #4b5bdc;
+  --accent-2: #a43cc4; --ok: #17805a; --warn: #9a6412; --bad: #c53a3a; --focus: #4b5bdc;
 }
 @media (prefers-color-scheme: dark) {
   :root:not([data-theme="light"]) {
     color-scheme: dark;
     --bg: #111421; --surface: #1a1e2e; --text: #e6e8f2; --muted: #8e95ad;
     --accent: #8c98ff; --on-accent: #111421; --accent-soft: #242a44; --edge: #262b3f;
-    --ok: #43c793; --warn: #e2b25a; --bad: #f07a7a; --focus: #aab3ff;
+    --accent-2: #de8cff; --ok: #43c793; --warn: #e2b25a; --bad: #f07a7a; --focus: #aab3ff;
   }
 }
 :root[data-theme="dark"] {
   color-scheme: dark;
   --bg: #111421; --surface: #1a1e2e; --text: #e6e8f2; --muted: #8e95ad;
   --accent: #8c98ff; --on-accent: #111421; --accent-soft: #242a44; --edge: #262b3f;
-  --ok: #43c793; --warn: #e2b25a; --bad: #f07a7a; --focus: #aab3ff;
+  --accent-2: #de8cff; --ok: #43c793; --warn: #e2b25a; --bad: #f07a7a; --focus: #aab3ff;
 }
 
 * { box-sizing: border-box; }
@@ -180,3 +180,46 @@ form > input:not([type="hidden"]) + button, form > textarea + button { margin-to
 .landing-closing h2 { font-family: "Literata", Georgia, serif; font-size: 1.6rem; margin: 0 0 16px; }
 .landing-footer { margin-top: 36px; font-size: 0.85rem; text-align: center; }
 @media (max-width: 760px) { .landing-step { grid-template-columns: 1fr; gap: 12px; padding: 28px 0; } .landing-step h2 { font-size: 1.15rem; } }
+
+/* Landing motion. Everything here is progressive: hidden-until-seen states apply only when
+   scripting is on and motion is welcome, so no-JS and reduced-motion visitors get the finished page. */
+.landing { position: relative; isolation: isolate; }
+.landing-glow { position: absolute; z-index: -1; top: -30px; left: 0; right: 0; height: 600px; overflow: hidden; pointer-events: none; -webkit-mask-image: radial-gradient(ellipse 60% 62% at 50% 38%, #000 25%, transparent 78%); mask-image: radial-gradient(ellipse 60% 62% at 50% 38%, #000 25%, transparent 78%); }
+.landing-glow::before, .landing-glow::after { content: ""; position: absolute; width: 620px; height: 620px; border-radius: 50%; }
+.landing-glow::before { left: -6%; top: -220px; background: radial-gradient(closest-side, color-mix(in srgb, var(--accent) 34%, transparent), transparent); }
+.landing-glow::after { right: 2%; top: -120px; background: radial-gradient(closest-side, color-mix(in srgb, var(--accent-2) 26%, transparent), transparent); }
+.landing-title em { font-style: normal; background: linear-gradient(100deg, var(--accent), var(--accent-2), var(--accent)); background-size: 200% 100%; -webkit-background-clip: text; background-clip: text; color: transparent; }
+.landing-cta { background: linear-gradient(100deg, var(--accent), var(--accent-2)); box-shadow: 0 10px 24px -14px var(--accent); }
+.landing-screen .pending[data-on="false"] { opacity: 0; transform: translateY(6px); }
+@media (prefers-reduced-motion: no-preference) {
+  .landing-glow::before { animation: landing-drift-a 16s ease-in-out infinite alternate; }
+  .landing-glow::after { animation: landing-drift-b 20s ease-in-out infinite alternate; }
+  .landing-title em { animation: landing-sheen 9s ease-in-out infinite alternate; }
+  .landing-rise { animation: landing-rise 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) both; animation-delay: calc(var(--i, 0) * 110ms); }
+  .landing-cta { transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease; }
+  .landing-cta:hover { transform: translateY(-2px); box-shadow: 0 16px 30px -14px var(--accent); filter: brightness(1.08); }
+  .landing-cta:active { transform: translateY(0) scale(0.98); }
+  .landing-screen { transition: opacity 0.6s ease, transform 0.6s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.3s ease; }
+  .landing-screen:hover { transform: translateY(-4px); box-shadow: 0 22px 44px -24px rgba(0, 0, 0, 0.5); }
+  .landing-screen .pending { transition: opacity 0.4s ease, transform 0.4s ease; }
+  .landing-screen .quick-add button[data-on="true"] { animation: landing-press 0.4s ease; }
+  .landing [data-reveal] { transition: opacity 0.6s ease, transform 0.6s cubic-bezier(0.2, 0.8, 0.2, 1); }
+  .landing .beat { transition: opacity 0.45s ease, transform 0.45s cubic-bezier(0.2, 0.8, 0.2, 1); transition-delay: calc(var(--i, 0) * var(--beat, 110ms) + 250ms); }
+  .landing .beat-pop { transition-timing-function: ease, cubic-bezier(0.3, 1.5, 0.5, 1); }
+  .landing-screen-slow { --beat: 190ms; }
+  .landing .seen .grade-suggested { animation: landing-pulse 1s ease-out calc(13 * var(--beat, 110ms) + 700ms) 2; }
+}
+@media (scripting: enabled) and (prefers-reduced-motion: no-preference) {
+  .landing [data-reveal]:not(.seen) { opacity: 0; transform: translateY(18px); }
+  .landing [data-reveal]:not(.seen) .beat { opacity: 0; transform: translateY(8px); }
+  .landing [data-reveal]:not(.seen) .beat-pop { transform: scale(0.8); }
+  /* If the script never runs (failed download), show everything after a few seconds. */
+  .landing:not(.live) [data-reveal], .landing:not(.live) .beat { animation: landing-failsafe 0.4s 5s forwards; }
+}
+@keyframes landing-failsafe { to { opacity: 1; transform: none; } }
+@keyframes landing-rise { from { opacity: 0; transform: translateY(16px); } }
+@keyframes landing-drift-a { to { transform: translate(140px, 60px) scale(1.15); } }
+@keyframes landing-drift-b { to { transform: translate(-160px, 40px) scale(0.9); } }
+@keyframes landing-sheen { to { background-position: 100% 0; } }
+@keyframes landing-press { 40% { transform: scale(0.93); } }
+@keyframes landing-pulse { from { box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 60%, transparent); } to { box-shadow: 0 0 0 12px transparent; } }

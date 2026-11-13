@@ -26,7 +26,7 @@ The public landing page looks dated: nothing moves, nothing has a gradient. It s
 
 ## Anti-goals
 
-- Content hidden for someone without JavaScript, or before hydration. The server-rendered page must show every screen in its finished state.
+- Content hidden for someone without JavaScript, or whose script failed to load. The server-rendered markup is every screen in its finished state.
 - Motion for visitors who asked for reduced motion. They get the finished screens, a still glow, and no transitions.
 - Layout shift while a screen plays. Elements keep their space and only change opacity/transform.
 - Slower first paint from heavy effects (no large blurred fixed layers that repaint on scroll, no video, no canvas).
@@ -39,8 +39,8 @@ The public landing page looks dated: nothing moves, nothing has a gradient. It s
 
 ## Decided
 
-- **Mechanism.** One small hook in `app/welcome/` uses `IntersectionObserver` to add a `seen` class to an element the first time it enters the viewport. On mount the landing root gets a `motion` class; the "hidden before seen" styles only apply under `.landing.motion`, so without JavaScript everything is visible.
-- **Choreography lives in CSS.** `@keyframes` in `app/app.css`, staggered with a `--i` custom property set inline on each element (`animation-delay: calc(var(--i) * …)`).
+- **Mechanism.** One effect in `app/welcome/landing.tsx` uses `IntersectionObserver` to add a `seen` class to each `[data-reveal]` element the first time it enters the viewport. The "hidden before seen" styles sit under `@media (scripting: enabled) and (prefers-reduced-motion: no-preference)`, so without JavaScript everything is visible. (Changed after the prototype: a class added on mount made the Day 0 screen, already in view on desktop, flash finished and then replay.) If the script never runs, a CSS failsafe shows everything after 5 seconds; the effect cancels it by adding `live` to the root.
+- **Choreography lives in CSS.** `@keyframes` in `app/app.css`, transitions staggered with a `--i` custom property set inline on each element (`transition-delay: calc(var(--i) * …)`), plus a few `@keyframes` for the hero.
 - **Typing** is the one piece done in JavaScript: a short effect fills the read-only input character by character once the Day 0 screen is seen.
 - **Headline gradient** needs the title split in two dictionary keys (`title` + `titleAccent`) in both `pl` and `en`.
 - **Colour.** The glow and gradients are built from the existing `--accent` plus one new warmer companion token, defined for light and dark alongside the others.

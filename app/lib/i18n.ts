@@ -22,7 +22,8 @@ const pl = {
   },
   landing: {
     logIn: 'Zaloguj się',
-    title: 'Trzy dni od usłyszanego słowa do słowa, które naprawdę znasz.',
+    title: 'Trzy dni od usłyszanego słowa do',
+    titleAccent: 'słowa, które naprawdę znasz.',
     pitch: 'Fiszki z angielskiego dla Polaków. Wpisujesz słowo, AI tworzy fiszkę, a algorytm powtórek decyduje, kiedy znów ją zobaczysz.',
     startFree: 'Zacznij za darmo',
     howItWorks: 'Jak to działa',
@@ -235,7 +236,8 @@ const en: Dict = {
   },
   landing: {
     logIn: 'Log in',
-    title: 'Three days from a word you heard to a word you own.',
+    title: 'Three days from a word you heard to',
+    titleAccent: 'a word you own.',
     pitch: 'English flashcards for Polish speakers. You type the word, AI writes the card, spaced repetition decides when you see it again.',
     startFree: 'Start free',
     howItWorks: 'How it works',
