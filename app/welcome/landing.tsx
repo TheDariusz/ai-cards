@@ -6,6 +6,9 @@ import { LocaleSwitch } from './locale-switch'
 // Shown at `/` to visitors without a session. The three screens are static copies of
 // the app's own markup (home quick-add, learn decode step, write-it review), so they
 // reuse the app classes and stay in step with the real look.
+const AUTHOR_SITE = 'https://thedariusz.dev'
+const EXTERNAL = { target: '_blank', rel: 'noopener' } as const
+
 const DECODE: [string, string][] = [
   ['She', 'Ona'],
   ['was', 'była'],
@@ -210,7 +213,36 @@ export function Landing({ starterCredits, dailyCardLimit }: { starterCredits: nu
           <Link to="/login?new=1" className="landing-cta">{t.startFree}</Link>
         </section>
       </main>
-      <footer className="landing-footer muted">{t.footer}</footer>
+      <footer className="landing-footer">
+        <div className="landing-author">
+          {/* The author's mark in the page's own tokens; the dot is the one brand colour it keeps. The rect
+              is inset by half its stroke so the border isn't clipped, and the text is pinned to a width so
+              a fallback font can't run it into the edge. */}
+          <svg className="author-mark" viewBox="0 0 32 32" aria-hidden="true">
+            <rect x="0.5" y="0.5" width="31" height="31" rx="6" />
+            <circle cx="5.5" cy="21" r="2" fill="#e11d48" />
+            <text x="10" y="23" textLength="19" lengthAdjust="spacingAndGlyphs">TD</text>
+          </svg>
+          <p>
+            <span>{t.footerCredit}</span>
+            <strong><a href={AUTHOR_SITE} {...EXTERNAL}>TheDariusz</a> · {t.footerName}</strong>
+            <span>{t.footerRole}</span>
+          </p>
+        </div>
+        <nav className="landing-social" aria-label={t.footerLinks}>
+          <a href={AUTHOR_SITE} {...EXTERNAL}>thedariusz.dev</a>
+          <a href="https://github.com/thedariusz" aria-label="GitHub" {...EXTERNAL}>
+            <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true" fill="currentColor">
+              <path d="M12 .5A12 12 0 0 0 8.2 23.9c.6.1.8-.3.8-.6v-2.2c-3.3.7-4-1.4-4-1.4-.6-1.4-1.4-1.8-1.4-1.8-1.1-.7.1-.7.1-.7 1.2.1 1.8 1.2 1.8 1.2 1.1 1.8 2.8 1.3 3.5 1 .1-.8.4-1.3.8-1.6-2.7-.3-5.5-1.3-5.5-5.9 0-1.3.5-2.4 1.2-3.2-.1-.3-.5-1.5.1-3.2 0 0 1-.3 3.3 1.2a11.5 11.5 0 0 1 6 0c2.3-1.5 3.3-1.2 3.3-1.2.6 1.7.2 2.9.1 3.2.8.8 1.2 1.9 1.2 3.2 0 4.6-2.8 5.6-5.5 5.9.4.4.8 1.1.8 2.2v3.3c0 .3.2.7.8.6A12 12 0 0 0 12 .5Z" />
+            </svg>
+          </a>
+          <a href="https://www.linkedin.com/in/dariusz-szczepanski-dev" aria-label="LinkedIn" {...EXTERNAL}>
+            <svg width="20" height="20" viewBox="0 0 24 24" aria-hidden="true" fill="currentColor">
+              <path d="M20.5 2h-17A1.5 1.5 0 0 0 2 3.5v17A1.5 1.5 0 0 0 3.5 22h17a1.5 1.5 0 0 0 1.5-1.5v-17A1.5 1.5 0 0 0 20.5 2ZM8 19H5v-9h3Zm-1.5-10.3a1.75 1.75 0 1 1 0-3.5 1.75 1.75 0 0 1 0 3.5ZM19 19h-3v-4.7c0-1.4-.5-2.1-1.6-2.1-1.2 0-1.9.8-1.9 2.1V19h-3v-9h2.9v1.3a3.4 3.4 0 0 1 3-1.6c2.2 0 3.6 1.3 3.6 4Z" />
+            </svg>
+          </a>
+        </nav>
+      </footer>
     </div>
   )
 }
