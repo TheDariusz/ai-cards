@@ -154,10 +154,23 @@ form > input:not([type="hidden"]) + button, form > textarea + button { margin-to
 :root[data-theme="dark"] .landing-header .logo-light { display: none; }
 :root[data-theme="dark"] .landing-header .logo-dark { display: block; }
 .landing-header-actions { display: flex; align-items: center; gap: 16px; }
-.landing-login { color: var(--text); font-weight: 500; text-underline-offset: 4px; }
-.landing-title { font-family: "Literata", Georgia, serif; font-size: clamp(2rem, 5vw, 3.4rem); line-height: 1.1; letter-spacing: -0.015em; margin: 0 0 14px; max-width: 44rem; text-wrap: balance; }
+.landing-login { display: inline-flex; align-items: center; min-height: 44px; color: var(--text); font-weight: 500; text-underline-offset: 4px; }
+.landing-header .locale-switch button { min-height: 44px; min-width: 48px; }
+.landing-reassure { margin: 12px 0 0; color: var(--muted); font-size: 0.9rem; }
+.landing-title { font-family: "Literata", Georgia, serif; font-size: clamp(2rem, 4.4vw, 3rem); line-height: 1.12; letter-spacing: -0.015em; margin: 0 0 14px; text-wrap: balance; }
+.landing-title em { font-style: normal; color: var(--accent); }
 .landing-pitch { color: var(--muted); font-size: 1.1rem; margin: 0; max-width: 32rem; }
-.landing-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 24px; margin: 24px 0 40px; }
+.landing-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 24px; margin: 24px 0 0; }
+.landing-hero { display: grid; grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 48px; align-items: center; margin-bottom: 56px; }
+.landing-hero-card { background: var(--surface); border: 1px solid var(--edge); border-radius: 18px; padding: 20px 22px; box-shadow: 0 18px 40px -24px rgba(0, 0, 0, 0.45); }
+.landing-hero-card p { margin: 0; }
+.landing-hero-label { color: var(--muted); font-size: 0.85rem; }
+.landing-hero-card .landing-hero-prompt { font-size: 1.05rem; margin: 2px 0 14px; padding-bottom: 14px; border-bottom: 1px solid var(--edge); }
+.landing-hero-answer { font-size: 1.3rem; line-height: 1.45; }
+.landing-hero-answer del { position: relative; text-decoration: none; color: var(--bad); }
+.landing-hero-answer del::after { content: ""; position: absolute; left: -2px; right: -2px; top: 54%; height: 2px; border-radius: 2px; background: currentColor; }
+.landing-hero-answer ins { text-decoration: none; color: var(--ok); font-weight: 600; }
+.landing-hero-card .landing-hero-note { margin-top: 12px; font-size: 0.95rem; }
 .landing-cta { display: inline-flex; align-items: center; min-height: 48px; padding: 0 22px; border-radius: 14px; background: var(--accent); color: var(--on-accent); font-weight: 600; text-decoration: none; }
 .landing-step { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr); gap: 48px; padding: 40px 0; border-top: 1px solid var(--edge); align-items: start; }
 .landing-step h2 { font-size: 1.4rem; margin: 0 0 6px; }
@@ -170,7 +183,13 @@ form > input:not([type="hidden"]) + button, form > textarea + button { margin-to
 .landing-screen .card-face p { font-size: 0.95rem; margin: 0.3rem 0; }
 .landing-screen .card-face p.answer { font-size: 1.1rem; margin: 0 0 6px; }
 .landing-screen .quick-add { margin: 0; }
-.landing-screen .pending { margin: 10px 0 0; }
+.landing-result { display: grid; margin-top: 10px; }
+.landing-result > * { grid-area: 1 / 1; align-self: start; }
+.landing-screen .landing-result .pending, .landing-screen .landing-result .card-face { margin: 0; }
+.landing-screen .landing-ready p { margin: 0.15rem 0; }
+.landing-screen .landing-ready .study { margin-top: 0.5rem; }
+.landing-screen .landing-ready .landing-audio { display: flex; align-items: center; gap: 8px; margin-top: 0.6rem; color: var(--accent); }
+.landing-audio-bar { flex: 1; max-width: 9rem; height: 4px; border-radius: 999px; background: linear-gradient(90deg, var(--accent) 30%, var(--accent-soft) 30%); }
 .landing-screen .decode-grid { margin: 0.6rem 0; }
 .landing-screen .decode-pair { font-size: 0.82rem; padding: 0.3rem 0.55rem; min-width: 4rem; }
 .landing-screen .feedback-notes { margin: 0.3rem 0; font-size: 0.88rem; }
@@ -179,4 +198,52 @@ form > input:not([type="hidden"]) + button, form > textarea + button { margin-to
 .landing-closing { text-align: center; margin-top: 40px; padding-top: 36px; border-top: 1px solid var(--edge); }
 .landing-closing h2 { font-family: "Literata", Georgia, serif; font-size: 1.6rem; margin: 0 0 16px; }
 .landing-footer { margin-top: 36px; font-size: 0.85rem; text-align: center; }
-@media (max-width: 760px) { .landing-step { grid-template-columns: 1fr; gap: 12px; padding: 28px 0; } .landing-step h2 { font-size: 1.15rem; } }
+@media (max-width: 760px) { .landing-hero { grid-template-columns: 1fr; gap: 32px; margin-bottom: 40px; } .landing-step { grid-template-columns: 1fr; gap: 12px; padding: 28px 0; } .landing-step h2 { font-size: 1.15rem; } }
+
+/* Landing motion. Everything here is progressive: hidden-until-seen states apply only when
+   scripting is on and motion is welcome, so no-JS and reduced-motion visitors get the finished page. */
+.landing { position: relative; isolation: isolate; }
+/* One quiet light behind the hero card, kept off the text so the pitch keeps its contrast. */
+.landing-glow { position: absolute; z-index: -1; top: 0; left: 0; right: 0; height: 640px; pointer-events: none; background: radial-gradient(250px 260px at 75% 46%, color-mix(in srgb, var(--accent) 18%, transparent), transparent); }
+@media (max-width: 760px) { .landing-glow { height: 1100px; background: radial-gradient(240px 220px at 50% 600px, color-mix(in srgb, var(--accent) 14%, transparent), transparent); } }
+.landing-cta { box-shadow: 0 10px 22px -14px color-mix(in srgb, var(--accent) 80%, #000); }
+.landing-screen .pending[data-on="false"] { opacity: 0; transform: translateY(6px); }
+.landing-screen .landing-ready[data-on="false"] { opacity: 0; transform: translateY(10px); }
+@media (prefers-reduced-motion: no-preference) {
+  .landing:not(.still) .landing-rise { animation: landing-rise 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) both; animation-delay: calc(var(--i, 0) * 110ms); }
+  .landing-cta { transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease; }
+  .landing-cta:active { transform: translateY(0) scale(0.98); }
+  .landing-screen .pending { transition: opacity 0.4s ease, transform 0.4s ease; }
+  /* Only on the way in: the reset to hidden at hydration must not show a fade-out. */
+  .landing-screen .landing-ready[data-on="true"] { transition: opacity 0.5s ease, transform 0.6s cubic-bezier(0.2, 0.8, 0.2, 1); }
+  /* Hero correction: the card settles, "borrow" is struck through, "lend" arrives, then the why. */
+  .landing:not(.still) .landing-hero-answer del { animation: landing-wrong 0.5s ease 1.3s both; }
+  .landing:not(.still) .landing-hero-answer del::after { transform-origin: left; animation: landing-strike 0.45s cubic-bezier(0.2, 0.8, 0.2, 1) 1.3s both; }
+  .landing:not(.still) .landing-hero-answer ins { display: inline-block; animation: landing-rise 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) 1.75s both; }
+  .landing:not(.still) .landing-hero-note { animation: landing-rise 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) 2.2s both; }
+  .landing.live .landing-screen .quick-add button[data-on="true"] { animation: landing-press 0.4s ease; }
+  .landing [data-reveal] { transition: opacity 0.6s ease, transform 0.6s cubic-bezier(0.2, 0.8, 0.2, 1); }
+  .landing .landing-screen { transition: opacity 0.6s ease, transform 0.6s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.3s ease; }
+  .landing .beat { transition: opacity 0.45s ease, transform 0.45s cubic-bezier(0.2, 0.8, 0.2, 1); transition-delay: calc(var(--i, 0) * var(--beat, 110ms) + 250ms); }
+  .landing .beat-pop { transition-timing-function: ease, cubic-bezier(0.3, 1.5, 0.5, 1); }
+  .landing-screen-slow { --beat: 190ms; }
+  .landing .seen .grade-suggested { animation: landing-pulse 1s ease-out calc(13 * var(--beat, 110ms) + 700ms) 2; }
+}
+/* Hover lifts only where hover is real; a tap on a phone would leave them stuck raised. */
+@media (hover: hover) and (prefers-reduced-motion: no-preference) {
+  .landing-cta:hover { transform: translateY(-2px); box-shadow: 0 16px 28px -14px color-mix(in srgb, var(--accent) 80%, #000); filter: brightness(1.08); }
+  .landing .landing-screen:hover { transform: translateY(-4px); box-shadow: 0 22px 44px -24px rgba(0, 0, 0, 0.5); }
+}
+@media (scripting: enabled) and (prefers-reduced-motion: no-preference) {
+  .landing:not(.still) [data-reveal]:not(.seen) { opacity: 0; transform: translateY(18px); }
+  .landing:not(.still) [data-reveal]:not(.seen) .beat { opacity: 0; transform: translateY(8px); }
+  .landing:not(.still) [data-reveal]:not(.seen) .beat-pop { transform: scale(0.8); }
+  /* If the script never runs (failed download), show everything after a few seconds. */
+  .landing:not(.live):not(.still) [data-reveal], .landing:not(.live):not(.still) .beat { animation: landing-failsafe 0.4s 5s forwards; }
+}
+@keyframes landing-failsafe { to { opacity: 1; transform: none; } }
+@keyframes landing-rise { from { opacity: 0; transform: translateY(16px); } }
+@keyframes landing-strike { from { transform: scaleX(0); } }
+@keyframes landing-wrong { from { color: var(--text); } }
+@keyframes landing-press { 40% { transform: scale(0.93); } }
+@keyframes landing-pulse { from { box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 60%, transparent); } to { box-shadow: 0 0 0 12px transparent; } }
