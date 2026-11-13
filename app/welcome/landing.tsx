@@ -16,6 +16,9 @@ const DECODE: [string, string][] = [
 ]
 
 const WORD = 'reluctant'
+// Day 0 typing steps past the letters: Add pressed (card generating), then the card is ready.
+const ADDED = WORD.length + 1
+const READY = WORD.length + 2
 
 // Position of an element in its screen's sequence; app.css turns it into a delay.
 const beat = (i: number) => ({ '--i': i }) as CSSProperties
@@ -24,8 +27,8 @@ export function Landing({ starterCredits, dailyCardLimit }: { starterCredits: nu
   const t = useT().landing
   const fact = ([bold, rest]: [string, string]) => <span><b>{bold}</b>{rest}</span>
   const root = useRef<HTMLDivElement>(null)
-  // Day 0 typing progress: 0 = empty, WORD.length = fully typed, past that = added.
-  const [step, setStep] = useState(WORD.length + 1)
+  // Day 0 progress: 0 = empty, WORD.length = fully typed, then ADDED, then READY.
+  const [step, setStep] = useState(READY)
 
   // Marks each [data-reveal] element `seen` the first time it scrolls into view (app.css
   // does the rest) and types the word into the Day 0 screen. Server markup is the finished
@@ -43,8 +46,11 @@ export function Landing({ starterCredits, dailyCardLimit }: { starterCredits: nu
     setStep(0)
     const timers: number[] = []
     const type = () => {
-      // One letter every 95ms, then a short pause before Add presses.
-      for (let i = 1; i <= WORD.length + 1; i++) timers.push(window.setTimeout(() => setStep(i), 500 + i * 95 + (i > WORD.length ? 300 : 0)))
+      // One letter every 95ms, a short pause before Add presses, then the card arrives.
+      for (let i = 1; i <= WORD.length; i++) timers.push(window.setTimeout(() => setStep(i), 500 + i * 95))
+      const addAt = 500 + ADDED * 95 + 300
+      timers.push(window.setTimeout(() => setStep(ADDED), addAt))
+      timers.push(window.setTimeout(() => setStep(READY), addAt + 1500))
     }
     const io = new IntersectionObserver((entries) => {
       for (const entry of entries) {
@@ -61,7 +67,7 @@ export function Landing({ starterCredits, dailyCardLimit }: { starterCredits: nu
     }
   }, [])
 
-  const added = step > WORD.length
+  const added = step >= ADDED
 
   return (
     <div className="landing" ref={root}>
@@ -78,13 +84,24 @@ export function Landing({ starterCredits, dailyCardLimit }: { starterCredits: nu
       </header>
 
       <main>
-        <h1 className="landing-title landing-rise">{t.title} <em>{t.titleAccent}</em></h1>
-        <p className="landing-pitch landing-rise" style={beat(1)}>
-          {t.pitch}
-        </p>
-        <div className="landing-actions landing-rise" style={beat(2)}>
-          <Link to="/login?new=1" className="landing-cta">{t.startFree}</Link>
-          <Link to="#how" className="landing-login">{t.howItWorks}</Link>
+        <div className="landing-hero">
+          <div>
+            <h1 className="landing-title landing-rise">{t.title} <em>{t.titleAccent}</em></h1>
+            <p className="landing-pitch landing-rise" style={beat(1)}>
+              {t.pitch}
+            </p>
+            <div className="landing-actions landing-rise" style={beat(2)}>
+              <Link to="/login?new=1" className="landing-cta">{t.startFree}</Link>
+              <Link to="#how" className="landing-login">{t.howItWorks}</Link>
+            </div>
+          </div>
+          {/* The review check from Day 2, condensed: the moment that sells the product, up front. */}
+          <div className="landing-hero-card landing-rise" style={beat(3)} aria-hidden="true">
+            <p className="landing-hero-label">{t.heroPrompt}</p>
+            <p lang="pl" className="study landing-hero-prompt">Niechętnie pożyczała swój samochód obcej osobie.</p>
+            <p lang="en" className="study landing-hero-answer">She was reluctant to <del>borrow</del> <ins>lend</ins> her car to a stranger.</p>
+            <p lang="pl" className="landing-hero-note">„Lend” to dawać komuś, „borrow” to brać od kogoś.</p>
+          </div>
         </div>
 
         <section className="landing-step" id="how" aria-labelledby="day0">
@@ -99,7 +116,20 @@ export function Landing({ starterCredits, dailyCardLimit }: { starterCredits: nu
               <input value={WORD.slice(0, step)} readOnly tabIndex={-1} />
               <button type="button" tabIndex={-1} data-on={added}>{t.demoAdd}</button>
             </div>
-            <p className="pending" data-on={added}>⏳ {t.demoGenerating} reluctant</p>
+            <div className="landing-result">
+              <p className="pending" data-on={step === ADDED}>⏳ {t.demoGenerating} reluctant</p>
+              <div className="card-face landing-ready" data-on={step >= READY}>
+                <p><b className="head" lang="en">reluctant</b> <span lang="pl">· niechętny</span></p>
+                <p className="muted" lang="en">not wanting to do something, so you hold back</p>
+                <p className="study" lang="en">She was reluctant to lend her car to a stranger.</p>
+                <p className="muted" lang="pl">Niechętnie pożyczała swój samochód obcej osobie.</p>
+                <p className="landing-audio">
+                  <svg viewBox="0 0 16 16" width="16" height="16" aria-hidden="true"><path d="M4.5 2.8v10.4L13 8z" fill="currentColor" /></svg>
+                  <span className="landing-audio-bar" />
+                  <span className="muted">0:03</span>
+                </p>
+              </div>
+            </div>
           </div>
         </section>
 
