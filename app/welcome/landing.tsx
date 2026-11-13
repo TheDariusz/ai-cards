@@ -3,12 +3,12 @@ import { Link } from 'react-router'
 import { useT } from '../lib/i18n'
 import { LocaleSwitch } from './locale-switch'
 
-// Shown at `/` to visitors without a session. The three screens are static copies of
-// the app's own markup (home quick-add, learn decode step, write-it review), so they
-// reuse the app classes and stay in step with the real look.
 const AUTHOR_SITE = 'https://thedariusz.dev'
 const EXTERNAL = { target: '_blank', rel: 'noopener' } as const
 
+// Shown at `/` to visitors without a session. The three screens are static copies of
+// the app's own markup (home quick-add, learn decode step, write-it review), so they
+// reuse the app classes and stay in step with the real look.
 const DECODE: [string, string][] = [
   ['She', 'Ona'],
   ['was', 'była'],
@@ -225,7 +225,7 @@ export function Landing({ starterCredits, dailyCardLimit }: { starterCredits: nu
           </svg>
           <p>
             <span>{t.footerCredit}</span>
-            <strong><a href={AUTHOR_SITE} {...EXTERNAL}>TheDariusz</a> · {t.footerName}</strong>
+            <strong><a href={AUTHOR_SITE} {...EXTERNAL}>TheDariusz</a> · Dariusz Szczepański</strong>
             <span>{t.footerRole}</span>
           </p>
         </div>

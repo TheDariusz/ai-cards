@@ -210,7 +210,7 @@ form > input:not([type="hidden"]) + button, form > textarea + button { margin-to
 .landing-social { display: flex; align-items: center; gap: 4px; margin-left: auto; }
 .landing-social a { display: inline-flex; align-items: center; justify-content: center; min-width: 44px; min-height: 44px; padding-inline: 10px; border-radius: 8px; color: var(--text); text-decoration: none; }
 .landing-social a:hover { background: var(--accent-soft); color: var(--accent); }
-@media (max-width: 640px) { .landing-social { margin-left: 0; } }
+@media (max-width: 640px) { .landing-social { flex-basis: 100%; margin-left: 0; } }
 @media (max-width: 760px) { .landing-hero { grid-template-columns: 1fr; gap: 32px; margin-bottom: 40px; } .landing-step { grid-template-columns: 1fr; gap: 12px; padding: 28px 0; } .landing-step h2 { font-size: 1.15rem; } }
 
 /* Landing motion. Everything here is progressive: hidden-until-seen states apply only when
