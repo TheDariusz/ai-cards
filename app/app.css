@@ -197,7 +197,20 @@ form > input:not([type="hidden"]) + button, form > textarea + button { margin-to
 .landing-facts b { color: var(--text); font-weight: 600; }
 .landing-closing { text-align: center; margin-top: 40px; padding-top: 36px; border-top: 1px solid var(--edge); }
 .landing-closing h2 { font-family: "Literata", Georgia, serif; font-size: 1.6rem; margin: 0 0 16px; }
-.landing-footer { margin-top: 36px; font-size: 0.85rem; text-align: center; }
+/* The author's card: the one place on the landing about the maker, not the product. */
+.landing-footer { display: flex; flex-wrap: wrap; align-items: center; gap: 16px 32px; margin-top: 36px; padding-top: 28px; border-top: 1px solid var(--edge); font-size: 0.85rem; }
+.landing-author { display: flex; align-items: center; gap: 12px; }
+.author-mark { width: 40px; height: 40px; flex-shrink: 0; }
+.author-mark rect { fill: var(--surface); stroke: var(--edge); }
+.author-mark text { font: 700 15px "Instrument Sans", system-ui, sans-serif; fill: var(--text); }
+.landing-author p { display: flex; flex-direction: column; margin: 0; line-height: 1.4; color: var(--muted); }
+.landing-author strong { font-size: 0.95rem; color: var(--text); }
+.landing-author strong a { text-decoration: none; }
+.landing-author strong a:hover { text-decoration: underline; text-underline-offset: 4px; }
+.landing-social { display: flex; align-items: center; gap: 4px; margin-left: auto; }
+.landing-social a { display: inline-flex; align-items: center; justify-content: center; min-width: 44px; min-height: 44px; padding-inline: 10px; border-radius: 8px; color: var(--text); text-decoration: none; }
+.landing-social a:hover { background: var(--accent-soft); color: var(--accent); }
+@media (max-width: 640px) { .landing-social { flex-basis: 100%; margin-left: 0; } }
 @media (max-width: 760px) { .landing-hero { grid-template-columns: 1fr; gap: 32px; margin-bottom: 40px; } .landing-step { grid-template-columns: 1fr; gap: 12px; padding: 28px 0; } .landing-step h2 { font-size: 1.15rem; } }
 
 /* Landing motion. Everything here is progressive: hidden-until-seen states apply only when

@@ -57,7 +57,10 @@ const pl = {
     factDaily: (n: number): [string, string] => [`${n} ${pluralNowa(n)} ${pluralKarty(n)}`, ' dziennie'],
     factExport: ['Eksport', ' do Anki w każdej chwili'] as [string, string],
     closing: 'Zacznij od następnego słowa, które usłyszysz.',
-    footer: 'AI Cards · Fiszki z angielskiego dla Polaków',
+    // The author's handle, name, site and profile names are proper nouns and stay in the component.
+    footerCredit: 'Autor',
+    footerRole: 'Software Engineer',
+    footerLinks: 'Strona i profile autora',
   },
   login: {
     logInTitle: 'Zaloguj się',
@@ -273,7 +276,9 @@ const en: Dict = {
     factDaily: (n) => [`${n} new cards`, ' a day'],
     factExport: ['Export', ' to Anki any time'],
     closing: 'Start with the next word you hear.',
-    footer: 'AI Cards · English flashcards for Polish speakers',
+    footerCredit: 'Made by',
+    footerRole: 'Software Engineer',
+    footerLinks: "The author's site and profiles",
   },
   login: {
     logInTitle: 'Log in',
