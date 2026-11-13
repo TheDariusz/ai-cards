@@ -154,7 +154,9 @@ form > input:not([type="hidden"]) + button, form > textarea + button { margin-to
 :root[data-theme="dark"] .landing-header .logo-light { display: none; }
 :root[data-theme="dark"] .landing-header .logo-dark { display: block; }
 .landing-header-actions { display: flex; align-items: center; gap: 16px; }
-.landing-login { color: var(--text); font-weight: 500; text-underline-offset: 4px; }
+.landing-login { display: inline-flex; align-items: center; min-height: 44px; color: var(--text); font-weight: 500; text-underline-offset: 4px; }
+.landing-header .locale-switch button { min-height: 44px; min-width: 48px; }
+.landing-reassure { margin: 12px 0 0; color: var(--muted); font-size: 0.9rem; }
 .landing-title { font-family: "Literata", Georgia, serif; font-size: clamp(2rem, 4.4vw, 3rem); line-height: 1.12; letter-spacing: -0.015em; margin: 0 0 14px; text-wrap: balance; }
 .landing-title em { font-style: normal; color: var(--accent); }
 .landing-pitch { color: var(--muted); font-size: 1.1rem; margin: 0; max-width: 32rem; }
@@ -208,17 +210,17 @@ form > input:not([type="hidden"]) + button, form > textarea + button { margin-to
 .landing-screen .pending[data-on="false"] { opacity: 0; transform: translateY(6px); }
 .landing-screen .landing-ready[data-on="false"] { opacity: 0; transform: translateY(10px); }
 @media (prefers-reduced-motion: no-preference) {
-  .landing-rise { animation: landing-rise 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) both; animation-delay: calc(var(--i, 0) * 110ms); }
+  .landing:not(.still) .landing-rise { animation: landing-rise 0.7s cubic-bezier(0.2, 0.8, 0.2, 1) both; animation-delay: calc(var(--i, 0) * 110ms); }
   .landing-cta { transition: transform 0.2s ease, box-shadow 0.2s ease, filter 0.2s ease; }
   .landing-cta:active { transform: translateY(0) scale(0.98); }
   .landing-screen .pending { transition: opacity 0.4s ease, transform 0.4s ease; }
   /* Only on the way in: the reset to hidden at hydration must not show a fade-out. */
   .landing-screen .landing-ready[data-on="true"] { transition: opacity 0.5s ease, transform 0.6s cubic-bezier(0.2, 0.8, 0.2, 1); }
   /* Hero correction: the card settles, "borrow" is struck through, "lend" arrives, then the why. */
-  .landing-hero-answer del { animation: landing-wrong 0.5s ease 1.3s both; }
-  .landing-hero-answer del::after { transform-origin: left; animation: landing-strike 0.45s cubic-bezier(0.2, 0.8, 0.2, 1) 1.3s both; }
-  .landing-hero-answer ins { display: inline-block; animation: landing-rise 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) 1.75s both; }
-  .landing-hero-note { animation: landing-rise 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) 2.2s both; }
+  .landing:not(.still) .landing-hero-answer del { animation: landing-wrong 0.5s ease 1.3s both; }
+  .landing:not(.still) .landing-hero-answer del::after { transform-origin: left; animation: landing-strike 0.45s cubic-bezier(0.2, 0.8, 0.2, 1) 1.3s both; }
+  .landing:not(.still) .landing-hero-answer ins { display: inline-block; animation: landing-rise 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) 1.75s both; }
+  .landing:not(.still) .landing-hero-note { animation: landing-rise 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) 2.2s both; }
   .landing-screen .quick-add button[data-on="true"] { animation: landing-press 0.4s ease; }
   .landing [data-reveal] { transition: opacity 0.6s ease, transform 0.6s cubic-bezier(0.2, 0.8, 0.2, 1); }
   .landing .landing-screen { transition: opacity 0.6s ease, transform 0.6s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.3s ease; }
@@ -233,11 +235,11 @@ form > input:not([type="hidden"]) + button, form > textarea + button { margin-to
   .landing .landing-screen:hover { transform: translateY(-4px); box-shadow: 0 22px 44px -24px rgba(0, 0, 0, 0.5); }
 }
 @media (scripting: enabled) and (prefers-reduced-motion: no-preference) {
-  .landing [data-reveal]:not(.seen) { opacity: 0; transform: translateY(18px); }
-  .landing [data-reveal]:not(.seen) .beat { opacity: 0; transform: translateY(8px); }
-  .landing [data-reveal]:not(.seen) .beat-pop { transform: scale(0.8); }
+  .landing:not(.still) [data-reveal]:not(.seen) { opacity: 0; transform: translateY(18px); }
+  .landing:not(.still) [data-reveal]:not(.seen) .beat { opacity: 0; transform: translateY(8px); }
+  .landing:not(.still) [data-reveal]:not(.seen) .beat-pop { transform: scale(0.8); }
   /* If the script never runs (failed download), show everything after a few seconds. */
-  .landing:not(.live) [data-reveal], .landing:not(.live) .beat { animation: landing-failsafe 0.4s 5s forwards; }
+  .landing:not(.live):not(.still) [data-reveal], .landing:not(.live):not(.still) .beat { animation: landing-failsafe 0.4s 5s forwards; }
 }
 @keyframes landing-failsafe { to { opacity: 1; transform: none; } }
 @keyframes landing-rise { from { opacity: 0; transform: translateY(16px); } }

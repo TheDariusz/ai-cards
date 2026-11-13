@@ -20,6 +20,10 @@ const WORD = 'reluctant'
 const ADDED = WORD.length + 1
 const READY = WORD.length + 2
 
+// Set once the intro has played in this tab. Coming back to `/` (Back from /login) remounts
+// the landing; it then renders `still`, already finished, instead of replaying everything.
+let played = false
+
 // Position of an element in its screen's sequence; app.css turns it into a delay.
 const beat = (i: number) => ({ '--i': i }) as CSSProperties
 
@@ -29,13 +33,15 @@ export function Landing({ starterCredits, dailyCardLimit }: { starterCredits: nu
   const root = useRef<HTMLDivElement>(null)
   // Day 0 progress: 0 = empty, WORD.length = fully typed, then ADDED, then READY.
   const [step, setStep] = useState(READY)
+  const [still] = useState(() => played)
 
   // Marks each [data-reveal] element `seen` the first time it scrolls into view (app.css
   // does the rest) and types the word into the Day 0 screen. Server markup is the finished
   // state; `live` tells app.css this effect ran, which cancels its show-everything failsafe.
   useEffect(() => {
     const el = root.current
-    if (!el || !('IntersectionObserver' in window)) return
+    if (still || !el || !('IntersectionObserver' in window)) return
+    played = true
     if (window.matchMedia('(prefers-reduced-motion: reduce)').matches) return
     // Hydrated after the failsafe already showed everything: leave the page finished rather
     // than cancel it and hide what the visitor is reading.
@@ -65,12 +71,12 @@ export function Landing({ starterCredits, dailyCardLimit }: { starterCredits: nu
       io.disconnect()
       timers.forEach((id) => window.clearTimeout(id))
     }
-  }, [])
+  }, [still])
 
   const added = step >= ADDED
 
   return (
-    <div className="landing" ref={root}>
+    <div className={still ? 'landing still' : 'landing'} ref={root}>
       <div className="landing-glow" aria-hidden="true" />
       <header className="landing-header">
         <Link to="/" aria-label="AI Cards">
@@ -94,9 +100,10 @@ export function Landing({ starterCredits, dailyCardLimit }: { starterCredits: nu
               <Link to="/login?new=1" className="landing-cta">{t.startFree}</Link>
               <Link to="#how" className="landing-login">{t.howItWorks}</Link>
             </div>
+            <p className="landing-reassure landing-rise" style={beat(3)}>{t.reassure}</p>
           </div>
           {/* The review check from Day 2, condensed: the moment that sells the product, up front. */}
-          <div className="landing-hero-card landing-rise" style={beat(3)} aria-hidden="true">
+          <div className="landing-hero-card landing-rise" style={beat(4)} aria-hidden="true">
             <p className="landing-hero-label">{t.heroPrompt}</p>
             <p lang="pl" className="study landing-hero-prompt">Niechętnie pożyczała swój samochód obcej osobie.</p>
             <p lang="en" className="study landing-hero-answer">She was reluctant to <del>borrow</del> <ins>lend</ins> her car to a stranger.</p>
