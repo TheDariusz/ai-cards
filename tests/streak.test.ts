@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { dayKey, computeStreak, endOfDay, startOfDay } from '../app/lib/streak'
+import { dayKey, computeStreak, endOfDay, startOfDay, longestStreak, weekDays, monthGrid } from '../app/lib/streak'
 
 describe('dayKey', () => {
   it('formats in Europe/Warsaw', () => {
@@ -51,4 +51,30 @@ describe('startOfDay', () => {
     expect(startOfDay(Date.UTC(2026, 9, 25, 20, 0))).toBe(Date.UTC(2026, 9, 24, 22, 0))
     expect(startOfDay(Date.UTC(2026, 9, 24, 22, 0))).toBe(Date.UTC(2026, 9, 24, 22, 0))
   })
+})
+
+describe('longestStreak', () => {
+  it('finds the longest run, ignoring order and duplicates', () => {
+    expect(longestStreak(['2026-11-03', '2026-11-01', '2026-11-02', '2026-11-02', '2026-11-05'])).toBe(3)
+  })
+  it('crosses month ends', () => expect(longestStreak(['2026-10-31', '2026-11-01'])).toBe(2))
+  it('is 0 for no days', () => expect(longestStreak([])).toBe(0))
+})
+
+describe('weekDays', () => {
+  it('starts on Monday', () => {
+    expect(weekDays('2026-11-24')).toEqual(['2026-11-23', '2026-11-24', '2026-11-25', '2026-11-26', '2026-11-27', '2026-11-28', '2026-11-29'])
+  })
+  it('puts a Sunday at the end of its week', () => expect(weekDays('2026-11-01')[0]).toBe('2026-10-26'))
+  it('crosses a year boundary', () => expect(weekDays('2027-01-01')).toEqual(['2026-12-28', '2026-12-29', '2026-12-30', '2026-12-31', '2027-01-01', '2027-01-02', '2027-01-03']))
+})
+
+describe('monthGrid', () => {
+  it('pads to the Monday-first column and lists the whole month', () => {
+    const g = monthGrid('2026-11-24') // 1 Nov 2026 is a Sunday
+    expect(g.slice(0, 7)).toEqual([null, null, null, null, null, null, '2026-11-01'])
+    expect(g.length).toBe(6 + 30)
+    expect(g.at(-1)).toBe('2026-11-30')
+  })
+  it('needs no padding when the month starts on Monday', () => expect(monthGrid('2027-02-10')[0]).toBe('2027-02-01'))
 })
