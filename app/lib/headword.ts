@@ -135,3 +135,19 @@ export function highlightHeadword(sentence: string, headword: string | null | un
   })
   return segments
 }
+
+// Which decode pairs hold the headword, by index. An occurrence counts only when it
+// sits inside one pair's English part. The pairs are scanned as one sentence, so an
+// exact spelling in one pair outranks a lookalike in another, as in findHeadwordIndices.
+export function headwordPairIndices(pairs: string[], headword: string | null | undefined): Set<number> {
+  const owner: number[] = []
+  const tokens = pairs.flatMap((en, pair) => normalize(en).map((token) => {
+    owner.push(pair)
+    return token
+  }))
+  const marked = new Set<number>()
+  for (const occ of findHeadwordIndices(tokens, headword)) {
+    if (occ.every((i) => owner[i] === owner[occ[0]])) marked.add(owner[occ[0]])
+  }
+  return marked
+}

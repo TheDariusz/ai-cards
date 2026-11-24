@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { findHeadwordIndices, highlightHeadword, tokenMatchesHeadword } from '../app/lib/headword'
+import { findHeadwordIndices, headwordPairIndices, highlightHeadword, tokenMatchesHeadword } from '../app/lib/headword'
 
 describe('tokenMatchesHeadword', () => {
   it('matches identical words', () => {
@@ -130,5 +130,33 @@ describe('highlightHeadword', () => {
 
   it('handles empty input', () => {
     expect(highlightHeadword('', 'x')).toEqual([])
+  })
+})
+
+describe('headwordPairIndices', () => {
+  const pairs = ['She', 'was', 'Reluctant', 'to lend', 'her car']
+
+  it('marks the pair holding the word, ignoring case', () => {
+    expect([...headwordPairIndices(pairs, 'reluctant')]).toEqual([2])
+  })
+
+  it('marks the pair holding a multi-word headword', () => {
+    expect([...headwordPairIndices(pairs, 'to lend')]).toEqual([3])
+  })
+
+  it('marks a pair holding an inflected form', () => {
+    expect([...headwordPairIndices(['She', 'lends', 'money'], 'lend')]).toEqual([1])
+  })
+
+  it('marks nothing when the headword is split across pairs', () => {
+    expect([...headwordPairIndices(['She wants', 'to', 'lend', 'it'], 'to lend')]).toEqual([])
+  })
+
+  it('prefers the exact spelling over a lookalike in another pair', () => {
+    expect([...headwordPairIndices(['helpful', 'help'], 'help')]).toEqual([1])
+  })
+
+  it('marks nothing without a headword', () => {
+    expect([...headwordPairIndices(pairs, null)]).toEqual([])
   })
 })
