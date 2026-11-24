@@ -131,7 +131,9 @@ form > input:not([type="hidden"]) + button, form > textarea + button { margin-to
 .today-card .ok, .today-card .error { color: inherit; font-weight: 600; }
 .today-card .add-word { border: 0; background: var(--on-accent); }
 .today-card .add-word button { background: var(--accent); color: var(--on-accent); }
-.today-card .failed-row button { min-height: 44px; background: var(--on-accent); color: var(--accent); }
+/* Failed rows sit in the card only while preparing, which is an accent card. */
+.today-card[data-state="preparing"] .failed-row button { min-height: 44px; background: var(--on-accent); color: var(--accent); }
+.today-card[data-state="preparing"] .failed-row button:focus-visible { outline-color: var(--on-accent); }
 .today-card .add-word:focus-within { outline-color: var(--on-accent); }
 .today-card[data-state="done"] { grid-template-columns: auto minmax(0, 1fr); align-items: start; background: var(--ok-soft); color: var(--text); }
 .today-card[data-state="nothing-due"] { background: var(--surface); color: var(--text); border: 1px solid var(--edge); }
