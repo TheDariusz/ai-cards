@@ -109,8 +109,8 @@ form > input:not([type="hidden"]) + button, form > textarea + button { margin-to
 .today-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
 .today-head h1 { margin: 0; font-size: 1.6rem; line-height: 1.1; letter-spacing: -0.02em; }
 .today-date { color: var(--muted); font-size: 0.9rem; }
-.streak-chip { display: inline-flex; align-items: center; min-height: 44px; flex: none; border-radius: 99px; color: var(--text); font-weight: 600; font-size: 0.85rem; font-variant-numeric: tabular-nums; text-decoration: none; }
-.streak-chip span { display: inline-flex; align-items: center; gap: 4px; background: var(--accent-soft); border-radius: 99px; padding: 5px 11px; }
+.today-streak { display: inline-flex; align-items: center; min-height: 44px; flex: none; border-radius: 99px; color: var(--text); font-weight: 600; font-size: 0.85rem; font-variant-numeric: tabular-nums; text-decoration: none; }
+.today-streak span { display: inline-flex; align-items: center; gap: 4px; background: var(--accent-soft); border-radius: 99px; padding: 5px 11px; }
 .today-add { display: grid; gap: 8px; }
 .add-word { display: flex; align-items: center; gap: 8px; background: var(--surface); border: 1px solid var(--edge); border-radius: 14px; padding: 4px 4px 4px 14px; }
 .add-word:focus-within { outline: 3px solid var(--focus); outline-offset: 2px; }
@@ -165,6 +165,7 @@ form > input:not([type="hidden"]) + button, form > textarea + button { margin-to
 }
 
 /* Shared with other screens (landing demo, card detail, settings, admin) */
+.streak-chip { background: var(--accent-soft); color: var(--text); border-radius: 999px; padding: 0.2rem 0.7rem; font-size: 0.95rem; font-weight: 600; }
 .quick-add { display: flex; gap: 0.5rem; margin: 0.6rem 0; }
 .quick-add > input:not([type="hidden"]) + button { margin-top: 0; }
 .quick-add input { flex: 1; }

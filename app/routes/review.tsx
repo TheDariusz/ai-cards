@@ -2,12 +2,12 @@ import { Link, useFetcher, useSearchParams } from 'react-router'
 import { useEffect, useRef, useState } from 'react'
 import type { Route } from './+types/review'
 import { requireAuth } from '../lib/session'
-import { createDb, getDueCards, applyReview, completedDays, countReviewsOn } from '../db/repo'
+import { createDb, getDueCards, applyReview, countReviewsOn } from '../db/repo'
 import { diffAnswer, type DiffResult, type HeadwordStatus } from '../lib/diff'
 import { headwordInAnswer, suggestGrade } from '../lib/evaluate'
 import { highlightHeadword } from '../lib/headword'
 import type { Grade } from '../lib/srs'
-import { computeStreak, dayKey } from '../lib/streak'
+import { dayKey } from '../lib/streak'
 import type { CheckResult } from './review-check'
 import { MAX_TEXT_CHARS } from '../lib/limits'
 import { useT } from '../lib/i18n'
@@ -23,7 +23,6 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   const today = dayKey(now)
   return {
     due: await getDueCards(db, userId, now),
-    streak: computeStreak(await completedDays(db, userId), today),
     doneToday: await countReviewsOn(db, userId, today),
   }
 }

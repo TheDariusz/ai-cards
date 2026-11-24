@@ -2,9 +2,14 @@ import { Link } from 'react-router'
 import type { Route } from './+types/streak'
 import { requireAuth } from '../lib/session'
 import { completedDays, createDb, listCards } from '../db/repo'
-import { useLocale, useT } from '../lib/i18n'
+import { useT } from '../lib/i18n'
+import { parseLocale } from '../lib/locale'
 import { computeStreak, dayKey, longestStreak, monthGrid } from '../lib/streak'
 import { Icon } from '../ui/icons'
+
+// Noon UTC keeps the month name stable in any time zone.
+const monthName = (today: string, locale: string) =>
+  new Intl.DateTimeFormat(locale, { month: 'long', timeZone: 'UTC' }).format(new Date(`${today.slice(0, 8)}01T12:00:00Z`))
 
 export async function loader({ request, context }: Route.LoaderArgs) {
   const env = context.cloudflare.env
@@ -13,8 +18,10 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   const today = dayKey(Date.now())
   const days = await completedDays(db, userId)
   const month = today.slice(0, 7)
+  const locale = parseLocale(request.headers.get('Cookie'))
   return {
     today,
+    monthName: monthName(today, locale),
     streak: computeStreak(days, today),
     longest: longestStreak(days),
     grid: monthGrid(today),
@@ -24,12 +31,9 @@ export async function loader({ request, context }: Route.LoaderArgs) {
 }
 
 export default function Streak({ loaderData }: Route.ComponentProps) {
-  const { today, streak, longest, grid, done, total } = loaderData
+  const { today, monthName, streak, longest, grid, done, total } = loaderData
   const t = useT()
-  const locale = useLocale()
   const doneSet = new Set(done)
-  // Noon UTC keeps the month name stable in any viewer time zone.
-  const month = new Intl.DateTimeFormat(locale, { month: 'long', timeZone: 'UTC' }).format(new Date(`${today.slice(0, 8)}01T12:00:00Z`))
   const rows = Array.from({ length: Math.ceil(grid.length / 7) }, (_, i) => {
     const row = grid.slice(i * 7, i * 7 + 7)
     return [...row, ...Array<null>(7 - row.length).fill(null)]
@@ -59,7 +63,7 @@ export default function Streak({ loaderData }: Route.ComponentProps) {
       </div>
 
       <section className="surface-card">
-        <h2 className="streak-month">{month}</h2>
+        <h2 className="streak-month">{monthName}</h2>
         <table className="cal">
           <thead>
             <tr>{t.home.weekdays.map((w) => <th key={w} scope="col">{w}</th>)}</tr>

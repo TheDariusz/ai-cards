@@ -11,19 +11,15 @@ import { canAddCard, dailyCardLimit } from '../lib/quota'
 import { MAX_WORD_CHARS } from '../lib/limits'
 import { hasCredits, starterMicros, toCredits, usageRecorder } from '../lib/credits'
 import { parseLocale } from '../lib/locale'
-import { dict, useLocale, useT } from '../lib/i18n'
+import { isStuck } from '../lib/cards'
+import { dict, useT } from '../lib/i18n'
 import { computeStreak, dayKey, weekDays } from '../lib/streak'
 import { doneLine, formatDayLine, reviewMinutes, todayState, type TodayState } from '../lib/today'
 import { Icon } from '../ui/icons'
 
-// A pipeline killed mid-flight (isolate reclaimed) never reaches markFailed, so
-// the row is stranded in `pending`. Past this age, treat it as failed and offer Retry.
-const STALE_PENDING_MS = 5 * 60_000
-const isStuck = (c: { status: string; createdAt: number }, now: number) =>
-  c.status === 'pending' && now - c.createdAt > STALE_PENDING_MS
-
 export async function loader({ request, context }: Route.LoaderArgs) {
   const env = context.cloudflare.env
+  const locale = parseLocale(request.headers.get('Cookie'))
   // Visitors get the public landing page; requireAuth still guards the rest (blocked users included).
   if ((await getUserId(request, env)) === null) {
     return { guest: { starterCredits: toCredits(starterMicros(env)), dailyCardLimit: dailyCardLimit(env) } }
@@ -49,6 +45,7 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   return {
     state,
     today,
+    dateLine: formatDayLine(today, locale),
     week: weekDays(today).map((day) => ({ day, done: days.includes(day) })),
     streak: computeStreak(days, today),
     due,
@@ -58,7 +55,7 @@ export async function loader({ request, context }: Route.LoaderArgs) {
     failed: all.filter((c) => c.status === 'failed' || isStuck(c, now)).map((c) => ({ id: c.id, word: c.word })),
     reviewedToday: await countReviewsOn(db, userId, today),
     learnedToday: all.filter((c) => c.firstLearnedAt !== null && dayKey(c.firstLearnedAt) === today).length,
-    nextDue: next === null ? null : dayKey(next),
+    nextDueLine: next === null ? null : formatDayLine(dayKey(next), locale),
     isOwner,
     credits: { left: toCredits(balance.balanceMicros), granted: toCredits(balance.grantedMicros), spentMicros: balance.spentMicros },
     outOfCredits: !isOwner && balance.balanceMicros <= 0,
@@ -116,10 +113,9 @@ export default function Home({ loaderData, actionData }: Route.ComponentProps) {
 type ActionData = Route.ComponentProps['actionData']
 
 function UserHome({ loaderData, actionData }: { loaderData: UserHome; actionData: ActionData }) {
-  const { state, today, week, streak, newCards, pending, failed, outOfCredits } = loaderData
+  const { state, today, dateLine, week, streak, newCards, pending, failed, outOfCredits } = loaderData
   const revalidator = useRevalidator()
   const t = useT()
-  const locale = useLocale()
 
   // light polling while cards are generating
   useEffect(() => {
@@ -135,11 +131,11 @@ function UserHome({ loaderData, actionData }: { loaderData: UserHome; actionData
     <main className="page today-screen">
       <header className="today-head">
         <div>
-          <p className="today-date">{formatDayLine(today, locale)}</p>
+          <p className="today-date">{dateLine}</p>
           <h1>{t.home.today}</h1>
         </div>
         {streak > 0 && (
-          <Link to="/streak" className="streak-chip" aria-label={`${streak} ${t.streak.inARow(streak)}`}>
+          <Link to="/streak" className="today-streak" aria-label={`${streak} ${t.streak.inARow(streak)}`}>
             <span><Icon name="flame" />{streak}</span>
           </Link>
         )}
@@ -192,9 +188,8 @@ function UserHome({ loaderData, actionData }: { loaderData: UserHome; actionData
 
 // The one primary card; its content follows `state` (see todayState).
 function TodayCard({ data, actionData }: { data: UserHome; actionData: ActionData }) {
-  const { state, due, minutes, newCards, pending, failed, reviewedToday, learnedToday, nextDue, outOfCredits } = data
+  const { state, due, minutes, newCards, pending, failed, reviewedToday, learnedToday, nextDueLine, outOfCredits } = data
   const t = useT()
-  const locale = useLocale()
 
   switch (state) {
     case 'first-run':
@@ -255,7 +250,7 @@ function TodayCard({ data, actionData }: { data: UserHome; actionData: ActionDat
       return (
         <section className="primary-card today-card" data-state={state}>
           <h2>{t.home.nothingTitle}</h2>
-          {nextDue && <p className="muted">{t.home.nothingNext(formatDayLine(nextDue, locale))}</p>}
+          {nextDueLine && <p className="muted">{t.home.nothingNext(nextDueLine)}</p>}
         </section>
       )
   }

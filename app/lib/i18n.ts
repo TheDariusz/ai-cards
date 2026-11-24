@@ -107,7 +107,7 @@ const pl = {
     startReview: 'Zacznij powtórkę',
     today: 'Dziś',
     firstTitle: 'Dodaj pierwsze słowo',
-    firstBody: 'Takie, które ostatnio usłyszałeś i chcesz zapamiętać.',
+    firstBody: 'Takie, które ostatnio wpadło Ci w ucho i chcesz je zapamiętać.',
     firstPlaceholder: 'np. reluctant',
     // [label, sentence]: the label is styled apart from the sentence
     stepNow: ['Teraz', 'AI przygotuje fiszkę ze zdaniem i nagraniem.'] as [string, string],
@@ -279,7 +279,7 @@ const pl = {
     noneStatus: 'Nie masz dziś kart do powtórki ani nowych kart.',
     openApp: 'Otwórz aplikację',
     streakLine: (streak: number) => `Twoja seria: ${dni(streak)}. Nie przerywaj jej dziś.`,
-    footer: 'Przypomnienia wyłączysz na stronie głównej aplikacji.',
+    footer: 'Przypomnienia wyłączysz w Ustawieniach aplikacji.',
   },
   error: {
     oops: 'Ups!',
@@ -548,7 +548,7 @@ const en: Dict = {
     noneStatus: 'You have no cards to review or learn today.',
     openApp: 'Open the app',
     streakLine: (streak) => `Your streak: ${streak} ${streak === 1 ? 'day' : 'days'}. Don't break it today.`,
-    footer: 'You can turn reminders off on the app home page.',
+    footer: "You can turn reminders off in the app's Settings.",
   },
   error: {
     oops: 'Oops!',

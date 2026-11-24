@@ -154,7 +154,7 @@ export default function CardDetail({ loaderData, actionData }: Route.ComponentPr
         </Form>
       ) : null}
 
-      <Form method="post" key={contentKey} className="surface-card card-fields">
+      <Form method="post" key={contentKey} className="surface-card card-fields" aria-busy={busy}>
         <input type="hidden" name="intent" value="save" />
         <label><span className="section-label">{t.card.polishWord}</span> <input name="wordPl" maxLength={MAX_WORD_CHARS} defaultValue={card.wordPl ?? ''} /></label>
         <label><span className="section-label">{t.card.explanation}</span> <textarea name="explanationEn" maxLength={MAX_TEXT_CHARS} defaultValue={card.explanationEn ?? ''} /></label>
@@ -176,7 +176,7 @@ export default function CardDetail({ loaderData, actionData }: Route.ComponentPr
 
       {!outOfCredits && (
         <section className="surface-card">
-          <Form method="post" className="quick-add">
+          <Form method="post" className="quick-add" aria-busy={busy}>
             <input type="hidden" name="intent" value="regenerate" />
             <input name="hint" maxLength={MAX_TEXT_CHARS} placeholder={t.card.hintPlaceholder} />
             <button type="submit" disabled={busy}>{t.card.regenerate}</button>

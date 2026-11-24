@@ -15,7 +15,7 @@ A personal English-learning flashcard app for a Polish native speaker. Hear an u
 - **Streak** — a day counts when all due cards are reviewed (or ≥10 reviews on backlog days), or when a new card is learned with nothing due; Europe/Warsaw timezone; the home screen shows this week, the Streak screen (`/streak`) the month calendar
 - **Card management** — edit any field, regenerate with a hint ("make it shorter", "business context"), delete; SRS progress survives edits
 - **Export** — CSV (Anki/spreadsheet-compatible) and JSON full backup, no import by design
-- **Light and dark themes** — calm, study-focused look (Instrument Sans UI, Literata for study sentences); *Auto* follows the phone, or pin *Light* / *Dark* in Settings — remembered in a cookie and rendered on the server, so there is no wrong-theme flash; review shows a progress bar for today, the streak, and highlights the suggested grade
+- **Light and dark themes** — calm, study-focused look (Instrument Sans UI, Literata for study sentences); *Auto* follows the phone, or pin *Light* / *Dark* in Settings — remembered in a cookie and rendered on the server, so there is no wrong-theme flash; review shows a progress bar for today and highlights the suggested grade
 - **Email reminder** — at 19:00 Europe/Warsaw, a short Polish email to each user whose day is not done yet and cards are due or new; On/Off and *Send test* in Settings
 - **Landing page** — visitors at `/` without a session see a public page explaining the product with the real learn and review screens; signed-in users land on home
 - **Accounts** — log in or sign up with a one-time link mailed via Resend (15 min, single use); every user's cards, streak and settings are separate
@@ -127,7 +127,7 @@ working as the owner. Afterwards `npx wrangler secret delete APP_PASSWORD_HASH`.
 ### Email reminders
 
 Two Cron Triggers (`0 17 * * *` and `0 18 * * *` UTC) run `scheduled` in `workers/app.ts`; only the one that is
-19:00 in Warsaw (CEST or CET) goes on. It emails every user, at their login email (the owner falls back to `REMINDER_TO` until their first email login), once a day when their today has no completed review day and there are
+19:00 in Warsaw (CEST or CET) goes on. It emails every user, at their login email (the owner falls back to `REMINDER_TO` until their first email login), once a day when their today has no completed day and there are
 due or new cards, unless switched off in Settings. Mail goes through [Resend](https://resend.com)'s
 free plan (3,000/month, 100/day) from `AI Cards <cards@ai-cards.app>` (`REMINDER_FROM` in `wrangler.jsonc`), an
 address in the `ai-cards.app` domain verified in Resend, so `REMINDER_TO` can be any address of yours.

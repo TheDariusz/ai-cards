@@ -3,18 +3,20 @@ import type { Route } from './+types/cards'
 import { requireAuth } from '../lib/session'
 import { createDb, isNewCard, listCards } from '../db/repo'
 import { useT } from '../lib/i18n'
+import { isStuck } from '../lib/cards'
 
 export async function loader({ request, context }: Route.LoaderArgs) {
   const env = context.cloudflare.env
   const userId = await requireAuth(request, env)
   const rows = await listCards(createDb(env.DB), userId)
+  const now = Date.now()
   return {
     cards: rows.map((c) => ({
       id: c.id,
       word: c.word,
       wordPl: c.wordPl,
       sentenceEn: c.sentenceEn,
-      tag: (isNewCard(c) ? 'new' : c.status !== 'ready' ? c.status : null) as 'pending' | 'failed' | 'new' | null,
+      tag: (isNewCard(c) ? 'new' : isStuck(c, now) ? 'failed' : c.status !== 'ready' ? c.status : null) as 'pending' | 'failed' | 'new' | null,
     })),
   }
 }

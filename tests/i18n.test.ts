@@ -11,6 +11,7 @@ describe('pl plurals', () => {
     ['streak.inARow', pl.streak.inARow, ['dzień z rzędu', 'dni z rzędu', 'dni z rzędu', 'dni z rzędu', 'dni z rzędu', 'dni z rzędu']],
     ['home.newWords', pl.home.newWords, ['1 nowe słowo', '2 nowe słowa', '5 nowych słów', '12 nowych słów', '22 nowe słowa', '25 nowych słów']],
     ['home.doneReviewed', pl.home.doneReviewed, ['1 powtórzona karta', '2 powtórzone karty', '5 powtórzonych kart', '12 powtórzonych kart', '22 powtórzone karty', '25 powtórzonych kart'].map((s) => `${s}. Kolejne wrócą jutro.`)],
+    ['home.doneLearned', pl.home.doneLearned, ['1 nowe słowo poznane', '2 nowe słowa poznane', '5 nowych słów poznanych', '12 nowych słów poznanych', '22 nowe słowa poznane', '25 nowych słów poznanych'].map((s) => `${s}. Pierwsza powtórka jutro.`)],
     ['landing.factCredits', (n) => pl.landing.factCredits(n)[0], ['1 darmowy kredyt', '2 darmowe kredyty', '5 darmowych kredytów', '12 darmowych kredytów', '22 darmowe kredyty', '25 darmowych kredytów']],
     ['landing.factDaily', (n) => pl.landing.factDaily(n)[0], ['1 nowa karta', '2 nowe karty', '5 nowych kart', '12 nowych kart', '22 nowe karty', '25 nowych kart']],
     ['home.wordTooLong', pl.home.wordTooLong, ['Słowo może mieć najwyżej 1 znak', 'Słowo może mieć najwyżej 2 znaki', 'Słowo może mieć najwyżej 5 znaków', 'Słowo może mieć najwyżej 12 znaków', 'Słowo może mieć najwyżej 22 znaki', 'Słowo może mieć najwyżej 25 znaków']],

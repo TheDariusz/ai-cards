@@ -83,9 +83,11 @@ export async function nextDueAt(db: Db, userId: number, after: number): Promise<
   return row.at ?? null
 }
 
+// SQL twin of isNewCard below: keep the two in sync
 const newCardCondition = (userId: number) =>
   and(eq(cards.userId, userId), eq(cards.status, 'ready'), isNull(cards.firstLearnedAt), isNotNull(cards.decodeParts))
 
+// In-memory twin of newCardCondition above: keep the two in sync
 export const isNewCard = (card: Pick<Card, 'status' | 'firstLearnedAt' | 'decodeParts'>): boolean =>
   card.status === 'ready' && card.firstLearnedAt === null && card.decodeParts !== null
 
