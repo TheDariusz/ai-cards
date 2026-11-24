@@ -129,7 +129,7 @@ function UserHome({ loaderData, actionData }: { loaderData: UserHome; actionData
   }, [pending.length, revalidator])
 
   const showTile = state !== 'learn' && newCards.length > 0
-  const weekLabel = `${t.home.weekLabel} · ${streak} ${t.home.dayStreak(streak)}`
+  const weekLabel = `${t.home.weekLabel} · ${streak} ${t.streak.inARow(streak)}`
 
   return (
     <main className="page today-screen">
@@ -139,7 +139,7 @@ function UserHome({ loaderData, actionData }: { loaderData: UserHome; actionData
           <h1>{t.home.today}</h1>
         </div>
         {streak > 0 && (
-          <Link to="/streak" className="streak-chip" aria-label={`${streak} ${t.home.dayStreak(streak)}`}>
+          <Link to="/streak" className="streak-chip" aria-label={`${streak} ${t.streak.inARow(streak)}`}>
             <span><Icon name="flame" />{streak}</span>
           </Link>
         )}

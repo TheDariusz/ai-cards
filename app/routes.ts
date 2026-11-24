@@ -6,6 +6,7 @@ export default [
     route('cards', 'routes/cards.tsx'),
     route('settings', 'routes/settings.tsx'),
   ]),
+  route('streak', 'routes/streak.tsx'),
   route('login', 'routes/login.tsx'),
   route('login/verify', 'routes/login-verify.tsx'),
   route('logout', 'routes/logout.ts'),

@@ -191,6 +191,25 @@ form > input:not([type="hidden"]) + button, form > textarea + button { margin-to
 .settings-card .link-button { min-height: 44px; }
 .settings-foot .link-button { min-height: 44px; color: var(--muted); }
 
+/* Streak screen: big number, month calendar, two stat cards. Day state is also in each cell's text, not colour alone. */
+.streak-page { display: grid; gap: 16px; }
+.streak-hero { display: flex; align-items: center; gap: 12px; }
+.streak-number { font-size: 52px; font-weight: 700; letter-spacing: -0.03em; line-height: 1; font-variant-numeric: tabular-nums; }
+.streak-hero p { margin: 0; }
+.streak-month { margin: 0 0 10px; font-size: 1rem; text-transform: capitalize; }
+.cal { width: 100%; border-collapse: separate; border-spacing: 5px; table-layout: fixed; text-align: center; font-size: 0.8rem; font-variant-numeric: tabular-nums; }
+.cal th { color: var(--muted); font-size: 11px; font-weight: 600; }
+.cal td { padding: 0; aspect-ratio: 1; border-radius: 50%; background: var(--accent-soft); color: var(--muted); }
+.cal td.empty { background: transparent; }
+.cal td.done { background: var(--ok); color: var(--bg); font-weight: 600; }
+.cal td.today { background: transparent; border: 2px solid var(--accent); color: var(--text); font-weight: 600; }
+.cal td.future { background: transparent; opacity: 0.5; }
+.cal-hidden { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.streak-stats { display: flex; gap: 10px; }
+.streak-stats .surface-card { flex: 1; display: grid; }
+.streak-stats b { font-size: 24px; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
+@media (min-width: 900px) { .streak-page { max-width: 640px; } }
+
 /* Cards */
 .card-face { background: var(--surface); border: 1px solid var(--edge); border-radius: 18px; padding: 16px; margin: 1rem 0; }
 .card-row { display: block; padding: 0.7rem 0; border-bottom: 1px solid var(--edge); color: inherit; text-decoration: none; }
