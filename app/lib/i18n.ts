@@ -20,6 +20,12 @@ const pl = {
     language: 'Język',
     noCredits: 'Brak kredytów. Nowe karty i funkcje AI są niedostępne.',
   },
+  nav: {
+    label: 'Nawigacja',
+    today: 'Dziś',
+    cards: 'Karty',
+    settings: 'Ustawienia',
+  },
   landing: {
     logIn: 'Zaloguj się',
     title: 'Trzy dni od usłyszanego słowa do',
@@ -238,6 +244,12 @@ const en: Dict = {
   common: {
     language: 'Language',
     noCredits: 'Out of credits. New cards and AI features are unavailable.',
+  },
+  nav: {
+    label: 'Navigation',
+    today: 'Today',
+    cards: 'Cards',
+    settings: 'Settings',
   },
   landing: {
     logIn: 'Log in',
