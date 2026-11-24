@@ -142,6 +142,7 @@ form > input:not([type="hidden"]) + button, form > textarea + button { margin-to
 .credit-meter { height: 6px; border-radius: 9px; background: var(--accent-soft); overflow: hidden; }
 .credit-meter span { display: block; height: 100%; background: var(--accent); }
 .settings-foot { display: flex; justify-content: space-between; align-items: center; gap: 12px; flex-wrap: wrap; font-size: 0.9rem; }
+.settings-card .link-button { min-height: 44px; }
 .settings-foot .link-button { min-height: 44px; color: var(--muted); }
 
 /* Cards */
