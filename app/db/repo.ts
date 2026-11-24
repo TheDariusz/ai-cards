@@ -86,6 +86,9 @@ export async function nextDueAt(db: Db, userId: number, after: number): Promise<
 const newCardCondition = (userId: number) =>
   and(eq(cards.userId, userId), eq(cards.status, 'ready'), isNull(cards.firstLearnedAt), isNotNull(cards.decodeParts))
 
+export const isNewCard = (card: Pick<Card, 'status' | 'firstLearnedAt' | 'decodeParts'>): boolean =>
+  card.status === 'ready' && card.firstLearnedAt === null && card.decodeParts !== null
+
 export async function getNewCards(db: Db, userId: number): Promise<Card[]> {
   return db.select().from(cards).where(newCardCondition(userId)).orderBy(asc(cards.createdAt))
 }
@@ -101,7 +104,11 @@ export async function completeFirstLearning(db: Db, userId: number, cardId: numb
     .set({ firstLearnedAt: now, ...newCardSrs(now) })
     .where(and(ownCard(userId, cardId), eq(cards.status, 'ready'), isNull(cards.firstLearnedAt), isNotNull(cards.decodeParts)))
     .returning({ id: cards.id })
-  return updated.length === 1
+  if (updated.length !== 1) return false
+  if ((await countDue(db, userId, now)) === 0) {
+    await db.insert(dayLog).values({ userId, date: dayKey(now) }).onConflictDoNothing()
+  }
+  return true
 }
 
 export async function applyReview(
