@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { reviewMinutes, todayState, formatDayLine } from '../app/lib/today'
+import { reviewMinutes, todayState, formatDayLine, weekdayShort, doneLine } from '../app/lib/today'
 
 const base = { total: 5, ready: 5, due: 0, newCount: 0, todayDone: false }
 
@@ -21,4 +21,16 @@ describe('reviewMinutes', () => {
 describe('formatDayLine', () => {
   it('formats in Polish', () => expect(formatDayLine('2026-11-24', 'pl')).toBe('wtorek, 24 listopada'))
   it('formats in English', () => expect(formatDayLine('2026-11-24', 'en')).toMatch(/Tuesday.*24.*November/))
+})
+
+describe('weekdayShort', () => {
+  const week = ['2026-11-23', '2026-11-24', '2026-11-25', '2026-11-26', '2026-11-27', '2026-11-28', '2026-11-29']
+  it('gives two letters in Polish', () => expect(week.map((d) => weekdayShort(d, 'pl'))).toEqual(['po', 'wt', 'śr', 'cz', 'pt', 'so', 'ni']))
+  it('gives two letters in English', () => expect(week.map((d) => weekdayShort(d, 'en'))).toEqual(['Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa', 'Su']))
+})
+
+describe('doneLine', () => {
+  it('reports reviews when there were any today', () => expect(doneLine(12, 2)).toEqual({ kind: 'reviewed', n: 12 }))
+  it('reports learned words when there were no reviews', () => expect(doneLine(0, 1)).toEqual({ kind: 'learned', n: 1 }))
+  it('has nothing to report when neither happened', () => expect(doneLine(0, 0)).toBeNull())
 })

@@ -102,28 +102,72 @@ form > input:not([type="hidden"]) + button, form > textarea + button { margin-to
   .shell-credits { display: block; margin: auto 10px 0; font-size: 0.85rem; color: var(--muted); }
 }
 
-/* Home */
-.home-head { display: flex; align-items: center; justify-content: space-between; gap: 0.5rem; }
-.streak-chip { background: var(--accent-soft); color: var(--text); border-radius: 999px; padding: 0.2rem 0.7rem; font-size: 0.95rem; font-weight: 600; }
+/* Today (home, signed in): header, add-word row, one primary card, then the tile, week strip and status line. */
+.today-screen { display: grid; gap: 14px; overflow-wrap: anywhere; }
+.today-screen p, .today-screen h2 { margin: 0; }
+.today-head { display: flex; justify-content: space-between; align-items: center; gap: 12px; }
+.today-head h1 { margin: 0; font-size: 1.6rem; line-height: 1.1; letter-spacing: -0.02em; }
+.today-date { color: var(--muted); font-size: 0.9rem; }
+.streak-chip { display: inline-flex; align-items: center; min-height: 44px; flex: none; border-radius: 99px; color: var(--text); font-weight: 600; font-size: 0.85rem; font-variant-numeric: tabular-nums; text-decoration: none; }
+.streak-chip span { display: inline-flex; align-items: center; gap: 4px; background: var(--accent-soft); border-radius: 99px; padding: 5px 11px; }
+.today-add { display: grid; gap: 8px; }
+.add-word { display: flex; align-items: center; gap: 8px; background: var(--surface); border: 1px solid var(--edge); border-radius: 14px; padding: 4px 4px 4px 14px; }
+.add-word:focus-within { outline: 3px solid var(--focus); outline-offset: 2px; }
+.add-word input { flex: 1; min-width: 0; min-height: 44px; border: 0; padding: 0; background: transparent; }
+.add-word input:focus-visible { outline: none; }
+.add-word > input:not([type="hidden"]) + button { margin-top: 0; }
+.add-word button { flex: none; min-height: 44px; background: var(--accent-soft); color: var(--accent); border-radius: 10px; padding: 0 14px; }
+.failed-row { display: flex; gap: 0.5rem; align-items: center; }
+.failed-row span { min-width: 0; }
+.today-cols, .today-main, .today-side { display: grid; gap: 14px; }
+.today-card { display: grid; gap: 12px; }
+.today-card > div { display: grid; gap: 4px; }
+.today-card h2 { font-size: 1.2rem; line-height: 1.2; letter-spacing: -0.01em; }
+.today-card > svg.icon { width: 28px; height: 28px; stroke-width: 2.4; color: var(--ok); }
+.today-count { font-size: 44px; font-weight: 700; line-height: 1; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; }
+.today-action { display: flex; align-items: center; justify-content: center; min-height: 44px; padding: 12px; border-radius: 13px; background: var(--on-accent); color: var(--accent); font-weight: 600; text-decoration: none; }
+.today-action:focus-visible { outline-color: var(--on-accent); }
+/* On the accent card, status colours would vanish: messages and the Retry take the card's own colours. */
+.today-card .ok, .today-card .error { color: inherit; font-weight: 600; }
+.today-card .add-word { border: 0; background: var(--on-accent); }
+.today-card .add-word button { background: var(--accent); color: var(--on-accent); }
+.today-card .failed-row button { min-height: 44px; background: var(--on-accent); color: var(--accent); }
+.today-card .add-word:focus-within { outline-color: var(--on-accent); }
+.today-card[data-state="done"] { grid-template-columns: auto minmax(0, 1fr); align-items: start; background: var(--ok-soft); color: var(--text); }
+.today-card[data-state="nothing-due"] { background: var(--surface); color: var(--text); border: 1px solid var(--edge); }
+.today-steps { display: grid; gap: 10px; margin: 0; list-style: none; }
+.today-steps li { display: flex; gap: 10px; align-items: baseline; }
+.today-steps b { flex: none; width: 7em; font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--accent); }
+.today-note, .today-status { font-size: 0.85rem; }
+.today-tile { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.today-tile > div { flex: 1; min-width: 0; }
+.tile-action { display: inline-flex; align-items: center; flex: none; min-height: 44px; padding: 0 14px; border-radius: 11px; background: var(--accent-soft); color: var(--accent); font-weight: 600; font-size: 0.9rem; text-decoration: none; }
+.week-card h2 { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
+.week { display: flex; justify-content: space-between; padding: 4px 0; border-radius: 12px; color: var(--muted); text-decoration: none; }
+.week span { display: grid; justify-items: center; gap: 5px; min-width: 2.25rem; font-size: 11px; }
+.week span::after { content: ""; width: 22px; height: 22px; border-radius: 50%; background: var(--accent-soft); box-sizing: border-box; }
+.week .done::after { background: var(--ok); }
+.week .today { color: var(--accent); font-weight: 600; }
+.week .today::after { background: transparent; border: 2px solid var(--accent); }
+@media (min-width: 900px) {
+  .page.today-screen { max-width: none; padding: 30px 40px; gap: 20px; }
+  .today-head h1 { font-size: 1.75rem; }
+  .today-screen .add-word { max-width: 460px; }
+  .today-cols { grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 20px; align-items: start; }
+  .today-card { padding: 26px; gap: 20px; }
+  .today-count { font-size: 72px; }
+  .today-action { justify-self: start; padding: 13px 26px; }
+  .week-card { display: grid; gap: 12px; background: var(--surface); border: 1px solid var(--edge); border-radius: 18px; padding: 14px; }
+  .week-card h2 { position: static; width: auto; height: auto; overflow: visible; clip-path: none; white-space: normal; font-size: 1rem; }
+}
+
+/* Shared with other screens (landing demo, card detail, settings, admin) */
 .quick-add { display: flex; gap: 0.5rem; margin: 0.6rem 0; }
 .quick-add > input:not([type="hidden"]) + button { margin-top: 0; }
 .quick-add input { flex: 1; }
-.failed-row { display: flex; gap: 0.5rem; align-items: center; }
 .request-row { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; padding: 0.5rem 0; border-bottom: 1px solid var(--accent-soft); }
 .request-row > span:first-of-type { flex: 1; min-width: 9rem; overflow-wrap: anywhere; }
 .request-actions { display: flex; gap: 0.5rem; align-items: center; margin-left: auto; }
-.stats { display: flex; gap: 0.75rem; margin: 1rem 0; }
-.stat { background: var(--surface); border: 1px solid var(--edge); border-radius: 18px; padding: 0.8rem 1rem; flex: 1; text-align: center; color: var(--muted); }
-.stat b { display: block; font-size: 1.6rem; color: var(--text); }
-.new-queue { display: flex; justify-content: space-between; gap: 1rem; align-items: center; background: var(--surface); border: 1px solid var(--edge); border-radius: 18px; padding: 16px; margin: 1rem 0; }
-.new-queue p { margin: 0.2rem 0 0; }
-.calendar { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; margin-top: 1rem; }
-.calendar .day { aspect-ratio: 1; border-radius: 8px; background: var(--accent-soft); display: grid; place-items: center; font-size: 0.75rem; color: var(--muted); }
-.calendar .done { background: var(--ok); color: var(--on-accent); }
-.nav { display: flex; gap: 0.75rem; margin-top: 1.5rem; }
-.nav-tile { flex: 1; display: flex; justify-content: space-between; align-items: center; background: var(--surface); border: 1px solid var(--edge); border-radius: 18px; padding: 0.8rem 1rem; color: var(--text); font-weight: 600; text-decoration: none; }
-.nav-tile:hover { border-color: var(--accent); }
-.nav-tile span { color: var(--muted); font-weight: 500; }
 .link-button { background: transparent; color: var(--accent); padding: 0.35rem 0.2rem; font-size: 0.9rem; text-decoration: underline; }
 .link-button:disabled { opacity: 0.6; }
 

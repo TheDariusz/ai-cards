@@ -12,6 +12,9 @@ const noweKartyAcc = (n: number) => (n === 1 ? '1 nową kartę' : noweKarty(n))
 const dni = (n: number) => `${n} ${n === 1 ? 'dzień' : 'dni'}`
 const cards = (n: number) => `${n} ${n === 1 ? 'card' : 'cards'}`
 const newCards = (n: number) => `${n} new ${n === 1 ? 'card' : 'cards'}`
+const kredytow = (n: number) => `${n} ${({ one: 'kredyt', few: 'kredyty', many: 'kredytów' })[plForm(n)]}`
+const noweSlowa = (n: number) => `${n} ${({ one: 'nowe słowo', few: 'nowe słowa', many: 'nowych słów' })[plForm(n)]}`
+const words = (n: number) => `${n} new ${n === 1 ? 'word' : 'words'}`
 const znakow = (n: number) => `${n} ${({ one: 'znak', few: 'znaki', many: 'znaków' })[plForm(n)]}`
 
 // [bold part, rest] pairs render as <b>{bold}</b>{rest}
@@ -106,6 +109,25 @@ const pl = {
     startReview: 'Zacznij powtórkę',
     navReview: 'Powtórka',
     navCards: 'Karty',
+    today: 'Dziś',
+    firstTitle: 'Dodaj pierwsze słowo',
+    firstBody: 'Takie, które ostatnio usłyszałeś i chcesz zapamiętać.',
+    firstPlaceholder: 'np. reluctant',
+    // [label, sentence]: the label is styled apart from the sentence
+    stepNow: ['Teraz', 'AI przygotuje fiszkę ze zdaniem i nagraniem.'] as [string, string],
+    stepThen: ['Potem', 'Uczysz się zdania krok po kroku.'] as [string, string],
+    stepTomorrow: ['Jutro', 'Słowo wraca w powtórce, coraz rzadziej.'] as [string, string],
+    starterNote: (n: number) => `Na start masz ${kredytow(n)}. Jedna fiszka to kilka kredytów.`,
+    preparingTitle: 'Przygotowuję Twoją pierwszą kartę',
+    preparingBody: (word: string) => `„${word}” będzie gotowe za chwilę.`,
+    reviewLine: (n: number, min: number) => `${pluralKarty(n)} do powtórki · ok. ${min} min`,
+    newWords: (n: number) => noweSlowa(n),
+    doneTitle: 'Na dziś wszystko',
+    doneReviewed: (n: number) => `${n} ${({ one: 'powtórzona karta', few: 'powtórzone karty', many: 'powtórzonych kart' })[plForm(n)]}. Kolejne wrócą jutro.`,
+    doneLearned: (n: number) => `${noweSlowa(n)} ${({ one: 'poznane', few: 'poznane', many: 'poznanych' })[plForm(n)]}. Pierwsza powtórka jutro.`,
+    nothingTitle: 'Nic do powtórki na dziś',
+    nothingNext: (date: string) => `Następna powtórka: ${date}`,
+    weekLabel: 'Ten tydzień',
   },
   settings: {
     title: 'Ustawienia',
@@ -338,6 +360,24 @@ const en: Dict = {
     startReview: 'Start review',
     navReview: 'Review',
     navCards: 'Cards',
+    today: 'Today',
+    firstTitle: 'Add your first word',
+    firstBody: 'One you heard recently and want to remember.',
+    firstPlaceholder: 'e.g. reluctant',
+    stepNow: ['Now', 'AI writes a card with a sentence and audio.'],
+    stepThen: ['Then', 'You learn the sentence step by step.'],
+    stepTomorrow: ['Tomorrow', 'The word comes back for review, less and less often.'],
+    starterNote: (n) => `You start with ${n} ${n === 1 ? 'credit' : 'credits'}. One card costs a few credits.`,
+    preparingTitle: 'Preparing your first card',
+    preparingBody: (word) => `“${word}” will be ready in a moment.`,
+    reviewLine: (n, min) => `${n === 1 ? 'card' : 'cards'} to review · about ${min} min`,
+    newWords: (n) => words(n),
+    doneTitle: 'All done for today',
+    doneReviewed: (n) => `${n} ${n === 1 ? 'card' : 'cards'} reviewed. More come back tomorrow.`,
+    doneLearned: (n) => `${words(n)} learned. First review tomorrow.`,
+    nothingTitle: 'Nothing to review today',
+    nothingNext: (date) => `Next review: ${date}`,
+    weekLabel: 'This week',
   },
   settings: {
     title: 'Settings',
@@ -479,6 +519,10 @@ const en: Dict = {
 
 export const dict: Record<Locale, Dict> = { pl, en }
 
+export function useLocale(): Locale {
+  return useRouteLoaderData<typeof rootLoader>('root')?.locale ?? 'pl'
+}
+
 export function useT(): Dict {
-  return dict[useRouteLoaderData<typeof rootLoader>('root')?.locale ?? 'pl']
+  return dict[useLocale()]
 }

@@ -28,3 +28,18 @@ export function formatDayLine(today: string, locale: Locale): string {
     timeZone: 'UTC', weekday: 'long', day: 'numeric', month: 'long',
   }).format(new Date(`${today}T12:00:00Z`))
 }
+
+// Two-letter weekday label for the week strip ("wt", "Tu"), from the day key so server and client agree.
+export function weekdayShort(day: string, locale: Locale): string {
+  return new Intl.DateTimeFormat(locale === 'pl' ? 'pl-PL' : 'en-GB', { timeZone: 'UTC', weekday: 'short' })
+    .format(new Date(`${day}T12:00:00Z`))
+    .replace('.', '')
+    .slice(0, 2)
+}
+
+// What the Done card reports: reviews when there were any today, otherwise words learned today.
+export function doneLine(reviewedToday: number, learnedToday: number): { kind: 'reviewed' | 'learned'; n: number } | null {
+  if (reviewedToday > 0) return { kind: 'reviewed', n: reviewedToday }
+  if (learnedToday > 0) return { kind: 'learned', n: learnedToday }
+  return null
+}
