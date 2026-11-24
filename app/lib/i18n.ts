@@ -162,7 +162,8 @@ const pl = {
   },
   cards: {
     title: 'Karty',
-    status: { pending: 'w przygotowaniu', failed: 'błąd', ready: 'gotowa' },
+    tag: { pending: 'generuję…', failed: 'błąd', new: 'nowa' },
+    empty: 'Nie masz jeszcze kart. Dodaj pierwsze słowo na ekranie Dziś.',
   },
   card: {
     noAudio: 'Brak nagrania.',
@@ -420,7 +421,8 @@ const en: Dict = {
   },
   cards: {
     title: 'Cards',
-    status: { pending: 'pending', failed: 'failed', ready: 'ready' },
+    tag: { pending: 'generating…', failed: 'failed', new: 'new' },
+    empty: 'You have no cards yet. Add your first word on the Today screen.',
   },
   card: {
     noAudio: 'No audio.',
