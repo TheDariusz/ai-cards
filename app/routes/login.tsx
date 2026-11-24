@@ -1,4 +1,4 @@
-import { Form, data, redirect, useActionData, useNavigation, useSearchParams } from 'react-router'
+import { Form, Link, data, redirect, useActionData, useNavigation, useSearchParams } from 'react-router'
 import type { Route } from './+types/login'
 import { getUserId } from '../lib/session'
 import { createDb } from '../db/repo'
@@ -50,23 +50,36 @@ export default function Login() {
   const isNew = params.has('new')
   const t = useT().login
   return (
-    <main className="page">
-      <LocaleSwitch />
-      <h1>AI Cards</h1>
-      <h2>{isNew ? t.signUpTitle : t.logInTitle}</h2>
-      {answer && 'sent' in answer ? (
-        <>
-          <p className="ok">{t.sent}</p>
-          <p className="muted">{t.checkSpam}</p>
-        </>
-      ) : (
-        <Form method="post">
-          <input type="email" name="email" placeholder={t.emailPlaceholder} autoComplete="email" required autoFocus />
-          <button type="submit" disabled={busy}>{busy ? t.sending : t.send}</button>
-          {answer && 'error' in answer && <p className="error">{answer.error}</p>}
-          <p className="muted">{isNew ? t.signUpHint : t.logInHint}</p>
-        </Form>
-      )}
+    <main className="page auth-page">
+      <header className="auth-top">
+        <Link to="/" className="auth-logo" aria-label="AI Cards">
+          <img className="logo-light" src="/logo-light.png" alt="" width="400" height="162" />
+          <img className="logo-dark" src="/logo-dark.png" alt="" width="400" height="162" />
+        </Link>
+        <LocaleSwitch />
+      </header>
+      <div className="auth-block">
+        {answer && 'sent' in answer ? (
+          <div className="auth-intro">
+            <h1>{isNew ? t.signUpTitle : t.logInTitle}</h1>
+            <p className="ok">{t.sent}</p>
+            <p className="muted">{t.checkSpam}</p>
+          </div>
+        ) : (
+          <>
+            <div className="auth-intro">
+              <h1>{isNew ? t.signUpTitle : t.logInTitle}</h1>
+              <p className="muted">{t.lead}</p>
+            </div>
+            <Form method="post" className="auth-form">
+              <input type="email" name="email" placeholder={t.emailPlaceholder} autoComplete="email" required autoFocus />
+              <button type="submit" className="primary-wide" disabled={busy}>{busy ? t.sending : t.send}</button>
+              {answer && 'error' in answer && <p className="error">{answer.error}</p>}
+              <p className="muted auth-hint">{isNew ? t.signUpHint : t.logInHint}</p>
+            </Form>
+          </>
+        )}
+      </div>
     </main>
   )
 }

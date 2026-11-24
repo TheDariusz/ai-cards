@@ -9,6 +9,7 @@ import { hasCredits, usageRecorder } from '../lib/credits'
 import { parseLocale } from '../lib/locale'
 import { dict, useT } from '../lib/i18n'
 import { MAX_TEXT_CHARS, MAX_WORD_CHARS } from '../lib/limits'
+import { Icon } from '../ui/icons'
 
 export async function loader({ request, params, context }: Route.LoaderArgs) {
   const env = context.cloudflare.env
@@ -135,32 +136,38 @@ export default function CardDetail({ loaderData, actionData }: Route.ComponentPr
   // must not remount the form and wipe in-progress typing.
   const contentKey = [card.wordPl, card.explanationEn, card.sentenceEn, card.sentencePl, JSON.stringify(card.decodeParts)].join('|')
   return (
-    <main className="page">
-      <h1><Link to="/cards">←</Link> {card.word}</h1>
+    <main className="page card-detail">
+      <header className="task-head">
+        <Link to="/cards" aria-label={t.card.back}><Icon name="back" /></Link>
+        <h1>{card.word}</h1>
+      </header>
       {card.audioKey ? (
-        <audio controls src={`/audio/${card.id}?v=${encodeURIComponent(card.audioKey ?? '')}`} />
+        <section className="surface-card">
+          <audio controls src={`/audio/${card.id}?v=${encodeURIComponent(card.audioKey ?? '')}`} />
+        </section>
       ) : card.status === 'ready' && outOfCredits ? (
         <p className="muted">{t.card.noAudio} {t.common.noCredits}</p>
       ) : card.status === 'ready' ? (
         <Form method="post">
           <input type="hidden" name="intent" value="retry-audio" />
           <button type="submit" disabled={busy}>{t.card.generateAudio}</button>
-          {busy && <span className="pending"> ⏳</span>}
         </Form>
       ) : null}
 
-      <Form method="post" key={contentKey}>
+      <Form method="post" key={contentKey} className="surface-card card-fields">
         <input type="hidden" name="intent" value="save" />
-        <label>{t.card.polishWord} <input name="wordPl" maxLength={MAX_WORD_CHARS} defaultValue={card.wordPl ?? ''} /></label>
-        <label>{t.card.explanation} <textarea name="explanationEn" maxLength={MAX_TEXT_CHARS} defaultValue={card.explanationEn ?? ''} /></label>
-        <label>{t.card.englishSentence} <textarea name="sentenceEn" className="study" maxLength={MAX_TEXT_CHARS} defaultValue={card.sentenceEn ?? ''} /></label>
-        <label>{t.card.polishSentence} <textarea name="sentencePl" className="study" maxLength={MAX_TEXT_CHARS} defaultValue={card.sentencePl ?? ''} /></label>
+        <label><span className="section-label">{t.card.polishWord}</span> <input name="wordPl" maxLength={MAX_WORD_CHARS} defaultValue={card.wordPl ?? ''} /></label>
+        <label><span className="section-label">{t.card.explanation}</span> <textarea name="explanationEn" maxLength={MAX_TEXT_CHARS} defaultValue={card.explanationEn ?? ''} /></label>
+        <label><span className="section-label">{t.card.englishSentence}</span> <textarea name="sentenceEn" className="study" maxLength={MAX_TEXT_CHARS} defaultValue={card.sentenceEn ?? ''} /></label>
+        <label><span className="section-label">{t.card.polishSentence}</span> <textarea name="sentencePl" className="study" maxLength={MAX_TEXT_CHARS} defaultValue={card.sentencePl ?? ''} /></label>
         <label>
-          {t.card.literalDecode} <span className="muted">{t.card.decodeFormat}</span>
+          <span className="section-label">{t.card.literalDecode}</span> <span className="muted">{t.card.decodeFormat}</span>
           <textarea name="decodeParts" rows={5} defaultValue={decodePartsToText(card.decodeParts)} />
         </label>
-        <button type="submit">{t.card.save}</button>
-        {actionData && 'saved' in actionData && actionData.saved && <span className="ok"> {t.card.saved}</span>}
+        <div className="card-save">
+          <button type="submit">{t.card.save}</button>
+          {actionData && 'saved' in actionData && actionData.saved && <span className="ok">{t.card.saved}</span>}
+        </div>
         {actionData && 'error' in actionData && <p className="error">{actionData.error}</p>}
         {actionData && 'staleTranslation' in actionData && actionData.staleTranslation && (
           <p className="pending">{t.card.staleTranslation}</p>
@@ -168,12 +175,13 @@ export default function CardDetail({ loaderData, actionData }: Route.ComponentPr
       </Form>
 
       {!outOfCredits && (
-        <Form method="post" className="quick-add">
-          <input type="hidden" name="intent" value="regenerate" />
-          <input name="hint" maxLength={MAX_TEXT_CHARS} placeholder={t.card.hintPlaceholder} />
-          <button type="submit" disabled={busy}>{t.card.regenerate}</button>
-          {busy && <span className="pending"> ⏳</span>}
-        </Form>
+        <section className="surface-card">
+          <Form method="post" className="quick-add">
+            <input type="hidden" name="intent" value="regenerate" />
+            <input name="hint" maxLength={MAX_TEXT_CHARS} placeholder={t.card.hintPlaceholder} />
+            <button type="submit" disabled={busy}>{t.card.regenerate}</button>
+          </Form>
+        </section>
       )}
 
       <Form

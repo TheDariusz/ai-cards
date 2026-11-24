@@ -6,6 +6,7 @@ import { OWNER_USER_ID } from '../db/schema'
 import { starterMicros, toCredits } from '../lib/credits'
 import { dict, useT } from '../lib/i18n'
 import { parseLocale } from '../lib/locale'
+import { Icon } from '../ui/icons'
 
 async function requireOwner(request: Request, env: Env) {
   if ((await requireAuth(request, env)) !== OWNER_USER_ID) throw new Response('Not found', { status: 404 })
@@ -43,30 +44,35 @@ export default function Admin({ loaderData, actionData }: Route.ComponentProps) 
   const t = useT().admin
   const { users, topUpCredits } = loaderData
   return (
-    <main className="page">
-      <h1><Link to="/">←</Link> {t.title}</h1>
+    <main className="page admin-page">
+      <header className="task-head">
+        <Link to="/settings" aria-label={t.back}><Icon name="back" /></Link>
+        <h1>{t.title}</h1>
+      </header>
       {actionData && 'error' in actionData && <p className="error">{actionData.error}</p>}
-      {users.map((u) => (
-        <Form method="post" key={u.id} className="request-row">
-          <input type="hidden" name="userId" value={u.id} />
-          <span>
-            {u.email ?? `#${u.id}`}
-            <span className="muted">
-              {' '}· {t.since(day(u.createdAt))} · {t.spent((u.spentMicros / 1e6).toFixed(2))}
-              {u.id !== OWNER_USER_ID && ` · ${t.creditsLeft(toCredits(u.balanceMicros))}`}
-              {u.blockedAt !== null && ` · ${t.blocked}`}
+      <section className="surface-card admin-list">
+        {users.map((u) => (
+          <Form method="post" key={u.id} className="request-row">
+            <input type="hidden" name="userId" value={u.id} />
+            <span>
+              {u.email ?? `#${u.id}`}
+              <span className="muted">
+                {' '}· {t.since(day(u.createdAt))} · {t.spent((u.spentMicros / 1e6).toFixed(2))}
+                {u.id !== OWNER_USER_ID && ` · ${t.creditsLeft(toCredits(u.balanceMicros))}`}
+                {u.blockedAt !== null && ` · ${t.blocked}`}
+              </span>
             </span>
-          </span>
-          {u.id !== OWNER_USER_ID && (
-            <span className="request-actions">
-              <button type="submit" name="intent" value={u.blockedAt === null ? 'block' : 'unblock'} className="link-button">
-                {u.blockedAt === null ? t.block : t.unblock}
-              </button>
-              <button type="submit" name="intent" value="grant">+{topUpCredits}</button>
-            </span>
-          )}
-        </Form>
-      ))}
+            {u.id !== OWNER_USER_ID && (
+              <span className="request-actions">
+                <button type="submit" name="intent" value={u.blockedAt === null ? 'block' : 'unblock'} className="link-button">
+                  {u.blockedAt === null ? t.block : t.unblock}
+                </button>
+                <button type="submit" name="intent" value="grant">+{topUpCredits}</button>
+              </span>
+            )}
+          </Form>
+        ))}
+      </section>
     </main>
   )
 }

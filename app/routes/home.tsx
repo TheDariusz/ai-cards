@@ -263,7 +263,7 @@ function TodayCard({ data, actionData }: { data: UserHome; actionData: ActionDat
 
 function AddWord({ outOfCredits, placeholder }: { outOfCredits: boolean; placeholder: string }) {
   const t = useT()
-  if (outOfCredits) return <p className="error today-no-credits">{t.common.noCredits}</p>
+  if (outOfCredits) return <p className="error">{t.common.noCredits}</p>
   return (
     <Form method="post" className="add-word">
       <input type="hidden" name="intent" value="add" />

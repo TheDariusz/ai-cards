@@ -74,6 +74,7 @@ const pl = {
   login: {
     logInTitle: 'Zaloguj się',
     signUpTitle: 'Załóż konto',
+    lead: 'Wyślemy Ci link. Bez hasła, ten sam link zakłada konto.',
     logInHint: 'Nie masz konta? Ten sam link je założy.',
     signUpHint: 'Masz już konto? Ten sam link Cię zaloguje.',
     sent: 'Wysłaliśmy Ci link do logowania (ważny 15 minut).',
@@ -166,6 +167,7 @@ const pl = {
     empty: 'Nie masz jeszcze kart. Dodaj pierwsze słowo na ekranie Dziś.',
   },
   card: {
+    back: 'Wróć do listy kart',
     noAudio: 'Brak nagrania.',
     generateAudio: 'Wygeneruj nagranie',
     polishWord: 'Polskie słowo',
@@ -246,6 +248,7 @@ const pl = {
   },
   admin: {
     title: 'Użytkownicy',
+    back: 'Wróć do ustawień',
     since: (date: string) => `od ${date}`,
     spent: (usd: string) => `wydano $${usd}`,
     creditsLeft: (n: number) => `zostało kredytów: ${n}`,
@@ -343,6 +346,7 @@ const en: Dict = {
   login: {
     logInTitle: 'Log in',
     signUpTitle: 'Create an account',
+    lead: "We'll email you a link. No password, and the same link creates your account.",
     logInHint: 'No account yet? The same link creates one.',
     signUpHint: 'Already have an account? The same link logs you in.',
     sent: 'A login link is on its way (valid for 15 minutes).',
@@ -433,6 +437,7 @@ const en: Dict = {
     empty: 'You have no cards yet. Add your first word on the Today screen.',
   },
   card: {
+    back: 'Back to cards',
     noAudio: 'No audio.',
     generateAudio: 'Generate audio',
     polishWord: 'Polish word',
@@ -513,6 +518,7 @@ const en: Dict = {
   },
   admin: {
     title: 'Users',
+    back: 'Back to Settings',
     since: (date) => `since ${date}`,
     spent: (usd) => `spent $${usd}`,
     creditsLeft: (n) => `${n} credits left`,

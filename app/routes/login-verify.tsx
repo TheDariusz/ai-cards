@@ -53,20 +53,28 @@ export default function LoginVerify({ loaderData }: Route.ComponentProps) {
   const t = dict[loaderData.lang].verify
   const error = answer?.error ?? loaderData.error
   return (
-    <main className="page" lang={loaderData.lang}>
-      <h1>AI Cards</h1>
-      {error ? (
-        <>
-          <p className="error">{error}</p>
-          <Link to="/login">{t.sendNew}</Link>
-        </>
-      ) : (
-        <Form method="post">
-          <input type="hidden" name="token" value={loaderData.token} />
-          <input type="hidden" name="lang" value={loaderData.lang} />
-          <button type="submit" disabled={busy} autoFocus>{busy ? t.loggingIn : t.logIn}</button>
-        </Form>
-      )}
+    <main className="page auth-page" lang={loaderData.lang}>
+      <header className="auth-top">
+        <Link to="/" className="auth-logo" aria-label="AI Cards">
+          <img className="logo-light" src="/logo-light.png" alt="" width="400" height="162" />
+          <img className="logo-dark" src="/logo-dark.png" alt="" width="400" height="162" />
+        </Link>
+      </header>
+      <div className="auth-block">
+        <h1 className="visually-hidden">AI Cards</h1>
+        {error ? (
+          <>
+            <p className="error">{error}</p>
+            <Link to="/login" className="auth-link">{t.sendNew}</Link>
+          </>
+        ) : (
+          <Form method="post">
+            <input type="hidden" name="token" value={loaderData.token} />
+            <input type="hidden" name="lang" value={loaderData.lang} />
+            <button type="submit" className="primary-wide" disabled={busy} autoFocus>{busy ? t.loggingIn : t.logIn}</button>
+          </Form>
+        )}
+      </div>
     </main>
   )
 }

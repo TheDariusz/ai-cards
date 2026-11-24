@@ -68,12 +68,12 @@ export default function Streak({ loaderData }: Route.ComponentProps) {
             {rows.map((row, r) => (
               <tr key={r}>
                 {row.map((day, c) => {
-                  if (day === null) return <td key={c} className="empty" />
+                  if (day === null) return <td key={c} />
                   const { className, state } = cell(day)
                   return (
                     <td key={c} className={className}>
-                      {Number(day.slice(8))}
-                      <span className="cal-hidden">, {state}</span>
+                      <span className="cal-day">{Number(day.slice(8))}</span>
+                      <span className="visually-hidden">, {state}</span>
                     </td>
                   )
                 })}
