@@ -13,7 +13,7 @@ import { hasCredits, starterMicros, toCredits, usageRecorder } from '../lib/cred
 import { parseLocale } from '../lib/locale'
 import { dict, useLocale, useT } from '../lib/i18n'
 import { computeStreak, dayKey, weekDays } from '../lib/streak'
-import { doneLine, formatDayLine, reviewMinutes, todayState, weekdayShort, type TodayState } from '../lib/today'
+import { doneLine, formatDayLine, reviewMinutes, todayState, type TodayState } from '../lib/today'
 import { Icon } from '../ui/icons'
 
 // A pipeline killed mid-flight (isolate reclaimed) never reaches markFailed, so
@@ -173,9 +173,9 @@ function UserHome({ loaderData, actionData }: { loaderData: UserHome; actionData
             <section className="week-card">
               <h2>{t.home.weekLabel}</h2>
               <Link to="/streak" className="week" aria-label={weekLabel}>
-                {week.map(({ day, done }) => (
+                {week.map(({ day, done }, i) => (
                   <span key={day} className={done ? 'done' : day === today ? 'today' : undefined}>
-                    {weekdayShort(day, locale)}
+                    {t.home.weekdays[i]}
                   </span>
                 ))}
               </Link>
