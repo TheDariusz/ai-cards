@@ -1,7 +1,7 @@
 import { describe, it, expect } from 'vitest'
 import { eq } from 'drizzle-orm'
 import { testDb } from './helpers/db'
-import { insertPendingCard, markReady, completeFirstLearning, getSetting, setSetting, setUserLocale, type Db } from '../app/db/repo'
+import { insertPendingCard, markReady, getSetting, setSetting, setUserLocale, type Db } from '../app/db/repo'
 import { cards, dayLog, users, OWNER_USER_ID as U } from '../app/db/schema'
 import { reminderRecipient, runAllReminders, runReminder } from '../app/lib/reminder-job'
 import type { MailMessage, Mailer } from '../app/lib/mailer'
@@ -22,7 +22,7 @@ function fakeMailer() {
 async function addDueCard(db: Db, userId = U) {
   const id = await insertPendingCard(db, userId, 'reluctant', NOW - 3 * DAY)
   await markReady(db, id, CONTENT, null)
-  await completeFirstLearning(db, userId, id, NOW - 2 * DAY)
+  await db.update(cards).set({ firstLearnedAt: NOW - 2 * DAY }).where(eq(cards.id, id))
   await db.update(cards).set({ dueAt: NOW - 1 }).where(eq(cards.id, id))
 }
 
