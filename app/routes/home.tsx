@@ -1,9 +1,9 @@
-import { Form, Link, useFetcher, useLocation, useRevalidator, useRouteLoaderData } from 'react-router'
+import { Form, Link, useRevalidator } from 'react-router'
 import { useEffect } from 'react'
 import type { Route } from './+types/home'
 import { getUserId, requireAuth } from '../lib/session'
 import { Landing } from '../welcome/landing'
-import { createDb, insertPendingCard, markPending, getCard, listCards, countDue, completedDays, getNewCards, getSetting, getBalance } from '../db/repo'
+import { createDb, insertPendingCard, markPending, getCard, listCards, countDue, completedDays, getNewCards, getBalance } from '../db/repo'
 import { runCardPipeline } from '../lib/pipeline'
 import { OWNER_USER_ID } from '../db/schema'
 import { aiFromEnv } from '../lib/openrouter'
@@ -12,11 +12,7 @@ import { MAX_WORD_CHARS } from '../lib/limits'
 import { hasCredits, starterMicros, toCredits, usageRecorder } from '../lib/credits'
 import { parseLocale } from '../lib/locale'
 import { dict, useT } from '../lib/i18n'
-import { LocaleSwitch } from '../welcome/locale-switch'
 import { computeStreak, dayKey } from '../lib/streak'
-import type { ThemePref } from '../lib/theme'
-import type { loader as rootLoader } from '../root'
-import type { action as reminderAction } from './reminder'
 
 // A pipeline killed mid-flight (isolate reclaimed) never reaches markFailed, so
 // the row is stranded in `pending`. Past this age, treat it as failed and offer Retry.
@@ -48,7 +44,6 @@ export async function loader({ request, context }: Route.LoaderArgs) {
     streak: computeStreak(days, today),
     completed: days.filter((d) => d.startsWith(today.slice(0, 7))), // this month
     today,
-    reminderEnabled: (await getSetting(db, userId, 'reminderEnabled')) !== 'false',
     isOwner,
     credits: { left: toCredits(balance.balanceMicros), granted: toCredits(balance.grantedMicros), spentMicros: balance.spentMicros },
     outOfCredits: !isOwner && balance.balanceMicros <= 0,
@@ -104,13 +99,9 @@ export default function Home({ loaderData, actionData }: Route.ComponentProps) {
 }
 
 function UserHome({ loaderData, actionData }: { loaderData: UserHome; actionData: Route.ComponentProps['actionData'] }) {
-  const { pending, failed, total, due, newCards, streak, completed, today, reminderEnabled, isOwner, credits, outOfCredits } = loaderData
+  const { pending, failed, total, due, newCards, streak, completed, today, isOwner, credits, outOfCredits } = loaderData
   const revalidator = useRevalidator()
-  const location = useLocation()
-  const theme = useRouteLoaderData<typeof rootLoader>('root')?.theme ?? 'auto'
-  const reminder = useFetcher<typeof reminderAction>()
   const t = useT()
-  const sendingTest = reminder.state !== 'idle' && reminder.formData?.get('intent') === 'test'
 
   // light polling while cards are generating
   useEffect(() => {
@@ -174,40 +165,6 @@ function UserHome({ loaderData, actionData }: { loaderData: UserHome; actionData
         <Link to="/review" className="nav-tile">{t.home.navReview} <span>→</span></Link>
         <Link to="/cards" className="nav-tile">{t.home.navCards} <span>{total}</span></Link>
       </nav>
-      <details className="settings">
-        <summary>⚙ {t.home.settings}</summary>
-        <div className="settings-links">
-          <a href="/export/csv" download>{t.home.exportCsv}</a>
-          <a href="/export/json" download>{t.home.backupJson}</a>
-          {isOwner && <Link to="/admin">{t.home.users}</Link>}
-        </div>
-        <Form method="post" action="/theme" className="theme-switch">
-          <input type="hidden" name="redirectTo" value={location.pathname + location.search} />
-          {(['auto', 'light', 'dark'] as ThemePref[]).map((value) => (
-            <button key={value} type="submit" name="theme" value={value} aria-pressed={theme === value}>
-              {t.home.theme[value]}
-            </button>
-          ))}
-        </Form>
-        <LocaleSwitch />
-        <reminder.Form method="post" action="/reminder" className="reminder-switch">
-          <span>{t.home.reminderAt}</span>
-          <span className="reminder-segment">
-            <button type="submit" name="intent" value="on" aria-pressed={reminderEnabled}>{t.home.on}</button>
-            <button type="submit" name="intent" value="off" aria-pressed={!reminderEnabled}>{t.home.off}</button>
-          </span>
-          <button type="submit" name="intent" value="test" className="link-button" disabled={sendingTest}>
-            {sendingTest ? t.home.sending : t.home.sendTest}
-          </button>
-        </reminder.Form>
-        {reminder.state === 'idle' && reminder.data && 'reminderSent' in reminder.data && <p className="ok">{t.home.sent}</p>}
-        {reminder.state === 'idle' && reminder.data && 'reminderError' in reminder.data && (
-          <p className="error">⚠ {reminder.data.reminderError}</p>
-        )}
-      </details>
-      <Form method="post" action="/logout" className="logout">
-        <button type="submit" className="link-button">{t.home.logOut}</button>
-      </Form>
     </main>
   )
 }

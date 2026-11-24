@@ -4,6 +4,7 @@ export default [
   layout('routes/shell.tsx', [
     index('routes/home.tsx'),
     route('cards', 'routes/cards.tsx'),
+    route('settings', 'routes/settings.tsx'),
   ]),
   route('login', 'routes/login.tsx'),
   route('login/verify', 'routes/login-verify.tsx'),
