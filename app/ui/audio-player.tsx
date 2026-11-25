@@ -1,4 +1,4 @@
-import { useRef, useState, type CSSProperties } from 'react'
+import { useEffect, useRef, useState, type CSSProperties } from 'react'
 import { useT } from '../lib/i18n'
 
 // A hidden <audio> driven by our own controls, so the player matches the app instead of the browser.
@@ -14,6 +14,20 @@ function Player({ src, autoPlay }: { src: string; autoPlay?: boolean }) {
   const [playing, setPlaying] = useState(false)
   const [current, setCurrent] = useState(0)
   const [duration, setDuration] = useState(0)
+  const [failed, setFailed] = useState(false)
+
+  // Events fired before hydration are lost, so read the element's state once on mount.
+  // Autoplay goes through play() here rather than the autoplay attribute: when the player mounts from a tap
+  // (reveal, next step) the effect still runs inside that gesture, which iOS requires for audio with sound.
+  useEffect(() => {
+    const el = audio.current
+    if (!el) return
+    if (el.readyState >= 1) setDuration(el.duration)
+    setCurrent(el.currentTime)
+    setPlaying(!el.paused)
+    if (el.error) setFailed(true)
+    else if (autoPlay && el.paused) el.play().catch(() => {}) // autoplay may need a tap on iOS
+  }, [])
 
   const toggle = () => {
     const el = audio.current
@@ -36,14 +50,14 @@ function Player({ src, autoPlay }: { src: string; autoPlay?: boolean }) {
       <audio
         ref={audio}
         src={src}
-        autoPlay={autoPlay}
         preload="metadata"
         onPlay={() => setPlaying(true)}
         onPause={() => setPlaying(false)}
         onTimeUpdate={(event) => setCurrent(event.currentTarget.currentTime)}
         onDurationChange={(event) => setDuration(event.currentTarget.duration)}
+        onError={() => setFailed(true)}
       />
-      <button type="button" className="audio-toggle" onClick={toggle} aria-label={playing ? t.common.pause : t.common.play}>
+      <button type="button" className="audio-toggle" onClick={toggle} disabled={failed} aria-label={playing ? t.common.pause : t.common.play}>
         <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true" focusable="false">
           {playing
             ? <path d="M7 5h3.5v14H7zM13.5 5H17v14h-3.5z" />

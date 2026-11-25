@@ -85,7 +85,8 @@ function GradeButtons({ cardId, mode, typed, suggested }: { cardId: number; mode
       const grade = KEY_TO_GRADE[e.key]
       if (!grade) return
       const el = e.target
-      if (el instanceof HTMLElement && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable)) return
+      // the audio seek bar is an <input type=range> that takes focus on a click, yet ignores digits, so grading still works there
+      if (el instanceof HTMLElement && ((el instanceof HTMLInputElement && el.type !== 'range') || el.tagName === 'TEXTAREA' || el.isContentEditable)) return
       if (fetcher.state !== 'idle') return
       e.preventDefault()
       fetcher.submit(
