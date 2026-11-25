@@ -48,6 +48,11 @@ export async function listCards(db: Db, userId: number): Promise<Card[]> {
   return db.select().from(cards).where(eq(cards.userId, userId)).orderBy(desc(cards.createdAt))
 }
 
+export async function countCards(db: Db, userId: number): Promise<number> {
+  const [row] = await db.select({ n: count() }).from(cards).where(eq(cards.userId, userId))
+  return row.n
+}
+
 const dueCondition = (userId: number, now: number) =>
   and(eq(cards.userId, userId), eq(cards.status, 'ready'), isNotNull(cards.firstLearnedAt), lte(cards.dueAt, now))
 
@@ -83,13 +88,9 @@ export async function nextDueAt(db: Db, userId: number, after: number): Promise<
   return row.at ?? null
 }
 
-// SQL twin of isNewCard below: keep the two in sync
+// SQL twin of isNewCard in app/lib/cards.ts: keep the two in sync
 const newCardCondition = (userId: number) =>
   and(eq(cards.userId, userId), eq(cards.status, 'ready'), isNull(cards.firstLearnedAt), isNotNull(cards.decodeParts))
-
-// In-memory twin of newCardCondition above: keep the two in sync
-export const isNewCard = (card: Pick<Card, 'status' | 'firstLearnedAt' | 'decodeParts'>): boolean =>
-  card.status === 'ready' && card.firstLearnedAt === null && card.decodeParts !== null
 
 export async function getNewCards(db: Db, userId: number): Promise<Card[]> {
   return db.select().from(cards).where(newCardCondition(userId)).orderBy(asc(cards.createdAt))

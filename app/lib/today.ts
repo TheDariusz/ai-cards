@@ -24,10 +24,16 @@ export function todayState(i: {
   return 'nothing-due'
 }
 
+// Noon UTC keeps the date stable in any time zone.
+const formatDay = (day: string, locale: Locale, options: Intl.DateTimeFormatOptions) =>
+  new Intl.DateTimeFormat(locale === 'pl' ? 'pl-PL' : 'en-GB', { timeZone: 'UTC', ...options }).format(new Date(`${day}T12:00:00Z`))
+
 export function formatDayLine(today: string, locale: Locale): string {
-  return new Intl.DateTimeFormat(locale === 'pl' ? 'pl-PL' : 'en-GB', {
-    timeZone: 'UTC', weekday: 'long', day: 'numeric', month: 'long',
-  }).format(new Date(`${today}T12:00:00Z`))
+  return formatDay(today, locale, { weekday: 'long', day: 'numeric', month: 'long' })
+}
+
+export function formatMonth(today: string, locale: Locale): string {
+  return formatDay(today, locale, { month: 'long' })
 }
 
 // What the Done card reports: reviews when there were any today, otherwise words learned today.

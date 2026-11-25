@@ -1,21 +1,21 @@
-import { Form, Link, useNavigate, useRevalidator } from 'react-router'
+import { Form, Link, useNavigate, useRevalidator, useRouteLoaderData } from 'react-router'
 import { useEffect } from 'react'
 import type { Route } from './+types/home'
 import { getUserId, requireAuth } from '../lib/session'
 import { Landing } from '../welcome/landing'
-import { createDb, insertPendingCard, markPending, getCard, listCards, countDue, completedDays, getNewCards, getBalance, countReviewsOn, nextDueAt } from '../db/repo'
+import { createDb, insertPendingCard, markPending, getCard, listCards, countDue, completedDays, countReviewsOn, nextDueAt } from '../db/repo'
 import { runCardPipeline } from '../lib/pipeline'
-import { OWNER_USER_ID } from '../db/schema'
 import { aiFromEnv } from '../lib/openrouter'
 import { canAddCard, dailyCardLimit } from '../lib/quota'
 import { MAX_WORD_CHARS } from '../lib/limits'
 import { hasCredits, starterMicros, toCredits, usageRecorder } from '../lib/credits'
 import { parseLocale } from '../lib/locale'
-import { isStuck } from '../lib/cards'
+import { cardStatus, countLearnedOn, isNewCard } from '../lib/cards'
 import { dict, useT } from '../lib/i18n'
-import { computeStreak, dayKey, weekDays } from '../lib/streak'
+import { computeStreak, dayKey, dayStatus, weekDays } from '../lib/streak'
 import { doneLine, formatDayLine, reviewMinutes, todayState, type TodayState } from '../lib/today'
 import { Icon } from '../ui/icons'
+import type { loader as shellLoader } from './shell'
 
 export async function loader({ request, context }: Route.LoaderArgs) {
   const env = context.cloudflare.env
@@ -26,39 +26,41 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   }
   const userId = await requireAuth(request, env)
   const db = createDb(env.DB)
-  const all = await listCards(db, userId)
   const now = Date.now()
   const today = dayKey(now)
-  const days = await completedDays(db, userId)
-  const newCards = await getNewCards(db, userId)
-  const due = await countDue(db, userId, now)
-  const next = await nextDueAt(db, userId, now)
-  const balance = await getBalance(db, userId)
-  const isOwner = userId === OWNER_USER_ID
+  // Credits and owner status come from the shell loader, which runs alongside this one.
+  const [all, days, due, next, reviewedToday] = await Promise.all([
+    listCards(db, userId),
+    completedDays(db, userId),
+    countDue(db, userId, now),
+    nextDueAt(db, userId, now),
+    countReviewsOn(db, userId, today),
+  ])
+  const status = all.map((c) => ({ id: c.id, word: c.word, status: cardStatus(c, now) }))
+  const cardsWith = (s: string) => status.filter((c) => c.status === s).map(({ id, word }) => ({ id, word }))
+  // oldest first, like getNewCards (listCards is newest first)
+  const newCards = all.filter(isNewCard).reverse()
+  const doneSet = new Set(days)
   const state: TodayState = todayState({
     total: all.length,
     ready: all.filter((c) => c.status === 'ready').length,
     due,
     newCount: newCards.length,
-    todayDone: days.includes(today),
+    todayDone: doneSet.has(today),
   })
   return {
     state,
-    today,
     dateLine: formatDayLine(today, locale),
-    week: weekDays(today).map((day) => ({ day, done: days.includes(day) })),
+    week: weekDays(today).map((day) => ({ day, status: dayStatus(day, today, doneSet) })),
     streak: computeStreak(days, today),
     due,
     minutes: reviewMinutes(due),
     newCards: newCards.map((c) => ({ id: c.id, word: c.word })),
-    pending: all.filter((c) => c.status === 'pending' && !isStuck(c, now)).map((c) => ({ id: c.id, word: c.word })),
-    failed: all.filter((c) => c.status === 'failed' || isStuck(c, now)).map((c) => ({ id: c.id, word: c.word })),
-    reviewedToday: await countReviewsOn(db, userId, today),
-    learnedToday: all.filter((c) => c.firstLearnedAt !== null && dayKey(c.firstLearnedAt) === today).length,
+    pending: cardsWith('pending'),
+    failed: cardsWith('failed'),
+    reviewedToday,
+    learnedToday: countLearnedOn(all, today),
     nextDueLine: next === null ? null : formatDayLine(dayKey(next), locale),
-    isOwner,
-    credits: { left: toCredits(balance.balanceMicros), granted: toCredits(balance.grantedMicros), spentMicros: balance.spentMicros },
-    outOfCredits: !isOwner && balance.balanceMicros <= 0,
   }
 }
 
@@ -91,7 +93,7 @@ export async function action({ request, context }: Route.ActionArgs) {
     const id = Number(form.get('cardId'))
     const card = await getCard(db, userId, id)
     if (!(await hasCredits(db, userId))) return { error: t.common.noCredits }
-    if (card && (card.status === 'failed' || isStuck(card, Date.now()))) {
+    if (card && cardStatus(card, Date.now()) === 'failed') {
       // shortcut: a stuck card stays shown as failed (isStuck keys off createdAt) until its retry finishes
       await markPending(db, userId, id)
       context.cloudflare.ctx.waitUntil(
@@ -113,7 +115,9 @@ export default function Home({ loaderData, actionData }: Route.ComponentProps) {
 type ActionData = Route.ComponentProps['actionData']
 
 function UserHome({ loaderData, actionData }: { loaderData: UserHome; actionData: ActionData }) {
-  const { state, today, dateLine, week, streak, newCards, pending, failed, outOfCredits } = loaderData
+  const { state, dateLine, week, streak, newCards, pending, failed } = loaderData
+  // requireAuth passed, so the shell has its signed-in data
+  const { isOwner, credits, outOfCredits } = useRouteLoaderData<typeof shellLoader>('routes/shell')!
   const revalidator = useRevalidator()
   const t = useT()
 
@@ -147,7 +151,7 @@ function UserHome({ loaderData, actionData }: { loaderData: UserHome; actionData
       <header className="today-head">
         <div>
           <p className="today-date">{dateLine}</p>
-          <h1>{t.home.today}</h1>
+          <h1>{t.nav.today}</h1>
         </div>
         {streak > 0 && (
           <Link to="/streak" className="today-streak" aria-label={`${streak} ${t.streak.inARow(streak)}`}>
@@ -167,8 +171,8 @@ function UserHome({ loaderData, actionData }: { loaderData: UserHome; actionData
 
       <div className="today-cols">
         <div className="today-main">
-          <TodayCard data={loaderData} actionData={actionData} />
-          {state === 'first-run' && <FirstSteps data={loaderData} />}
+          <TodayCard data={loaderData} actionData={actionData} outOfCredits={outOfCredits} />
+          {state === 'first-run' && <FirstSteps starterCredits={isOwner || outOfCredits ? null : credits.granted} />}
         </div>
         {state !== 'first-run' && (
           <div className="today-side">
@@ -184,8 +188,8 @@ function UserHome({ loaderData, actionData }: { loaderData: UserHome; actionData
             <section className="week-card">
               <h2>{t.home.weekLabel}</h2>
               <Link to="/streak" className="week" aria-label={weekLabel}>
-                {week.map(({ day, done }, i) => (
-                  <span key={day} className={done ? 'done' : day === today ? 'today' : day > today ? 'future' : 'missed'}>
+                {week.map(({ day, status }, i) => (
+                  <span key={day} className={status}>
                     {t.home.weekdays[i]}
                   </span>
                 ))}
@@ -202,8 +206,8 @@ function UserHome({ loaderData, actionData }: { loaderData: UserHome; actionData
 }
 
 // The one primary card; its content follows `state` (see todayState).
-function TodayCard({ data, actionData }: { data: UserHome; actionData: ActionData }) {
-  const { state, due, minutes, newCards, pending, failed, reviewedToday, learnedToday, nextDueLine, outOfCredits } = data
+function TodayCard({ data, actionData, outOfCredits }: { data: UserHome; actionData: ActionData; outOfCredits: boolean }) {
+  const { state, due, minutes, newCards, pending, failed, reviewedToday, learnedToday, nextDueLine } = data
   const t = useT()
 
   switch (state) {
@@ -217,11 +221,11 @@ function TodayCard({ data, actionData }: { data: UserHome; actionData: ActionDat
         </section>
       )
     case 'preparing':
-      // A failure is not a call to action: a calm surface card with a red heading, not the accent card.
+      // A failure is not a call to action: a calm tinted card with a red heading, not the accent card.
       if (failed.length > 0) {
         const card = failed[0]
         return (
-          <section className="today-card today-failed" data-state={state} data-variant="failed">
+          <section className="today-card today-failed" data-state={state}>
             <div>
               <h2>{t.home.failedTitle}</h2>
               <p><b lang="en">{card.word}</b></p>
@@ -267,7 +271,7 @@ function TodayCard({ data, actionData }: { data: UserHome; actionData: ActionDat
     case 'done': {
       const line = doneLine(reviewedToday, learnedToday)
       return (
-        <section className="primary-card today-card" data-state={state}>
+        <section className="today-card" data-state={state}>
           <Icon name="check" />
           <div>
             <h2>{t.home.doneTitle}</h2>
@@ -278,7 +282,7 @@ function TodayCard({ data, actionData }: { data: UserHome; actionData: ActionDat
     }
     case 'nothing-due':
       return (
-        <section className="primary-card today-card" data-state={state}>
+        <section className="surface-card today-card" data-state={state}>
           <h2>{t.home.nothingTitle}</h2>
           {nextDueLine && <p className="muted">{t.home.nothingNext(nextDueLine)}</p>}
         </section>
@@ -319,7 +323,8 @@ function FailedCards({ failed, outOfCredits }: { failed: { id: number; word: str
 }
 
 // First run only: what happens after adding a word, and the starter credits.
-function FirstSteps({ data }: { data: UserHome }) {
+// starterCredits is null for the owner and once credits run out: no note then.
+function FirstSteps({ starterCredits }: { starterCredits: number | null }) {
   const t = useT()
   const steps = [t.home.stepNow, t.home.stepThen, t.home.stepTomorrow]
   return (
@@ -329,7 +334,7 @@ function FirstSteps({ data }: { data: UserHome }) {
           <li key={label}><b>{label}</b><span>{sentence}</span></li>
         ))}
       </ol>
-      {!data.isOwner && !data.outOfCredits && <p className="muted today-note">{t.home.starterNote(data.credits.granted)}</p>}
+      {starterCredits !== null && <p className="muted today-note">{t.home.starterNote(starterCredits)}</p>}
     </>
   )
 }

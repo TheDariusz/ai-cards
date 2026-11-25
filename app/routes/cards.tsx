@@ -1,9 +1,9 @@
 import { Link } from 'react-router'
 import type { Route } from './+types/cards'
 import { requireAuth } from '../lib/session'
-import { createDb, isNewCard, listCards } from '../db/repo'
+import { createDb, listCards } from '../db/repo'
 import { useT } from '../lib/i18n'
-import { isStuck } from '../lib/cards'
+import { cardStatus } from '../lib/cards'
 
 export async function loader({ request, context }: Route.LoaderArgs) {
   const env = context.cloudflare.env
@@ -11,13 +11,10 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   const rows = await listCards(createDb(env.DB), userId)
   const now = Date.now()
   return {
-    cards: rows.map((c) => ({
-      id: c.id,
-      word: c.word,
-      wordPl: c.wordPl,
-      sentenceEn: c.sentenceEn,
-      tag: (isNewCard(c) ? 'new' : isStuck(c, now) ? 'failed' : c.status !== 'ready' ? c.status : null) as 'pending' | 'failed' | 'new' | null,
-    })),
+    cards: rows.map((c) => {
+      const status = cardStatus(c, now)
+      return { id: c.id, word: c.word, wordPl: c.wordPl, sentenceEn: c.sentenceEn, tag: status === 'ready' ? null : status }
+    }),
   }
 }
 

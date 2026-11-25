@@ -7,6 +7,7 @@ import { dict, useT } from '../lib/i18n'
 import { LocaleSwitch } from '../welcome/locale-switch'
 import { mailSenderFromEnv } from '../lib/resend'
 import { browserKeyCookie, loginConfigFromEnv, normalizeEmail, requestLoginLink } from '../lib/login'
+import { Logo } from '../ui/logo'
 
 export async function loader({ request, context }: Route.LoaderArgs) {
   if ((await getUserId(request, context.cloudflare.env)) !== null) throw redirect('/')
@@ -53,8 +54,7 @@ export default function Login() {
     <main className="page auth-page">
       <header className="auth-top">
         <Link to="/" className="auth-logo" aria-label="AI Cards">
-          <img className="logo-light" src="/logo-light.png" alt="" width="400" height="162" />
-          <img className="logo-dark" src="/logo-dark.png" alt="" width="400" height="162" />
+          <Logo />
         </Link>
         <LocaleSwitch />
       </header>

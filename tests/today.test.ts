@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { reviewMinutes, todayState, formatDayLine, doneLine, finishSummary } from '../app/lib/today'
+import { reviewMinutes, todayState, formatDayLine, formatMonth, doneLine, finishSummary } from '../app/lib/today'
 
 const base = { total: 5, ready: 5, due: 0, newCount: 0, todayDone: false }
 
@@ -39,4 +39,9 @@ describe('finishSummary', () => {
     expect(finishSummary(1, ['2026-11-20', today], today)).toEqual({ done: 1, streak: 1 }))
   it('reports nothing done when nothing happened today', () =>
     expect(finishSummary(0, [], today)).toEqual({ done: null, streak: null }))
+})
+
+describe('formatMonth', () => {
+  it('formats in Polish', () => expect(formatMonth('2026-11-24', 'pl')).toBe('listopad'))
+  it('formats in English', () => expect(formatMonth('2026-11-24', 'en')).toBe('November'))
 })

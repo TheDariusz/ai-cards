@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { dayKey, computeStreak, endOfDay, startOfDay, longestStreak, weekDays, monthGrid } from '../app/lib/streak'
+import { dayKey, computeStreak, endOfDay, startOfDay, longestStreak, weekDays, monthGrid, dayStatus } from '../app/lib/streak'
 
 describe('dayKey', () => {
   it('formats in Europe/Warsaw', () => {
@@ -77,4 +77,17 @@ describe('monthGrid', () => {
     expect(g.at(-1)).toBe('2026-11-30')
   })
   it('needs no padding when the month starts on Monday', () => expect(monthGrid('2027-02-10')[0]).toBe('2027-02-01'))
+})
+
+describe('dayStatus', () => {
+  const done = new Set(['2026-11-20', '2026-11-24'])
+  it('marks a completed day done, even when it is today', () => {
+    expect(dayStatus('2026-11-24', '2026-11-24', done)).toBe('done')
+    expect(dayStatus('2026-11-20', '2026-11-24', done)).toBe('done')
+  })
+  it('tells today, future and missed days apart', () => {
+    expect(dayStatus('2026-11-25', '2026-11-25', done)).toBe('today')
+    expect(dayStatus('2026-11-26', '2026-11-25', done)).toBe('future')
+    expect(dayStatus('2026-11-21', '2026-11-25', done)).toBe('missed')
+  })
 })

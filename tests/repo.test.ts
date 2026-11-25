@@ -1,7 +1,8 @@
 import { describe, it, expect } from 'vitest'
 import { testDb } from './helpers/db'
 import { eq } from 'drizzle-orm'
-import { insertPendingCard, getDueCards, countDue, getCard, listCards, markReady, markFailed, markPending, applyReview, completedDays, updateCardContent, deleteCard, getNewCards, completeFirstLearning, isNewCard, countReviewsOn, getSetting, setSetting, isDayDone, countNew, nextDueAt, setAudioKey, listReviewLog, findOrCreateUser, getUserLocale, setUserLocale, type Db } from '../app/db/repo'
+import { insertPendingCard, getDueCards, countDue, getCard, listCards, markReady, markFailed, markPending, applyReview, completedDays, updateCardContent, deleteCard, getNewCards, completeFirstLearning, countReviewsOn, countCards, getSetting, setSetting, isDayDone, countNew, nextDueAt, setAudioKey, listReviewLog, findOrCreateUser, getUserLocale, setUserLocale, type Db } from '../app/db/repo'
+import { isNewCard } from '../app/lib/cards'
 import { cards, reviewLog, dayLog, users, OWNER_USER_ID as U } from '../app/db/schema'
 import { dayKey } from '../app/lib/streak'
 import { newCardSrs } from '../app/lib/srs'
@@ -267,6 +268,8 @@ describe('per-user isolation', () => {
     expect(await listCards(db, other)).toEqual([])
     expect(await getDueCards(db, other, NOW + 365 * DAY)).toEqual([])
     expect(await countDue(db, other, NOW + 365 * DAY)).toBe(0)
+    expect(await countCards(db, other)).toBe(0)
+    expect(await countCards(db, U)).toBe(1)
     expect(await nextDueAt(db, other, NOW)).toBeNull()
     expect(await countReviewsOn(db, other, dayKey(NOW))).toBe(0)
     expect(await listReviewLog(db, other)).toEqual([])

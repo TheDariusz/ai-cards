@@ -1,30 +1,26 @@
 import { Form, Link, useFetcher, useRouteLoaderData } from 'react-router'
 import type { Route } from './+types/settings'
 import { requireAuth } from '../lib/session'
-import { createDb, getBalance, getSetting, getUserEmail } from '../db/repo'
-import { OWNER_USER_ID } from '../db/schema'
-import { toCredits } from '../lib/credits'
+import { createDb, getSetting, getUserEmail } from '../db/repo'
 import { useT } from '../lib/i18n'
 import type { ThemePref } from '../lib/theme'
 import { LocaleSwitch } from '../welcome/locale-switch'
 import type { loader as rootLoader } from '../root'
+import type { loader as shellLoader } from './shell'
 import type { action as reminderAction } from './reminder'
 
 export async function loader({ request, context }: Route.LoaderArgs) {
   const env = context.cloudflare.env
   const userId = await requireAuth(request, env)
   const db = createDb(env.DB)
-  const balance = await getBalance(db, userId)
-  return {
-    email: await getUserEmail(db, userId),
-    reminderEnabled: (await getSetting(db, userId, 'reminderEnabled')) !== 'false',
-    isOwner: userId === OWNER_USER_ID,
-    credits: { left: toCredits(balance.balanceMicros), granted: toCredits(balance.grantedMicros), spentMicros: balance.spentMicros },
-  }
+  const [email, reminder] = await Promise.all([getUserEmail(db, userId), getSetting(db, userId, 'reminderEnabled')])
+  return { email, reminderEnabled: reminder !== 'false' }
 }
 
 export default function Settings({ loaderData }: Route.ComponentProps) {
-  const { email, reminderEnabled, isOwner, credits } = loaderData
+  const { email, reminderEnabled } = loaderData
+  // requireAuth passed, so the shell has its signed-in data
+  const { isOwner, credits } = useRouteLoaderData<typeof shellLoader>('routes/shell')!
   const t = useT()
   const theme = useRouteLoaderData<typeof rootLoader>('root')?.theme ?? 'auto'
   const reminder = useFetcher<typeof reminderAction>()
@@ -52,7 +48,7 @@ export default function Settings({ loaderData }: Route.ComponentProps) {
           </Form>
         </div>
         <div className="setting-row">
-          <span>{t.settings.languageLabel}</span>
+          <span>{t.common.language}</span>
           <LocaleSwitch />
         </div>
       </section>

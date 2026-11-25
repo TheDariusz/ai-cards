@@ -6,6 +6,7 @@ import { dict } from '../lib/i18n'
 import { localeCookie, toLocale, type Locale } from '../lib/locale'
 import type { Logger } from '../lib/logger'
 import { clearBrowserKeyCookie, isRequestingBrowser, loginConfigFromEnv, verifyLoginLink } from '../lib/login'
+import { Logo } from '../ui/logo'
 
 // GET signs in only in the browser that asked for the link; anywhere else (mail scanners that
 // prefetch links, another device) it renders a button, so a prefetch can't burn the one-time token.
@@ -56,8 +57,7 @@ export default function LoginVerify({ loaderData }: Route.ComponentProps) {
     <main className="page auth-page" lang={loaderData.lang}>
       <header className="auth-top">
         <Link to="/" className="auth-logo" aria-label="AI Cards">
-          <img className="logo-light" src="/logo-light.png" alt="" width="400" height="162" />
-          <img className="logo-dark" src="/logo-dark.png" alt="" width="400" height="162" />
+          <Logo />
         </Link>
       </header>
       <div className="auth-block">

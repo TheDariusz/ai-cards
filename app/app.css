@@ -73,6 +73,7 @@ form > input:not([type="hidden"]) + button, form > textarea + button { margin-to
 .task-head { display: flex; align-items: center; gap: 10px; font-weight: 600; font-variant-numeric: tabular-nums; }
 .task-head > a { display: inline-flex; align-items: center; justify-content: center; min-width: 44px; min-height: 44px; margin-left: -10px; border-radius: 12px; color: var(--text); text-decoration: none; }
 .task-head > a .icon { width: 22px; height: 22px; }
+.task-head h1 { margin: 0; }
 .task-progress { flex: 1; height: 5px; border-radius: 9px; background: var(--accent-soft); overflow: hidden; }
 .task-progress span { display: block; height: 100%; border-radius: inherit; background: var(--accent); }
 /* Actions pinned to the bottom of a phone screen, in normal flow on desktop. Inline padding lines them up with .page. */
@@ -95,13 +96,14 @@ form > input:not([type="hidden"]) + button, form > textarea + button { margin-to
 .shell-nav a[aria-current="page"] { color: var(--accent); font-weight: 700; }
 .shell-nav a[aria-current="page"] .icon { background: var(--accent-soft); }
 .shell-nav .shell-logo, .shell-count, .shell-credits { display: none; }
-:is(.shell-logo, .auth-logo) .logo-dark { display: none; }
+/* The logo pair (app/ui/logo.tsx): show the one for the theme. :root lifts these above the `… img { display: block }` sizing rules. */
+:root .logo-dark { display: none; }
 @media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) :is(.shell-logo, .auth-logo) .logo-light { display: none; }
-  :root:not([data-theme="light"]) :is(.shell-logo, .auth-logo) .logo-dark { display: block; }
+  :root:not([data-theme="light"]) .logo-light { display: none; }
+  :root:not([data-theme="light"]) .logo-dark { display: block; }
 }
-:root[data-theme="dark"] :is(.shell-logo, .auth-logo) .logo-light { display: none; }
-:root[data-theme="dark"] :is(.shell-logo, .auth-logo) .logo-dark { display: block; }
+:root[data-theme="dark"] .logo-light { display: none; }
+:root[data-theme="dark"] .logo-dark { display: block; }
 @media (min-width: 900px) {
   .shell { display: grid; grid-template-columns: 208px minmax(0, 1fr); min-height: 100vh; padding-bottom: 0; }
   .shell-content { width: 100%; max-width: 880px; margin: 0 auto; }
@@ -137,7 +139,8 @@ form > input:not([type="hidden"]) + button, form > textarea + button { margin-to
 /* Secondary, so a Retry next to the add-word row never competes with the primary card. */
 .failed-row button { flex: none; min-height: 44px; background: var(--accent-soft); color: var(--accent); }
 .today-cols, .today-main, .today-side { display: grid; gap: 14px; }
-.today-card { display: grid; gap: 12px; }
+/* The Today card's shape; the colours come from .primary-card (a call to action) or the state rules below. */
+.today-card { display: grid; gap: 12px; border-radius: 22px; padding: 18px; }
 .today-card > div { display: grid; gap: 4px; }
 .today-card h2 { font-size: 1.2rem; line-height: 1.2; letter-spacing: -0.01em; }
 .today-card > svg.icon { width: 28px; height: 28px; stroke-width: 2.4; color: var(--ok); }
@@ -152,10 +155,9 @@ form > input:not([type="hidden"]) + button, form > textarea + button { margin-to
 .today-card .add-word { border: 0; background: var(--on-accent); }
 .today-card .add-word button { background: var(--accent); color: var(--on-accent); }
 .today-card .add-word:focus-within { outline-color: var(--on-accent); }
-.today-card[data-state="done"] { grid-template-columns: auto minmax(0, 1fr); align-items: start; background: var(--ok-soft); color: var(--text); }
-.today-card[data-state="nothing-due"] { background: var(--surface); color: var(--text); border: 1px solid var(--edge); }
+.today-card[data-state="done"] { grid-template-columns: auto minmax(0, 1fr); align-items: start; background: var(--ok-soft); }
 /* The first card failed: a calm tinted card with a red heading and a normal accent Retry, not a call to action. */
-.today-failed { background: var(--bad-soft); color: var(--text); border-radius: 22px; padding: 18px; }
+.today-failed { background: var(--bad-soft); }
 .today-failed h2 { color: var(--bad); }
 .today-failed button { min-height: 44px; padding: 0 22px; }
 .today-steps { display: grid; gap: 10px; margin: 0; list-style: none; }
@@ -215,7 +217,6 @@ form > input:not([type="hidden"]) + button, form > textarea + button { margin-to
 
 /* Card detail: the task header, then the audio, the edit fields and the regenerate row as surface cards; delete stays a plain red button at the end. */
 .card-detail { display: grid; gap: 12px; overflow-wrap: anywhere; }
-.card-detail .task-head h1 { margin: 0; }
 .card-detail p { margin: 0; }
 .card-detail audio { display: block; width: 100%; }
 .card-fields { display: grid; gap: 12px; }
@@ -225,23 +226,19 @@ form > input:not([type="hidden"]) + button, form > textarea + button { margin-to
 .card-detail button { min-height: 44px; }
 .card-detail .quick-add { flex-wrap: wrap; margin: 0; }
 .card-detail .quick-add input { min-width: 12rem; }
-@media (min-width: 900px) { .card-detail { max-width: 640px; } }
 
 /* Admin: one surface card of user rows. */
 .admin-page { display: grid; gap: 12px; }
-.admin-page .task-head h1 { margin: 0; }
 .admin-list { padding-block: 0; }
 .request-row { display: flex; flex-wrap: wrap; gap: 0.5rem; align-items: center; padding: 0.5rem 0; border-bottom: 1px solid var(--edge); }
 .request-row:last-child { border-bottom: 0; }
 .request-row > span:first-of-type { flex: 1; min-width: 9rem; overflow-wrap: anywhere; }
 .request-actions { display: flex; gap: 0.5rem; align-items: center; margin-left: auto; }
 .request-actions button { min-height: 44px; }
-@media (min-width: 900px) { .admin-page { max-width: 640px; } }
 
 /* Settings screen */
 .settings-page { display: grid; gap: 12px; }
 .settings-card { display: grid; gap: 10px; }
-@media (min-width: 900px) { .settings-page { max-width: 640px; } }
 .setting-row { display: flex; justify-content: space-between; align-items: center; gap: 12px; min-height: 44px; margin: 0; }
 .setting-row .muted { font-size: 0.85rem; }
 .setting-link { display: flex; align-items: center; min-height: 44px; font-weight: 600; text-decoration: none; }
@@ -271,17 +268,18 @@ button.setting-link:disabled { opacity: 0.6; }
 /* Only completed days are filled; plain past days are just the number. */
 .cal-day { display: grid; place-items: center; width: min(100%, 40px); aspect-ratio: 1; margin: 0 auto; border-radius: 50%; background: transparent; color: var(--text); }
 .cal .done .cal-day { background: var(--ok); color: var(--bg); font-weight: 600; }
-.cal .today .cal-day { background: transparent; box-shadow: inset 0 0 0 2px var(--accent); color: var(--text); font-weight: 600; }
-.cal .future .cal-day { background: transparent; opacity: 0.5; }
+.cal .today .cal-day { box-shadow: inset 0 0 0 2px var(--accent); font-weight: 600; }
+.cal .future .cal-day { opacity: 0.5; }
 .streak-stats { display: flex; gap: 10px; }
 .streak-stats .surface-card { flex: 1; display: grid; }
 .streak-stats b { font-size: 24px; letter-spacing: -0.02em; font-variant-numeric: tabular-nums; }
-@media (min-width: 900px) { .streak-page { max-width: 640px; } }
+
+/* On a wide screen the list and detail screens get a bit more room than the 520px column. */
+@media (min-width: 900px) { :is(.cards-page, .card-detail, .settings-page, .streak-page, .admin-page) { max-width: 640px; } }
 
 /* Cards */
 .card-face { background: var(--surface); border: 1px solid var(--edge); border-radius: 18px; padding: 16px; margin: 1rem 0; }
 .cards-page { display: grid; gap: 12px; overflow-wrap: anywhere; }
-@media (min-width: 900px) { .cards-page { max-width: 640px; } }
 .cards-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
 .cards-head h1 { margin: 0; }
 .cards-empty { display: grid; gap: 4px; }
@@ -301,7 +299,6 @@ button.setting-link:disabled { opacity: 0.6; }
 .task-screen { display: grid; gap: 14px; overflow-wrap: anywhere; }
 .task-screen p { margin: 0; }
 .task-screen audio { width: 100%; }
-.task-screen .task-head h1 { margin: 0; }
 .task-intro { display: grid; gap: 2px; }
 /* A long headword breaks at hyphenation points (lang="en" on the word), mid-word only when it can't fit at all.
    min-width: 0 lets the grid tracks shrink below an unbroken word, so it never scrolls sideways. */
@@ -383,13 +380,6 @@ button.setting-link:disabled { opacity: 0.6; }
 .landing { max-width: 1040px; margin: 0 auto; padding: 0 16px 48px; }
 .landing-header { display: flex; align-items: center; justify-content: space-between; padding: 18px 0 34px; }
 .landing-header img { height: 52px; width: auto; display: block; }
-.landing-header .logo-dark { display: none; }
-@media (prefers-color-scheme: dark) {
-  :root:not([data-theme="light"]) .landing-header .logo-light { display: none; }
-  :root:not([data-theme="light"]) .landing-header .logo-dark { display: block; }
-}
-:root[data-theme="dark"] .landing-header .logo-light { display: none; }
-:root[data-theme="dark"] .landing-header .logo-dark { display: block; }
 .landing-header-actions { display: flex; align-items: center; gap: 16px; }
 .landing-login { display: inline-flex; align-items: center; min-height: 44px; color: var(--text); font-weight: 500; text-underline-offset: 4px; }
 .landing-header .locale-switch button { min-height: 44px; min-width: 48px; }

@@ -2,6 +2,7 @@ import { useEffect, useRef, useState, type CSSProperties } from 'react'
 import { Link } from 'react-router'
 import { useT } from '../lib/i18n'
 import { LocaleSwitch } from './locale-switch'
+import { Logo } from '../ui/logo'
 
 const AUTHOR_SITE = 'https://thedariusz.dev'
 const EXTERNAL = { target: '_blank', rel: 'noopener' } as const
@@ -84,8 +85,7 @@ export function Landing({ starterCredits, dailyCardLimit }: { starterCredits: nu
       <div className="landing-glow" aria-hidden="true" />
       <header className="landing-header">
         <Link to="/" aria-label="AI Cards">
-          <img className="logo-light" src="/logo-light.png" alt="" width="400" height="162" />
-          <img className="logo-dark" src="/logo-dark.png" alt="" width="400" height="162" />
+          <Logo />
         </Link>
         <div className="landing-header-actions">
           <LocaleSwitch />

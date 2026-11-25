@@ -1,32 +1,28 @@
-import { Link } from 'react-router'
 import type { Route } from './+types/streak'
 import { requireAuth } from '../lib/session'
-import { completedDays, createDb, listCards } from '../db/repo'
+import { completedDays, countCards, createDb } from '../db/repo'
 import { useT } from '../lib/i18n'
 import { parseLocale } from '../lib/locale'
-import { computeStreak, dayKey, longestStreak, monthGrid } from '../lib/streak'
-import { Icon } from '../ui/icons'
-
-// Noon UTC keeps the month name stable in any time zone.
-const monthName = (today: string, locale: string) =>
-  new Intl.DateTimeFormat(locale, { month: 'long', timeZone: 'UTC' }).format(new Date(`${today.slice(0, 8)}01T12:00:00Z`))
+import { computeStreak, dayKey, dayStatus, longestStreak, monthGrid } from '../lib/streak'
+import { formatMonth } from '../lib/today'
+import { TaskHead } from '../ui/task-head'
 
 export async function loader({ request, context }: Route.LoaderArgs) {
   const env = context.cloudflare.env
   const userId = await requireAuth(request, env)
   const db = createDb(env.DB)
   const today = dayKey(Date.now())
-  const days = await completedDays(db, userId)
+  const [days, total] = await Promise.all([completedDays(db, userId), countCards(db, userId)])
   const month = today.slice(0, 7)
   const locale = parseLocale(request.headers.get('Cookie'))
   return {
     today,
-    monthName: monthName(today, locale),
+    monthName: formatMonth(today, locale),
     streak: computeStreak(days, today),
     longest: longestStreak(days),
     grid: monthGrid(today),
     done: days.filter((d) => d.startsWith(month)),
-    total: (await listCards(db, userId)).length,
+    total,
   }
 }
 
@@ -39,19 +35,11 @@ export default function Streak({ loaderData }: Route.ComponentProps) {
     return [...row, ...Array<null>(7 - row.length).fill(null)]
   })
 
-  const cell = (day: string) => {
-    if (doneSet.has(day)) return { className: 'done', state: t.streak.dayDone }
-    if (day === today) return { className: 'today', state: t.streak.dayToday }
-    if (day > today) return { className: 'future', state: t.streak.dayFuture }
-    return { className: 'missed', state: t.streak.dayMissed }
-  }
+  const stateLabel = { done: t.streak.dayDone, today: t.streak.dayToday, future: t.streak.dayFuture, missed: t.streak.dayMissed }
 
   return (
     <main className="page streak-page">
-      <header className="task-head">
-        <Link to="/" aria-label={t.streak.back}><Icon name="back" /></Link>
-        <h1>{t.streak.title}</h1>
-      </header>
+      <TaskHead to="/" label={t.streak.back}><h1>{t.streak.title}</h1></TaskHead>
 
       <div className="streak-hero">
         <span className="streak-number">{streak}</span>
@@ -73,11 +61,11 @@ export default function Streak({ loaderData }: Route.ComponentProps) {
               <tr key={r}>
                 {row.map((day, c) => {
                   if (day === null) return <td key={c} />
-                  const { className, state } = cell(day)
+                  const status = dayStatus(day, today, doneSet)
                   return (
-                    <td key={c} className={className}>
+                    <td key={c} className={status}>
                       <span className="cal-day">{Number(day.slice(8))}</span>
-                      <span className="visually-hidden">, {state}</span>
+                      <span className="visually-hidden">, {stateLabel[status]}</span>
                     </td>
                   )
                 })}

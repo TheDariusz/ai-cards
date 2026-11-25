@@ -1,4 +1,4 @@
-import { Form, Link, redirect, useNavigation } from 'react-router'
+import { Form, redirect, useNavigation } from 'react-router'
 import type { Route } from './+types/card-detail'
 import { requireAuth } from '../lib/session'
 import { createDb, getCard, updateCardContent, deleteCard, setAudioKey } from '../db/repo'
@@ -9,7 +9,7 @@ import { hasCredits, usageRecorder } from '../lib/credits'
 import { parseLocale } from '../lib/locale'
 import { dict, useT } from '../lib/i18n'
 import { MAX_TEXT_CHARS, MAX_WORD_CHARS } from '../lib/limits'
-import { Icon } from '../ui/icons'
+import { TaskHead } from '../ui/task-head'
 
 export async function loader({ request, params, context }: Route.LoaderArgs) {
   const env = context.cloudflare.env
@@ -137,10 +137,7 @@ export default function CardDetail({ loaderData, actionData }: Route.ComponentPr
   const contentKey = [card.wordPl, card.explanationEn, card.sentenceEn, card.sentencePl, JSON.stringify(card.decodeParts)].join('|')
   return (
     <main className="page card-detail">
-      <header className="task-head">
-        <Link to="/cards" aria-label={t.card.back}><Icon name="back" /></Link>
-        <h1>{card.word}</h1>
-      </header>
+      <TaskHead to="/cards" label={t.card.back}><h1>{card.word}</h1></TaskHead>
       {card.audioKey ? (
         <section className="surface-card">
           <audio controls src={`/audio/${card.id}?v=${encodeURIComponent(card.audioKey ?? '')}`} />

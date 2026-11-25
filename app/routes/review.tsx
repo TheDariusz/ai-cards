@@ -1,4 +1,4 @@
-import { Link, useFetcher, useSearchParams } from 'react-router'
+import { useFetcher, useSearchParams } from 'react-router'
 import { useEffect, useRef, useState } from 'react'
 import type { Route } from './+types/review'
 import { requireAuth } from '../lib/session'
@@ -12,7 +12,8 @@ import { finishSummary } from '../lib/today'
 import type { CheckResult } from './review-check'
 import { MAX_TEXT_CHARS } from '../lib/limits'
 import { useT } from '../lib/i18n'
-import { Icon } from '../ui/icons'
+import { ProgressBar } from '../ui/progress-bar'
+import { TaskHead } from '../ui/task-head'
 import { TaskFinish } from '../ui/task-finish'
 
 const KEY_TO_GRADE: Record<string, 'again' | 'good' | 'easy'> = { '1': 'again', '2': 'good', '3': 'easy' }
@@ -23,11 +24,10 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   const db = createDb(env.DB)
   const now = Date.now()
   const today = dayKey(now)
-  const due = await getDueCards(db, userId, now)
-  const doneToday = await countReviewsOn(db, userId, today)
+  const [due, doneToday] = await Promise.all([getDueCards(db, userId, now), countReviewsOn(db, userId, today)])
   // Nothing left: the closing screen reports today's reviews and, once today counts, the streak.
-  const finish = due.length === 0 ? finishSummary(doneToday, await completedDays(db, userId), today) : null
-  return { due, doneToday, finish }
+  if (due.length === 0) return { due, doneToday, finish: finishSummary(doneToday, await completedDays(db, userId), today) }
+  return { due, doneToday, finish: null }
 }
 
 export async function action({ request, context }: Route.ActionArgs) {
@@ -289,41 +289,27 @@ export default function Review({ loaderData }: Route.ComponentProps) {
   const mode = params.get('mode') === 'flip' ? 'flip' : 'write'
   const card = loaderData.due[0] // action revalidates the loader → next card appears
 
-  if (!card) {
-    const { done, streak } = loaderData.finish ?? { done: null, streak: null }
+  if (loaderData.finish) {
+    const { done, streak } = loaderData.finish
     return (
       <main className="page task-screen">
-        <header className="task-head">
-          <Link to="/" aria-label={t.close}><Icon name="close" /></Link>
-          <h1>{t.title}</h1>
-        </header>
-        <TaskFinish kind="review" title={t.allDone} line={done !== null ? tAll.home.doneReviewed(done) : null} streak={streak} />
+        <TaskHead to="/" label={t.close} icon="close"><h1>{t.title}</h1></TaskHead>
+        <TaskFinish title={t.allDone} line={done !== null ? tAll.home.doneReviewed(done) : null} streak={streak} />
       </main>
     )
   }
 
   const { doneToday } = loaderData
   const left = loaderData.due.length
-  // an Again-graded card stays due, so doneToday can grow while left doesn't drop
-  const pct = Math.min(100, Math.round((doneToday / (doneToday + left)) * 100))
 
   return (
     <main className="page task-screen">
       <h1 className="visually-hidden">{t.title}</h1>
-      <header className="task-head">
-        <Link to="/" aria-label={t.close}><Icon name="close" /></Link>
-        <div
-          className="task-progress"
-          role="progressbar"
-          aria-label={t.progress}
-          aria-valuemin={0}
-          aria-valuemax={doneToday + left}
-          aria-valuenow={doneToday}
-        >
-          <span style={{ width: `${pct}%` }} />
-        </div>
+      <TaskHead to="/" label={t.close} icon="close">
+        {/* an Again-graded card stays due, so doneToday can grow while left doesn't drop */}
+        <ProgressBar value={doneToday} max={doneToday + left} label={t.progress} />
         <span className="muted">{t.left(left)}</span>
-      </header>
+      </TaskHead>
       <div className="segmented" role="group" aria-label={t.mode}>
         {(['write', 'flip'] as const).map((option) => (
           <button

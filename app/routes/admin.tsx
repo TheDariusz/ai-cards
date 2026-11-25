@@ -1,4 +1,4 @@
-import { Form, Link } from 'react-router'
+import { Form } from 'react-router'
 import type { Route } from './+types/admin'
 import { requireAuth } from '../lib/session'
 import { createDb, grantCredits, listUsersWithUsage, setBlocked } from '../db/repo'
@@ -6,7 +6,7 @@ import { OWNER_USER_ID } from '../db/schema'
 import { starterMicros, toCredits } from '../lib/credits'
 import { dict, useT } from '../lib/i18n'
 import { parseLocale } from '../lib/locale'
-import { Icon } from '../ui/icons'
+import { TaskHead } from '../ui/task-head'
 
 async function requireOwner(request: Request, env: Env) {
   if ((await requireAuth(request, env)) !== OWNER_USER_ID) throw new Response('Not found', { status: 404 })
@@ -45,10 +45,7 @@ export default function Admin({ loaderData, actionData }: Route.ComponentProps) 
   const { users, topUpCredits } = loaderData
   return (
     <main className="page admin-page">
-      <header className="task-head">
-        <Link to="/settings" aria-label={t.back}><Icon name="back" /></Link>
-        <h1>{t.title}</h1>
-      </header>
+      <TaskHead to="/settings" label={t.back}><h1>{t.title}</h1></TaskHead>
       {actionData && 'error' in actionData && <p className="error">{actionData.error}</p>}
       <section className="surface-card admin-list">
         {users.map((u) => (
