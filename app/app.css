@@ -120,6 +120,8 @@ form > input:not([type="hidden"]) + button, form > textarea + button { margin-to
 .add-word button { flex: none; min-height: 44px; background: var(--accent-soft); color: var(--accent); border-radius: 10px; padding: 0 14px; }
 .failed-row { display: flex; gap: 0.5rem; align-items: center; }
 .failed-row span { min-width: 0; }
+/* Secondary, so a Retry next to the add-word row never competes with the primary card. */
+.failed-row button { flex: none; min-height: 44px; background: var(--accent-soft); color: var(--accent); }
 .today-cols, .today-main, .today-side { display: grid; gap: 14px; }
 .today-card { display: grid; gap: 12px; }
 .today-card > div { display: grid; gap: 4px; }
@@ -132,12 +134,13 @@ form > input:not([type="hidden"]) + button, form > textarea + button { margin-to
 .today-card .ok, .today-card .error { color: inherit; font-weight: 600; }
 .today-card .add-word { border: 0; background: var(--on-accent); }
 .today-card .add-word button { background: var(--accent); color: var(--on-accent); }
-/* Failed rows sit in the card only while preparing, which is an accent card. */
-.today-card[data-state="preparing"] .failed-row button { min-height: 44px; background: var(--on-accent); color: var(--accent); }
-.today-card[data-state="preparing"] .failed-row button:focus-visible { outline-color: var(--on-accent); }
 .today-card .add-word:focus-within { outline-color: var(--on-accent); }
 .today-card[data-state="done"] { grid-template-columns: auto minmax(0, 1fr); align-items: start; background: var(--ok-soft); color: var(--text); }
 .today-card[data-state="nothing-due"] { background: var(--surface); color: var(--text); border: 1px solid var(--edge); }
+/* The first card failed: a calm tinted card with a red heading and a normal accent Retry, not a call to action. */
+.today-failed { background: var(--bad-soft); color: var(--text); border-radius: 22px; padding: 18px; }
+.today-failed h2 { color: var(--bad); }
+.today-failed button { min-height: 44px; padding: 0 22px; }
 .today-steps { display: grid; gap: 10px; margin: 0; list-style: none; }
 .today-steps li { display: flex; gap: 10px; align-items: baseline; }
 .today-steps b { flex: none; width: 7em; font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--accent); }
@@ -157,6 +160,8 @@ form > input:not([type="hidden"]) + button, form > textarea + button { margin-to
   .today-head h1 { font-size: 1.75rem; }
   .today-screen .add-word { max-width: 460px; }
   .today-cols { grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 20px; align-items: start; }
+  /* First run has no side column: one column instead of a squeezed left half. */
+  .today-screen[data-state="first-run"] .today-cols { grid-template-columns: minmax(0, 560px); }
   .today-card { padding: 26px; gap: 20px; }
   .today-count { font-size: 72px; }
   .today-action { justify-self: start; padding: 13px 26px; }

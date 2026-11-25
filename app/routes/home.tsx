@@ -126,9 +126,11 @@ function UserHome({ loaderData, actionData }: { loaderData: UserHome; actionData
 
   const showTile = state !== 'learn' && newCards.length > 0
   const weekLabel = `${t.home.weekLabel} · ${streak} ${t.streak.inARow(streak)}`
+  // While the first card is on its way the primary card already says so: no "added" line, no status line.
+  const quietProgress = state === 'preparing' && failed.length === 0
 
   return (
-    <main className="page today-screen">
+    <main className="page today-screen" data-state={state}>
       <header className="today-head">
         <div>
           <p className="today-date">{dateLine}</p>
@@ -144,9 +146,9 @@ function UserHome({ loaderData, actionData }: { loaderData: UserHome; actionData
       {state !== 'first-run' && (
         <div className="today-add">
           <AddWord outOfCredits={outOfCredits} placeholder={t.home.newWord} />
-          <Feedback actionData={actionData} />
-          {/* While preparing, the primary card carries the failed cards and their Retry. */}
-          {state !== 'preparing' && <FailedCards failed={failed} outOfCredits={outOfCredits} />}
+          <Feedback actionData={actionData} hideAdded={quietProgress} />
+          {/* While preparing, the primary card carries the first failed card and its Retry. */}
+          <FailedCards failed={state === 'preparing' ? failed.slice(1) : failed} outOfCredits={outOfCredits} />
         </div>
       )}
 
@@ -161,7 +163,7 @@ function UserHome({ loaderData, actionData }: { loaderData: UserHome; actionData
               <section className="surface-card today-tile">
                 <div>
                   <b>{t.home.newWords(newCards.length)}</b>
-                  <p className="muted">{t.home.startWith(newCards[0].word)}</p>
+                  <p className="muted">{state === 'done' ? t.home.startWithOptional(newCards[0].word) : t.home.startWith(newCards[0].word)}</p>
                 </div>
                 <Link to="/learn" className="tile-action">{t.home.learnNow}</Link>
               </section>
@@ -176,7 +178,7 @@ function UserHome({ loaderData, actionData }: { loaderData: UserHome; actionData
                 ))}
               </Link>
             </section>
-            {pending.length > 0 && (
+            {pending.length > 0 && !quietProgress && (
               <p className="muted today-status">{t.home.generating} {pending.map((c) => c.word).join(', ')}</p>
             )}
           </div>
@@ -197,21 +199,35 @@ function TodayCard({ data, actionData }: { data: UserHome; actionData: ActionDat
         <section className="primary-card today-card" data-state={state}>
           <h2>{t.home.firstTitle}</h2>
           <p>{t.home.firstBody}</p>
-          <AddWord outOfCredits={outOfCredits} placeholder={t.home.firstPlaceholder} />
+          <AddWord outOfCredits={outOfCredits} placeholder={t.home.firstPlaceholder} autoFocus />
           <Feedback actionData={actionData} />
         </section>
       )
     case 'preparing':
+      // A failure is not a call to action: a calm surface card with a red heading, not the accent card.
+      if (failed.length > 0) {
+        const card = failed[0]
+        return (
+          <section className="today-card today-failed" data-state={state} data-variant="failed">
+            <div>
+              <h2>{t.home.failedTitle}</h2>
+              <p><b lang="en">{card.word}</b></p>
+              <p>{t.home.failedHint}</p>
+            </div>
+            {!outOfCredits && (
+              <Form method="post">
+                <input type="hidden" name="intent" value="retry" />
+                <input type="hidden" name="cardId" value={card.id} />
+                <button type="submit">{t.home.retry}</button>
+              </Form>
+            )}
+          </section>
+        )
+      }
       return (
         <section className="primary-card today-card" data-state={state}>
-          {failed.length > 0 ? (
-            <FailedCards failed={failed} outOfCredits={outOfCredits} />
-          ) : (
-            <>
-              <h2>{t.home.preparingTitle}</h2>
-              {pending.length > 0 && <p>{t.home.preparingBody(pending[0].word)}</p>}
-            </>
-          )}
+          <h2>{t.home.preparingTitle}</h2>
+          {pending.length > 0 && <p>{t.home.preparingBody(pending[0].word)}</p>}
         </section>
       )
     case 'review':
@@ -256,21 +272,22 @@ function TodayCard({ data, actionData }: { data: UserHome; actionData: ActionDat
   }
 }
 
-function AddWord({ outOfCredits, placeholder }: { outOfCredits: boolean; placeholder: string }) {
+// autoFocus only on first run: elsewhere the field would outshine the primary card with a permanent focus ring.
+function AddWord({ outOfCredits, placeholder, autoFocus = false }: { outOfCredits: boolean; placeholder: string; autoFocus?: boolean }) {
   const t = useT()
   if (outOfCredits) return <p className="error">{t.common.noCredits}</p>
   return (
     <Form method="post" className="add-word">
       <input type="hidden" name="intent" value="add" />
-      <input name="word" placeholder={placeholder} aria-label={t.home.newWord} autoComplete="off" maxLength={MAX_WORD_CHARS} autoFocus />
+      <input name="word" placeholder={placeholder} aria-label={t.home.newWord} autoComplete="off" maxLength={MAX_WORD_CHARS} autoFocus={autoFocus} />
       <button type="submit">{t.home.add}</button>
     </Form>
   )
 }
 
-function Feedback({ actionData }: { actionData: ActionData }) {
+function Feedback({ actionData, hideAdded = false }: { actionData: ActionData; hideAdded?: boolean }) {
   const t = useT()
-  if (actionData && 'added' in actionData) return <p className="ok">{t.home.added(actionData.added ?? '')}</p>
+  if (actionData && 'added' in actionData) return hideAdded ? null : <p className="ok">{t.home.added(actionData.added ?? '')}</p>
   if (actionData && 'error' in actionData) return <p className="error">{actionData.error}</p>
   return null
 }
