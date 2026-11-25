@@ -23,6 +23,9 @@ const pl = {
     language: 'Język',
     noCredits: 'Brak kredytów. Nowe karty i funkcje AI są niedostępne.',
     backToToday: 'Wróć do Dziś',
+    play: 'Odtwórz',
+    pause: 'Wstrzymaj',
+    audioPosition: 'Pozycja nagrania',
   },
   nav: {
     label: 'Nawigacja',
@@ -290,6 +293,9 @@ const en: Dict = {
     language: 'Language',
     noCredits: 'Out of credits. New cards and AI features are unavailable.',
     backToToday: 'Back to Today',
+    play: 'Play',
+    pause: 'Pause',
+    audioPosition: 'Audio position',
   },
   nav: {
     label: 'Navigation',

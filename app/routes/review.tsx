@@ -1,5 +1,5 @@
 import { useFetcher, useSearchParams } from 'react-router'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { Route } from './+types/review'
 import { requireAuth } from '../lib/session'
 import { createDb, getDueCards, applyReview, countReviewsOn, completedDays } from '../db/repo'
@@ -15,6 +15,7 @@ import { useT } from '../lib/i18n'
 import { ProgressBar } from '../ui/progress-bar'
 import { TaskHead } from '../ui/task-head'
 import { TaskFinish } from '../ui/task-finish'
+import { AudioPlayer } from '../ui/audio-player'
 
 const KEY_TO_GRADE: Record<string, 'again' | 'good' | 'easy'> = { '1': 'again', '2': 'good', '3': 'easy' }
 
@@ -84,7 +85,8 @@ function GradeButtons({ cardId, mode, typed, suggested }: { cardId: number; mode
       const grade = KEY_TO_GRADE[e.key]
       if (!grade) return
       const el = e.target
-      if (el instanceof HTMLElement && (el.tagName === 'INPUT' || el.tagName === 'TEXTAREA' || el.isContentEditable)) return
+      // the audio seek bar is an <input type=range> that takes focus on a click, yet ignores digits, so grading still works there
+      if (el instanceof HTMLElement && ((el instanceof HTMLInputElement && el.type !== 'range') || el.tagName === 'TEXTAREA' || el.isContentEditable)) return
       if (fetcher.state !== 'idle') return
       e.preventDefault()
       fetcher.submit(
@@ -119,10 +121,6 @@ function GradeButtons({ cardId, mode, typed, suggested }: { cardId: number; mode
 function FlipCard({ card }: { card: Route.ComponentProps['loaderData']['due'][number] }) {
   const t = useT().review
   const [revealed, setRevealed] = useState(false)
-  const audioRef = useRef<HTMLAudioElement>(null)
-  useEffect(() => {
-    if (revealed) audioRef.current?.play().catch(() => {}) // autoplay may need a tap on iOS
-  }, [revealed])
   useEffect(() => {
     if (revealed) return
     const onKey = (e: KeyboardEvent) => {
@@ -153,7 +151,7 @@ function FlipCard({ card }: { card: Route.ComponentProps['loaderData']['due'][nu
             <p className="section-label">{t.answer}</p>
             <Sentence text={card.sentenceEn} headword={card.word} lang="en" bold />
             <p className="muted">{card.word} = {card.wordPl} · {card.explanationEn}</p>
-            {card.audioKey && <audio ref={audioRef} controls src={`/audio/${card.id}?v=${encodeURIComponent(card.audioKey)}`} />}
+            {card.audioKey && <AudioPlayer autoPlay cardId={card.id} audioKey={card.audioKey} />}
           </div>
           <div className="bottom-actions">
             <GradeButtons cardId={card.id} mode="flip" />
@@ -171,10 +169,6 @@ function WriteCard({ card }: { card: Route.ComponentProps['loaderData']['due'][n
   const [local, setLocal] = useState<{ diff: DiffResult; headword: HeadwordStatus } | null>(null)
   const [checked, setChecked] = useState<CheckResult | null>(null)
   const done = local !== null && checked !== null
-  const audioRef = useRef<HTMLAudioElement>(null)
-  useEffect(() => {
-    if (done) audioRef.current?.play().catch(() => {})
-  }, [done])
 
   const check = async () => {
     if (!typed.trim() || local) return
@@ -270,7 +264,7 @@ function WriteCard({ card }: { card: Route.ComponentProps['loaderData']['due'][n
             )}
             {local.headword === 'missing' && <p className="error">{t.headwordMissing} <b>{card.word}</b></p>}
             {local.headword === 'typo' && <p className="muted">{t.headwordTypo}</p>}
-            {card.audioKey && <audio ref={audioRef} controls src={`/audio/${card.id}?v=${encodeURIComponent(card.audioKey)}`} />}
+            {card.audioKey && <AudioPlayer autoPlay cardId={card.id} audioKey={card.audioKey} />}
           </div>
           <div className="bottom-actions">
             {suggested && <p className="section-label">{t.suggested} {t.grades[suggested].toLowerCase()}</p>}
