@@ -11,8 +11,8 @@ const AUTHOR_SITE = 'https://thedariusz.dev'
 const EXTERNAL = { target: '_blank', rel: 'noopener' } as const
 
 // Shown at `/` to visitors without a session. The three screens are static copies of
-// the app's own markup (Today, the learn decode step, a checked write-it review): they
-// reuse the app's classes and strings, so they stay in step with the real look.
+// the app's own markup (Today, the learn decode step, a checked write-it review). They
+// reuse the app's classes and strings, so a change to either shows up here as well.
 const DECODE: [string, string][] = [
   ['She', 'Ona'],
   ['was', 'była'],

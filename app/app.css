@@ -399,9 +399,10 @@ button.setting-link:disabled { opacity: 0.6; }
 .landing-step p { margin: 0; }
 .landing-step > :first-child p { font-size: 0.95rem; }
 .landing-day { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.07em; color: var(--accent); font-weight: 700; margin: 0 0 4px; }
-/* Demo screens: a framed piece of the app's background holding the app's own classes (.today-screen, .task-screen).
-   The rules below keep them phone-sized at any viewport: the app's rem sizes restated in em of the frame's 15px,
-   and stand-ins for the parts that are links or pinned bars in the app. The desktop Today rules are scoped to .page, so they skip the demo. */
+/* Demo screens: a 15px frame on the app background holding the app's own markup (.today-screen, .task-screen).
+   The em rules below restate the app's rem sizes, so the demo keeps phone proportions at any viewport width.
+   .landing-screen-nav, .landing-grade and the 48px buttons stand in for the app's back/close link and pinned bottom bar.
+   The desktop Today rules are scoped to .page and do not reach the demo. */
 .landing-screen { background: var(--bg); border: 1px solid var(--edge); border-radius: 18px; padding: 16px; box-shadow: 0 14px 36px -22px rgba(0, 0, 0, 0.4); font-size: 15px; }
 .landing-screen-title { font-size: 1.6em; font-weight: 700; line-height: 1.1; letter-spacing: -0.02em; }
 .landing-screen .today-date { font-size: 0.9em; }
