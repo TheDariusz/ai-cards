@@ -3,6 +3,7 @@ import { Link } from 'react-router'
 import { useLocale, useT } from '../lib/i18n'
 import { formatDayLine } from '../lib/today'
 import { Icon } from '../ui/icons'
+import { ProgressBar } from '../ui/progress-bar'
 import { LocaleSwitch } from './locale-switch'
 import { Logo } from '../ui/logo'
 
@@ -36,8 +37,7 @@ let played = false
 const beat = (i: number) => ({ '--i': i }) as CSSProperties
 
 export function Landing({ starterCredits, dailyCardLimit }: { starterCredits: number; dailyCardLimit: number }) {
-  const all = useT()
-  const t = all.landing
+  const { landing: t, nav, home, learn, review } = useT()
   const locale = useLocale()
   const fact = ([bold, rest]: [string, string]) => <span><b>{bold}</b>{rest}</span>
   const root = useRef<HTMLDivElement>(null)
@@ -131,23 +131,23 @@ export function Landing({ starterCredits, dailyCardLimit }: { starterCredits: nu
             <div className="today-head">
               <div>
                 <p className="today-date">{formatDayLine(DEMO_DAY, locale)}</p>
-                <p className="landing-screen-title">{all.nav.today}</p>
+                <p className="landing-screen-title">{nav.today}</p>
               </div>
               <span className="today-streak"><span><Icon name="flame" />12</span></span>
             </div>
             <div className="add-word">
-              <input value={WORD.slice(0, step)} placeholder={all.home.newWord} readOnly tabIndex={-1} />
-              <button type="button" tabIndex={-1} data-on={added}>{all.home.add}</button>
+              <input value={WORD.slice(0, step)} placeholder={home.newWord} readOnly tabIndex={-1} />
+              <button type="button" tabIndex={-1} data-on={added}>{home.add}</button>
             </div>
             <div className="landing-result">
-              <p className="pending today-status" data-on={step === ADDED}>{all.home.generating} <span lang="en">{WORD}</span></p>
+              <p className="pending today-status" data-on={step === ADDED}>{home.generating} <span lang="en">{WORD}</span></p>
               <div className="primary-card today-card landing-ready" data-on={step >= READY}>
                 <div>
-                  <p className="today-eyebrow">{all.home.newWords(1)}</p>
+                  <p className="today-eyebrow">{home.newWords(1)}</p>
                   <p className="today-word study" lang="en">{WORD}</p>
-                  <p>{all.home.learnTomorrow}</p>
+                  <p>{home.learnTomorrow}</p>
                 </div>
-                <span className="today-action">{all.home.learnNow}</span>
+                <span className="today-action">{home.learnNow}</span>
               </div>
             </div>
           </div>
@@ -162,28 +162,28 @@ export function Landing({ starterCredits, dailyCardLimit }: { starterCredits: nu
           <div className="landing-screen task-screen" aria-hidden="true" data-reveal="">
             <div className="task-head">
               <span className="landing-screen-nav"><Icon name="back" /></span>
-              <div className="task-progress"><span style={{ width: '25%' }} /></div>
+              <ProgressBar value={1} max={4} label={learn.progress} />
               <span className="muted">1 / 4</span>
             </div>
             <div className="task-intro">
-              <p className="section-label">{all.learn.steps[0]}</p>
-              <p className="task-word"><span lang="en">{WORD}</span> {all.learn.remaining(3)}</p>
+              <p className="section-label">{learn.steps[0]}</p>
+              <p className="task-word"><span lang="en">{WORD}</span> {learn.remaining(3)}</p>
             </div>
             <p className="study answer task-sentence beat" style={beat(0)} lang="en">She was reluctant to lend her car to a stranger.</p>
-            <p className="muted beat" style={beat(2)}>{all.learn.decodeHint}</p>
+            <p className="muted beat" style={beat(2)}>{learn.decodeHint}</p>
             <div className="decode-grid">
               {DECODE.map(([en, pl], i) => (
-                <div className={en === WORD ? 'decode-pair decode-head beat beat-pop' : 'decode-pair beat beat-pop'} style={beat(4 + i * 1.5)} key={en}>
+                <div className={`decode-pair beat beat-pop${en === WORD ? ' decode-head' : ''}`} style={beat(4 + i * 1.5)} key={en}>
                   <span lang="en" className="study">{en}</span>
                   <span lang="pl">{pl}</span>
                 </div>
               ))}
             </div>
             <div className="surface-card beat" style={beat(14)}>
-              <p className="section-label">{all.learn.naturalPolish}</p>
+              <p className="section-label">{learn.naturalPolish}</p>
               <p className="study" lang="pl">Niechętnie pożyczała swój samochód obcej osobie.</p>
             </div>
-            <button type="button" className="primary-wide beat" style={beat(16)} tabIndex={-1}>{all.learn.seeStructure}</button>
+            <button type="button" className="primary-wide beat" style={beat(16)} tabIndex={-1}>{learn.seeStructure}</button>
           </div>
         </section>
 
@@ -196,19 +196,19 @@ export function Landing({ starterCredits, dailyCardLimit }: { starterCredits: nu
           <div className="landing-screen landing-screen-slow task-screen" aria-hidden="true" data-reveal="">
             <div className="task-head">
               <span className="landing-screen-nav"><Icon name="close" /></span>
-              <div className="task-progress"><span style={{ width: '20%' }} /></div>
-              <span className="muted">{all.review.left(4)}</span>
+              <ProgressBar value={1} max={5} label={review.progress} />
+              <span className="muted">{review.left(4)}</span>
             </div>
             <div className="segmented">
-              <button type="button" aria-pressed="true" tabIndex={-1}>{all.review.modeWrite}</button>
-              <button type="button" aria-pressed="false" tabIndex={-1}>{all.review.modeFlip}</button>
+              <button type="button" aria-pressed="true" tabIndex={-1}>{review.modeWrite}</button>
+              <button type="button" aria-pressed="false" tabIndex={-1}>{review.modeFlip}</button>
             </div>
             <div className="task-prompt beat" style={beat(0)}>
-              <p className="section-label">{all.review.promptWrite}</p>
+              <p className="section-label">{review.promptWrite}</p>
               <p lang="pl" className="study"><b className="head">Niechętnie</b> pożyczała swój samochód obcej osobie.</p>
             </div>
             <div className="surface-card beat" style={beat(2)}>
-              <p className="section-label">{all.review.yourAnswer}</p>
+              <p className="section-label">{review.yourAnswer}</p>
               <p lang="en" className="study typed-answer">She was reluctant to borrow her car to a stranger.</p>
             </div>
             <div className="verdict-block verdict-block-wrong beat beat-pop" style={beat(5)}>
@@ -220,15 +220,15 @@ export function Landing({ starterCredits, dailyCardLimit }: { starterCredits: nu
               </ul>
             </div>
             <div className="surface-card beat" style={beat(11)}>
-              <p className="section-label">{all.review.alternative}</p>
+              <p className="section-label">{review.alternative}</p>
               <p lang="en" className="study answer">She was <b className="head">reluctant</b> to lend her car to a stranger.</p>
             </div>
             <div className="landing-grade beat" style={beat(13)}>
-              <p className="section-label">{all.review.suggested} {all.review.grades.again.toLowerCase()}</p>
+              <p className="section-label">{review.suggested} {review.grades.again.toLowerCase()}</p>
               <div className="grades">
-                <button type="button" className="grade-suggested" tabIndex={-1}>{all.review.grades.again}</button>
-                <button type="button" tabIndex={-1}>{all.review.grades.good}</button>
-                <button type="button" tabIndex={-1}>{all.review.grades.easy}</button>
+                <button type="button" className="grade-suggested" tabIndex={-1}>{review.grades.again}</button>
+                <button type="button" tabIndex={-1}>{review.grades.good}</button>
+                <button type="button" tabIndex={-1}>{review.grades.easy}</button>
               </div>
             </div>
           </div>

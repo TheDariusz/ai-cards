@@ -71,8 +71,8 @@ form > input:not([type="hidden"]) + button, form > textarea + button { margin-to
 .segmented button[aria-pressed="true"], .page .locale-switch button[aria-pressed="true"] { background: var(--seg-on); color: var(--seg-on-text); box-shadow: var(--seg-on-ring); }
 /* Focused task screens: back/close link, progress bar, muted count. */
 .task-head { display: flex; align-items: center; gap: 10px; font-weight: 600; font-variant-numeric: tabular-nums; }
-.task-head > a { display: inline-flex; align-items: center; justify-content: center; min-width: 44px; min-height: 44px; margin-left: -10px; border-radius: 12px; color: var(--text); text-decoration: none; }
-.task-head > a .icon { width: 22px; height: 22px; }
+.task-head > :is(a, .landing-screen-nav) { display: inline-flex; align-items: center; justify-content: center; min-width: 44px; min-height: 44px; margin-left: -10px; border-radius: 12px; color: var(--text); text-decoration: none; }
+.task-head > :is(a, .landing-screen-nav) .icon { width: 22px; height: 22px; }
 .task-head h1 { margin: 0; }
 .task-progress { flex: 1; height: 5px; border-radius: 9px; background: var(--accent-soft); overflow: hidden; }
 .task-progress span { display: block; height: 100%; border-radius: inherit; background: var(--accent); }
@@ -179,14 +179,14 @@ form > input:not([type="hidden"]) + button, form > textarea + button { margin-to
 @media (min-width: 900px) {
   .page.today-screen { max-width: none; padding: 30px 40px; gap: 20px; }
   .today-head h1 { font-size: 1.75rem; }
-  .today-screen .add-word { max-width: 460px; }
+  .page.today-screen .add-word { max-width: 460px; }
   .today-cols { grid-template-columns: minmax(0, 1.15fr) minmax(0, 1fr); gap: 20px; align-items: start; }
   /* First run has no side column: one column instead of a squeezed left half. */
   .today-screen[data-state="first-run"] .today-cols { grid-template-columns: minmax(0, 560px); }
-  .today-card { padding: 26px; gap: 20px; }
+  .page .today-card { padding: 26px; gap: 20px; }
   .today-count { font-size: 72px; }
-  .today-action { justify-self: start; padding: 13px 26px; }
-  .today-card .today-word { font-size: 2.4rem; }
+  .page .today-action { justify-self: start; padding: 13px 26px; }
+  .page .today-card .today-word { font-size: 2.4rem; }
   .week-card { display: grid; gap: 12px; background: var(--surface); border: 1px solid var(--edge); border-radius: 18px; padding: 14px; }
   .week-card h2 { position: static; width: auto; height: auto; overflow: visible; clip-path: none; white-space: normal; font-size: 1rem; }
 }
@@ -401,27 +401,22 @@ button.setting-link:disabled { opacity: 0.6; }
 .landing-day { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.07em; color: var(--accent); font-weight: 700; margin: 0 0 4px; }
 /* Demo screens: a framed piece of the app's background holding the app's own classes (.today-screen, .task-screen).
    The rules below keep them phone-sized at any viewport: the app's rem sizes restated in em of the frame's 15px,
-   its desktop Today layout undone, and stand-ins for the parts that are links or pinned bars in the app. */
+   and stand-ins for the parts that are links or pinned bars in the app. The desktop Today rules are scoped to .page, so they skip the demo. */
 .landing-screen { background: var(--bg); border: 1px solid var(--edge); border-radius: 18px; padding: 16px; box-shadow: 0 14px 36px -22px rgba(0, 0, 0, 0.4); font-size: 15px; }
 .landing-screen-title { font-size: 1.6em; font-weight: 700; line-height: 1.1; letter-spacing: -0.02em; }
 .landing-screen .today-date { font-size: 0.9em; }
 .landing-screen :is(.today-streak, .today-status, .today-eyebrow) { font-size: 0.85em; }
 .landing-screen .today-card .today-word { font-size: 1.9em; }
-.landing-screen .add-word { max-width: none; }
-.landing-screen .today-card { padding: 18px; gap: 12px; }
-.landing-screen .today-action { justify-self: stretch; padding: 12px; }
 .landing-result { display: grid; }
 .landing-result > * { grid-area: 1 / 1; align-self: start; }
-.landing-screen-nav { display: inline-flex; align-items: center; justify-content: center; min-width: 44px; min-height: 44px; margin-left: -10px; }
-.landing-screen-nav .icon { width: 22px; height: 22px; }
 .landing-screen .task-word { font-size: 1em; }
 .landing-screen :is(.task-sentence, .task-prompt .study) { font-size: 1.3em; }
 .landing-screen .segmented button { font-size: 0.9em; }
 .landing-screen .decode-pair span:last-child { font-size: 0.9em; }
 .landing-screen .feedback-notes { font-size: 0.95em; }
-.landing-screen .primary-wide, .landing-screen .grades button { min-height: 48px; }
+.landing-screen .primary-wide { min-height: 48px; }
+.landing-screen .grades button { min-height: 48px; padding: 0.6rem 0.4rem; font-size: 0.9em; white-space: nowrap; }
 .landing-grade { display: grid; gap: 6px; }
-.landing-screen .grades button { padding: 0.6rem 0.4rem; font-size: 0.9em; white-space: nowrap; }
 .landing-facts { display: flex; flex-wrap: wrap; gap: 8px 28px; color: var(--muted); font-size: 0.9rem; margin: 0; padding: 28px 0 8px; border-top: 1px solid var(--edge); }
 .landing-facts b { color: var(--text); font-weight: 600; }
 .landing-closing { text-align: center; margin-top: 40px; padding-top: 36px; border-top: 1px solid var(--edge); }
