@@ -23,7 +23,9 @@ const DECODE: [string, string][] = [
 ]
 
 const WORD = 'reluctant'
-// The Today demo's date line: a fixed day, so the server and the browser render the same text.
+// The Today demo's date line: a fixed day, so the server and the browser agree on the date.
+// Their Intl data can still differ (en-GB punctuation varies across ICU versions), hence
+// suppressHydrationWarning on the line: the server's text stays.
 const DEMO_DAY = '2026-05-12'
 // Day 0 typing steps past the letters: Add pressed (card generating), then the card is ready.
 const ADDED = WORD.length + 1
@@ -130,7 +132,7 @@ export function Landing({ starterCredits, dailyCardLimit }: { starterCredits: nu
           <div className="landing-screen today-screen" aria-hidden="true" data-reveal="type">
             <div className="today-head">
               <div>
-                <p className="today-date">{formatDayLine(DEMO_DAY, locale)}</p>
+                <p className="today-date" suppressHydrationWarning>{formatDayLine(DEMO_DAY, locale)}</p>
                 <p className="landing-screen-title">{nav.today}</p>
               </div>
               <span className="today-streak"><span><Icon name="flame" />12</span></span>

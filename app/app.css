@@ -71,8 +71,8 @@ form > input:not([type="hidden"]) + button, form > textarea + button { margin-to
 .segmented button[aria-pressed="true"], .page .locale-switch button[aria-pressed="true"] { background: var(--seg-on); color: var(--seg-on-text); box-shadow: var(--seg-on-ring); }
 /* Focused task screens: back/close link, progress bar, muted count. */
 .task-head { display: flex; align-items: center; gap: 10px; font-weight: 600; font-variant-numeric: tabular-nums; }
-.task-head > :is(a, .landing-screen-nav) { display: inline-flex; align-items: center; justify-content: center; min-width: 44px; min-height: 44px; margin-left: -10px; border-radius: 12px; color: var(--text); text-decoration: none; }
-.task-head > :is(a, .landing-screen-nav) .icon { width: 22px; height: 22px; }
+.task-head > a, .task-head > .landing-screen-nav { display: inline-flex; align-items: center; justify-content: center; min-width: 44px; min-height: 44px; margin-left: -10px; border-radius: 12px; color: var(--text); text-decoration: none; }
+.task-head > a .icon, .task-head > .landing-screen-nav .icon { width: 22px; height: 22px; }
 .task-head h1 { margin: 0; }
 .task-progress { flex: 1; height: 5px; border-radius: 9px; background: var(--accent-soft); overflow: hidden; }
 .task-progress span { display: block; height: 100%; border-radius: inherit; background: var(--accent); }
@@ -398,11 +398,12 @@ button.setting-link:disabled { opacity: 0.6; }
 .landing-step h2 { font-size: 1.4rem; margin: 0 0 6px; }
 .landing-step p { margin: 0; }
 .landing-step > :first-child p { font-size: 0.95rem; }
-.landing-day { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.07em; color: var(--accent); font-weight: 700; margin: 0 0 4px; }
+.landing-step p.landing-day { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.07em; color: var(--accent); font-weight: 700; margin: 0 0 4px; }
 /* Demo screens: a 15px frame on the app background holding the app's own markup (.today-screen, .task-screen).
    The em rules below restate the app's rem sizes, so the demo keeps phone proportions at any viewport width.
    .landing-screen-nav, .landing-grade and the 48px buttons stand in for the app's back/close link and pinned bottom bar.
-   The desktop Today rules are scoped to .page and do not reach the demo. */
+   The desktop Today rules for elements the demo shares (card, action, add-word) are scoped to .page and do not reach it;
+   the rest (.today-head h1, .today-cols, .today-count, .week-card) are not, so scope them too before adding those here. */
 .landing-screen { background: var(--bg); border: 1px solid var(--edge); border-radius: 18px; padding: 16px; box-shadow: 0 14px 36px -22px rgba(0, 0, 0, 0.4); font-size: 15px; }
 .landing-screen-title { font-size: 1.6em; font-weight: 700; line-height: 1.1; letter-spacing: -0.02em; }
 .landing-screen .today-date { font-size: 0.9em; }
