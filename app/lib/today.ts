@@ -1,4 +1,5 @@
 import type { Locale } from './locale'
+import { computeStreak } from './streak'
 
 const SECONDS_PER_CARD = 30
 
@@ -34,4 +35,13 @@ export function doneLine(reviewedToday: number, learnedToday: number): { kind: '
   if (reviewedToday > 0) return { kind: 'reviewed', n: reviewedToday }
   if (learnedToday > 0) return { kind: 'learned', n: learnedToday }
   return null
+}
+
+// The closing screen when Learn or Review has nothing left: how many were done today (null when none),
+// and the streak only once today is a completed day (reviews still due keep it open).
+export function finishSummary(doneToday: number, completedDays: string[], today: string): { done: number | null; streak: number | null } {
+  return {
+    done: doneToday > 0 ? doneToday : null,
+    streak: completedDays.includes(today) ? computeStreak(completedDays, today) : null,
+  }
 }

@@ -2,16 +2,18 @@ import { Link, useFetcher, useSearchParams } from 'react-router'
 import { useEffect, useRef, useState } from 'react'
 import type { Route } from './+types/review'
 import { requireAuth } from '../lib/session'
-import { createDb, getDueCards, applyReview, countReviewsOn } from '../db/repo'
+import { createDb, getDueCards, applyReview, countReviewsOn, completedDays } from '../db/repo'
 import { diffAnswer, type DiffResult, type HeadwordStatus } from '../lib/diff'
 import { headwordInAnswer, suggestGrade } from '../lib/evaluate'
 import { highlightHeadword } from '../lib/headword'
 import type { Grade } from '../lib/srs'
 import { dayKey } from '../lib/streak'
+import { finishSummary } from '../lib/today'
 import type { CheckResult } from './review-check'
 import { MAX_TEXT_CHARS } from '../lib/limits'
 import { useT } from '../lib/i18n'
 import { Icon } from '../ui/icons'
+import { TaskFinish } from '../ui/task-finish'
 
 const KEY_TO_GRADE: Record<string, 'again' | 'good' | 'easy'> = { '1': 'again', '2': 'good', '3': 'easy' }
 
@@ -21,10 +23,11 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   const db = createDb(env.DB)
   const now = Date.now()
   const today = dayKey(now)
-  return {
-    due: await getDueCards(db, userId, now),
-    doneToday: await countReviewsOn(db, userId, today),
-  }
+  const due = await getDueCards(db, userId, now)
+  const doneToday = await countReviewsOn(db, userId, today)
+  // Nothing left: the closing screen reports today's reviews and, once today counts, the streak.
+  const finish = due.length === 0 ? finishSummary(doneToday, await completedDays(db, userId), today) : null
+  return { due, doneToday, finish }
 }
 
 export async function action({ request, context }: Route.ActionArgs) {
@@ -280,25 +283,21 @@ function WriteCard({ card }: { card: Route.ComponentProps['loaderData']['due'][n
 }
 
 export default function Review({ loaderData }: Route.ComponentProps) {
-  const t = useT().review
+  const tAll = useT()
+  const t = tAll.review
   const [params, setParams] = useSearchParams()
   const mode = params.get('mode') === 'flip' ? 'flip' : 'write'
   const card = loaderData.due[0] // action revalidates the loader → next card appears
 
   if (!card) {
+    const { done, streak } = loaderData.finish ?? { done: null, streak: null }
     return (
       <main className="page task-screen">
         <header className="task-head">
           <Link to="/" aria-label={t.close}><Icon name="close" /></Link>
           <h1>{t.title}</h1>
         </header>
-        <div className="task-done">
-          <Icon name="check" />
-          <div>
-            <p>{t.allDone}</p>
-            <Link to="/" className="task-done-link">{t.backHome}</Link>
-          </div>
-        </div>
+        <TaskFinish kind="review" title={t.allDone} line={done !== null ? tAll.home.doneReviewed(done) : null} streak={streak} />
       </main>
     )
   }

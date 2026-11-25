@@ -1,5 +1,5 @@
 import { describe, it, expect } from 'vitest'
-import { reviewMinutes, todayState, formatDayLine, doneLine } from '../app/lib/today'
+import { reviewMinutes, todayState, formatDayLine, doneLine, finishSummary } from '../app/lib/today'
 
 const base = { total: 5, ready: 5, due: 0, newCount: 0, todayDone: false }
 
@@ -27,4 +27,16 @@ describe('doneLine', () => {
   it('reports reviews when there were any today', () => expect(doneLine(12, 2)).toEqual({ kind: 'reviewed', n: 12 }))
   it('reports learned words when there were no reviews', () => expect(doneLine(0, 1)).toEqual({ kind: 'learned', n: 1 }))
   it('has nothing to report when neither happened', () => expect(doneLine(0, 0)).toBeNull())
+})
+
+describe('finishSummary', () => {
+  const today = '2026-11-25'
+  it('shows the streak, today included, once today is a completed day', () =>
+    expect(finishSummary(3, ['2026-11-23', '2026-11-24', today], today)).toEqual({ done: 3, streak: 3 }))
+  it('has no streak line while today is not complete, even with a running streak', () =>
+    expect(finishSummary(2, ['2026-11-23', '2026-11-24'], today)).toEqual({ done: 2, streak: null }))
+  it('starts the streak at 1 when today completes after a gap', () =>
+    expect(finishSummary(1, ['2026-11-20', today], today)).toEqual({ done: 1, streak: 1 }))
+  it('reports nothing done when nothing happened today', () =>
+    expect(finishSummary(0, [], today)).toEqual({ done: null, streak: null }))
 })

@@ -71,7 +71,7 @@ export default function Settings({ loaderData }: Route.ComponentProps) {
           />
         </reminder.Form>
         <reminder.Form method="post" action="/reminder">
-          <button type="submit" name="intent" value="test" className="link-button" disabled={sendingTest}>
+          <button type="submit" name="intent" value="test" className="setting-link" disabled={sendingTest}>
             {sendingTest ? t.settings.sending : t.settings.sendTest}
           </button>
         </reminder.Form>

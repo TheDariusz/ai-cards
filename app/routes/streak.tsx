@@ -43,7 +43,7 @@ export default function Streak({ loaderData }: Route.ComponentProps) {
     if (doneSet.has(day)) return { className: 'done', state: t.streak.dayDone }
     if (day === today) return { className: 'today', state: t.streak.dayToday }
     if (day > today) return { className: 'future', state: t.streak.dayFuture }
-    return { className: undefined, state: t.streak.dayMissed }
+    return { className: 'missed', state: t.streak.dayMissed }
   }
 
   return (

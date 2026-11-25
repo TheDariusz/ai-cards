@@ -150,7 +150,7 @@ export default function CardDetail({ loaderData, actionData }: Route.ComponentPr
       ) : card.status === 'ready' ? (
         <Form method="post">
           <input type="hidden" name="intent" value="retry-audio" />
-          <button type="submit" disabled={busy}>{t.card.generateAudio}</button>
+          <button type="submit" className="soft-button" disabled={busy}>{t.card.generateAudio}</button>
         </Form>
       ) : null}
 

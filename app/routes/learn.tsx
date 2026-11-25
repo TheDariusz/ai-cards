@@ -2,17 +2,25 @@ import { Form, Link, useNavigation } from 'react-router'
 import { useState } from 'react'
 import type { Route } from './+types/learn'
 import { requireAuth } from '../lib/session'
-import { completeFirstLearning, createDb, getNewCards } from '../db/repo'
+import { completedDays, completeFirstLearning, createDb, getNewCards, listCards } from '../db/repo'
 import type { DecodePart } from '../lib/ai'
 import { headwordPairIndices } from '../lib/headword'
 import { useT } from '../lib/i18n'
+import { dayKey } from '../lib/streak'
+import { finishSummary } from '../lib/today'
 import { Icon } from '../ui/icons'
+import { TaskFinish } from '../ui/task-finish'
 
 export async function loader({ request, context }: Route.LoaderArgs) {
   const env = context.cloudflare.env
   const userId = await requireAuth(request, env)
-  const cards = await getNewCards(createDb(env.DB), userId)
-  return { card: cards[0] ?? null, remaining: cards.length }
+  const db = createDb(env.DB)
+  const cards = await getNewCards(db, userId)
+  if (cards.length > 0) return { card: cards[0], remaining: cards.length, finish: null }
+  // Nothing left to learn: the closing screen reports today's first learnings and, once today counts, the streak.
+  const today = dayKey(Date.now())
+  const learnedToday = (await listCards(db, userId)).filter((c) => c.firstLearnedAt !== null && dayKey(c.firstLearnedAt) === today).length
+  return { card: null, remaining: 0, finish: finishSummary(learnedToday, await completedDays(db, userId), today) }
 }
 
 export async function action({ request, context }: Route.ActionArgs) {
@@ -94,7 +102,7 @@ function LearningCard({ card, remaining, failed }: {
       </header>
       <div className="task-intro">
         <p className="section-label">{t.steps[step]}</p>
-        <h1 className="task-word">{card.word} {t.remaining(remaining)}</h1>
+        <h1 className="task-word"><span lang="en">{card.word}</span> {t.remaining(remaining)}</h1>
       </div>
       {failed && <p className="error">{t.completeFailed}</p>}
 
@@ -212,21 +220,17 @@ function LearningCard({ card, remaining, failed }: {
 }
 
 export default function Learn({ loaderData, actionData }: Route.ComponentProps) {
-  const t = useT().learn
+  const tAll = useT()
+  const t = tAll.learn
   if (!loaderData.card) {
+    const { done, streak } = loaderData.finish ?? { done: null, streak: null }
     return (
       <main className="page task-screen">
         <header className="task-head">
           <Link to="/" aria-label={t.back}><Icon name="back" /></Link>
           <h1>{t.title}</h1>
         </header>
-        <div className="task-done">
-          <Icon name="check" />
-          <div>
-            <p>{t.allLearned}</p>
-            <Link to="/" className="task-done-link">{t.back}</Link>
-          </div>
-        </div>
+        <TaskFinish kind="learn" title={t.doneTitle} line={done !== null ? tAll.home.doneLearned(done) : t.allLearned} streak={streak} />
       </main>
     )
   }

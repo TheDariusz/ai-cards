@@ -22,6 +22,7 @@ const pl = {
   common: {
     language: 'Język',
     noCredits: 'Brak kredytów. Nowe karty i funkcje AI są niedostępne.',
+    backToToday: 'Wróć do Dziś',
   },
   nav: {
     label: 'Nawigacja',
@@ -74,7 +75,7 @@ const pl = {
   login: {
     logInTitle: 'Zaloguj się',
     signUpTitle: 'Załóż konto',
-    lead: 'Wyślemy Ci link. Bez hasła, ten sam link zakłada konto.',
+    lead: 'Wyślemy Ci link do logowania, bez hasła.',
     logInHint: 'Nie masz konta? Ten sam link je założy.',
     signUpHint: 'Masz już konto? Ten sam link Cię zaloguje.',
     sent: 'Wysłaliśmy Ci link do logowania (ważny 15 minut).',
@@ -141,6 +142,7 @@ const pl = {
     dayToday: 'dziś, jeszcze nie zrobione',
     dayMissed: 'bez nauki',
     dayFuture: 'jeszcze przed nami',
+    dayCounted: 'Dzień zaliczony',
   },
   settings: {
     title: 'Ustawienia',
@@ -153,7 +155,7 @@ const pl = {
     sendTest: 'Wyślij testowy mail',
     sending: 'Wysyłam…',
     sent: 'Wysłano ✓',
-    reminderNotConfigured: 'Brak adresu e-mail albo nie skonfigurowano RESEND_API_KEY/REMINDER_FROM',
+    reminderNotConfigured: 'Nie udało się wysłać: wysyłka maili nie jest skonfigurowana.',
     reminderFailed: 'Nie udało się wysłać testowego przypomnienia.',
     credits: 'Kredyty',
     creditsLeft: (left: number, granted: number) => `${left} z ${granted}`,
@@ -195,7 +197,6 @@ const pl = {
     title: 'Powtórka',
     allDone: 'Na dziś wszystko',
     close: 'Zamknij powtórkę',
-    backHome: 'Wróć do ekranu Dziś',
     left: (n: number) => `${({ one: 'została', few: 'zostały', many: 'zostało' })[plForm(n)]} ${n}`,
     progress: 'Dzisiejsze powtórki',
     mode: 'Tryb',
@@ -224,7 +225,8 @@ const pl = {
     title: 'Do nauki',
     back: 'Wróć do ekranu Dziś',
     progress: 'Postęp tej karty',
-    allLearned: 'Pierwsza nauka zakończona. Nowe karty wrócą jutro.',
+    doneTitle: 'Nauka zakończona',
+    allLearned: 'Nie ma nowych kart do nauki.',
     remaining: (n: number) => `(${n} ${pluralNowa(n)})`,
     completeFailed: 'Nie udało się zakończyć tej karty. Odśwież stronę i spróbuj jeszcze raz.',
     steps: ['Rozbiór', 'Posłuchaj i zrozum', 'Bez pomocy', 'Powiedz raz'],
@@ -298,6 +300,7 @@ const en: Dict = {
   common: {
     language: 'Language',
     noCredits: 'Out of credits. New cards and AI features are unavailable.',
+    backToToday: 'Back to Today',
   },
   nav: {
     label: 'Navigation',
@@ -349,7 +352,7 @@ const en: Dict = {
   login: {
     logInTitle: 'Log in',
     signUpTitle: 'Create an account',
-    lead: "We'll email you a link. No password, and the same link creates your account.",
+    lead: "We'll email you a sign-in link — no password.",
     logInHint: 'No account yet? The same link creates one.',
     signUpHint: 'Already have an account? The same link logs you in.',
     sent: 'A login link is on its way (valid for 15 minutes).',
@@ -414,6 +417,7 @@ const en: Dict = {
     dayToday: 'today, not done yet',
     dayMissed: 'no study',
     dayFuture: 'still ahead',
+    dayCounted: 'Day counted',
   },
   settings: {
     title: 'Settings',
@@ -426,7 +430,7 @@ const en: Dict = {
     sendTest: 'Send a test email',
     sending: 'Sending…',
     sent: 'Sent ✓',
-    reminderNotConfigured: 'No email address or RESEND_API_KEY/REMINDER_FROM not configured',
+    reminderNotConfigured: 'Couldn’t send: e-mail delivery isn’t configured.',
     reminderFailed: "Couldn't send the test reminder.",
     credits: 'Credits',
     creditsLeft: (left, granted) => `${left} of ${granted}`,
@@ -468,7 +472,6 @@ const en: Dict = {
     title: 'Review',
     allDone: 'All done for today',
     close: 'Close review',
-    backHome: 'Back to Today',
     left: (n) => `${n} left`,
     progress: 'Today\'s reviews',
     mode: 'Mode',
@@ -497,7 +500,8 @@ const en: Dict = {
     title: 'New to learn',
     back: 'Back to Today',
     progress: 'Progress on this card',
-    allLearned: 'First learning complete. Your new cards will return tomorrow.',
+    doneTitle: 'Learning complete',
+    allLearned: 'No new cards to learn.',
     remaining: (n) => `(${n} new)`,
     completeFailed: 'This card could not be completed. Reload and try again.',
     steps: ['Decode', 'Listen & understand', 'Without help', 'Speak once'],

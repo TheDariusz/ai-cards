@@ -172,7 +172,7 @@ function UserHome({ loaderData, actionData }: { loaderData: UserHome; actionData
               <h2>{t.home.weekLabel}</h2>
               <Link to="/streak" className="week" aria-label={weekLabel}>
                 {week.map(({ day, done }, i) => (
-                  <span key={day} className={done ? 'done' : day === today ? 'today' : undefined}>
+                  <span key={day} className={done ? 'done' : day === today ? 'today' : day > today ? 'future' : 'missed'}>
                     {t.home.weekdays[i]}
                   </span>
                 ))}
@@ -257,7 +257,7 @@ function TodayCard({ data, actionData }: { data: UserHome; actionData: ActionDat
           <Icon name="check" />
           <div>
             <h2>{t.home.doneTitle}</h2>
-            {line && <p className="muted">{line.kind === 'reviewed' ? t.home.doneReviewed(line.n) : t.home.doneLearned(line.n)}</p>}
+            {line && <p>{line.kind === 'reviewed' ? t.home.doneReviewed(line.n) : t.home.doneLearned(line.n)}</p>}
           </div>
         </section>
       )
