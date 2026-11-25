@@ -191,8 +191,7 @@ form > input:not([type="hidden"]) + button, form > textarea + button { margin-to
   .week-card h2 { position: static; width: auto; height: auto; overflow: visible; clip-path: none; white-space: normal; font-size: 1rem; }
 }
 
-/* Shared with other screens (landing demo, card detail, settings, admin) */
-.streak-chip { background: var(--accent-soft); color: var(--text); border-radius: 999px; padding: 0.2rem 0.7rem; font-size: 0.95rem; font-weight: 600; }
+/* Shared with other screens (card detail, settings, admin) */
 .quick-add { display: flex; gap: 0.5rem; margin: 0.6rem 0; }
 .quick-add > input:not([type="hidden"]) + button { margin-top: 0; }
 .quick-add input { flex: 1; }
@@ -278,7 +277,6 @@ button.setting-link:disabled { opacity: 0.6; }
 @media (min-width: 900px) { :is(.cards-page, .card-detail, .settings-page, .streak-page, .admin-page) { max-width: 640px; } }
 
 /* Cards */
-.card-face { background: var(--surface); border: 1px solid var(--edge); border-radius: 18px; padding: 16px; margin: 1rem 0; }
 .cards-page { display: grid; gap: 12px; overflow-wrap: anywhere; }
 .cards-head { display: flex; justify-content: space-between; align-items: baseline; gap: 12px; }
 .cards-head h1 { margin: 0; }
@@ -337,7 +335,6 @@ button.setting-link:disabled { opacity: 0.6; }
 .diff-extra { color: var(--muted); text-decoration: line-through; }
 .diff-head { font-weight: 700; }
 .typed-answer { margin-top: 0; }
-.feedback { margin-bottom: 0.2rem; }
 .verdict { font-weight: 700; }
 .verdict-correct { color: var(--ok); }
 .verdict-minor { color: var(--warn); }
@@ -347,16 +344,14 @@ button.setting-link:disabled { opacity: 0.6; }
 .verdict-block-wrong { background: var(--bad-soft); border-radius: 18px; padding: 14px; }
 .feedback-notes { margin: 0.4rem 0; padding-left: 1.2rem; color: var(--text); font-size: 0.95rem; }
 .feedback-notes li + li { margin-top: 0.25rem; }
-.alt-label { margin: 0.8rem 0 0; color: var(--muted); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; }
 .write-form { display: grid; }
 
 /* Learn */
-.step-progress { color: var(--accent); font-weight: 700; }
 .decode-grid { display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 1rem 0; }
 .decode-pair { display: grid; min-width: 5rem; text-align: center; background: var(--accent-soft); border-radius: 12px; padding: 0.45rem 0.7rem; }
 .decode-pair span:first-child { font-weight: 600; }
 .decode-pair span:last-child { color: var(--muted); font-size: 0.9rem; border-top: 1px solid var(--edge); }
-/* In the app the pairs are bordered surface chips; the landing demo keeps the tinted ones above. */
+/* On a task screen (and its landing demo) the pairs are bordered surface chips. */
 .task-screen .decode-grid { margin: 0; gap: 7px; }
 .task-screen .decode-pair { min-width: 0; background: var(--surface); border: 1px solid var(--edge); }
 .task-screen .decode-pair span:last-child { border-top: 0; }
@@ -401,25 +396,32 @@ button.setting-link:disabled { opacity: 0.6; }
 .landing-cta { display: inline-flex; align-items: center; min-height: 48px; padding: 0 22px; border-radius: 14px; background: var(--accent); color: var(--on-accent); font-weight: 600; text-decoration: none; }
 .landing-step { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.4fr); gap: 48px; padding: 40px 0; border-top: 1px solid var(--edge); align-items: start; }
 .landing-step h2 { font-size: 1.4rem; margin: 0 0 6px; }
-.landing-step p { margin: 0; font-size: 0.95rem; }
+.landing-step p { margin: 0; }
+.landing-step > :first-child p { font-size: 0.95rem; }
 .landing-day { font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.07em; color: var(--accent); font-weight: 700; margin: 0 0 4px; }
-.landing-screen { background: var(--surface); border: 1px solid var(--edge); border-radius: 18px; padding: 16px; box-shadow: 0 14px 36px -22px rgba(0, 0, 0, 0.4); font-size: 15px; }
-.landing-screen h3 { display: flex; align-items: center; gap: 0.5rem; margin: 0 0 8px; font-size: 1.05rem; }
-.landing-screen h3 .muted { font-weight: 500; font-size: 0.9em; }
-.landing-screen .card-face { background: var(--bg); padding: 12px 14px; margin: 8px 0; }
-.landing-screen .card-face p { font-size: 0.95rem; margin: 0.3rem 0; }
-.landing-screen .card-face p.answer { font-size: 1.1rem; margin: 0 0 6px; }
-.landing-screen .quick-add { margin: 0; }
-.landing-result { display: grid; margin-top: 10px; }
+/* Demo screens: a framed piece of the app's background holding the app's own classes (.today-screen, .task-screen).
+   The rules below keep them phone-sized at any viewport: the app's rem sizes restated in em of the frame's 15px,
+   its desktop Today layout undone, and stand-ins for the parts that are links or pinned bars in the app. */
+.landing-screen { background: var(--bg); border: 1px solid var(--edge); border-radius: 18px; padding: 16px; box-shadow: 0 14px 36px -22px rgba(0, 0, 0, 0.4); font-size: 15px; }
+.landing-screen-title { font-size: 1.6em; font-weight: 700; line-height: 1.1; letter-spacing: -0.02em; }
+.landing-screen .today-date { font-size: 0.9em; }
+.landing-screen :is(.today-streak, .today-status, .today-eyebrow) { font-size: 0.85em; }
+.landing-screen .today-card .today-word { font-size: 1.9em; }
+.landing-screen .add-word { max-width: none; }
+.landing-screen .today-card { padding: 18px; gap: 12px; }
+.landing-screen .today-action { justify-self: stretch; padding: 12px; }
+.landing-result { display: grid; }
 .landing-result > * { grid-area: 1 / 1; align-self: start; }
-.landing-screen .landing-result .pending, .landing-screen .landing-result .card-face { margin: 0; }
-.landing-screen .landing-ready p { margin: 0.15rem 0; }
-.landing-screen .landing-ready .study { margin-top: 0.5rem; }
-.landing-screen .landing-ready .landing-audio { display: flex; align-items: center; gap: 8px; margin-top: 0.6rem; color: var(--accent); }
-.landing-audio-bar { flex: 1; max-width: 9rem; height: 4px; border-radius: 999px; background: linear-gradient(90deg, var(--accent) 30%, var(--accent-soft) 30%); }
-.landing-screen .decode-grid { margin: 0.6rem 0; }
-.landing-screen .decode-pair { font-size: 0.82rem; padding: 0.3rem 0.55rem; min-width: 4rem; }
-.landing-screen .feedback-notes { margin: 0.3rem 0; font-size: 0.88rem; }
+.landing-screen-nav { display: inline-flex; align-items: center; justify-content: center; min-width: 44px; min-height: 44px; margin-left: -10px; }
+.landing-screen-nav .icon { width: 22px; height: 22px; }
+.landing-screen .task-word { font-size: 1em; }
+.landing-screen :is(.task-sentence, .task-prompt .study) { font-size: 1.3em; }
+.landing-screen .segmented button { font-size: 0.9em; }
+.landing-screen .decode-pair span:last-child { font-size: 0.9em; }
+.landing-screen .feedback-notes { font-size: 0.95em; }
+.landing-screen .primary-wide, .landing-screen .grades button { min-height: 48px; }
+.landing-grade { display: grid; gap: 6px; }
+.landing-screen .grades button { padding: 0.6rem 0.4rem; font-size: 0.9em; white-space: nowrap; }
 .landing-facts { display: flex; flex-wrap: wrap; gap: 8px 28px; color: var(--muted); font-size: 0.9rem; margin: 0; padding: 28px 0 8px; border-top: 1px solid var(--edge); }
 .landing-facts b { color: var(--text); font-weight: 600; }
 .landing-closing { text-align: center; margin-top: 40px; padding-top: 36px; border-top: 1px solid var(--edge); }
@@ -461,7 +463,7 @@ button.setting-link:disabled { opacity: 0.6; }
   .landing:not(.still) .landing-hero-answer del::after { transform-origin: left; animation: landing-strike 0.45s cubic-bezier(0.2, 0.8, 0.2, 1) 1.3s both; }
   .landing:not(.still) .landing-hero-answer ins { display: inline-block; animation: landing-rise 0.5s cubic-bezier(0.2, 0.8, 0.2, 1) 1.75s both; }
   .landing:not(.still) .landing-hero-note { animation: landing-rise 0.6s cubic-bezier(0.2, 0.8, 0.2, 1) 2.2s both; }
-  .landing.live .landing-screen .quick-add button[data-on="true"] { animation: landing-press 0.4s ease; }
+  .landing.live .landing-screen .add-word button[data-on="true"] { animation: landing-press 0.4s ease; }
   .landing [data-reveal] { transition: opacity 0.6s ease, transform 0.6s cubic-bezier(0.2, 0.8, 0.2, 1); }
   .landing .landing-screen { transition: opacity 0.6s ease, transform 0.6s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.3s ease; }
   .landing .beat { transition: opacity 0.45s ease, transform 0.45s cubic-bezier(0.2, 0.8, 0.2, 1); transition-delay: calc(var(--i, 0) * var(--beat, 110ms) + 250ms); }
