@@ -144,6 +144,9 @@ form > input:not([type="hidden"]) + button, form > textarea + button { margin-to
 .today-count { font-size: 44px; font-weight: 700; line-height: 1; letter-spacing: -0.03em; font-variant-numeric: tabular-nums; }
 .today-action { display: flex; align-items: center; justify-content: center; min-height: 44px; padding: 12px; border-radius: 13px; background: var(--on-accent); color: var(--accent); font-weight: 600; text-decoration: none; }
 .today-action:focus-visible { outline-color: var(--on-accent); }
+.today-action kbd { display: none; font: inherit; font-size: 0.75em; font-weight: 500; margin-left: 0.6em; padding: 0.05em 0.45em; border-radius: 5px; background: color-mix(in srgb, currentColor 14%, transparent); }
+.today-eyebrow { font-size: 0.85rem; font-weight: 600; opacity: 0.85; }
+.today-card .today-word { font-size: 1.9rem; font-weight: 600; line-height: 1.15; letter-spacing: -0.01em; overflow-wrap: break-word; hyphens: auto; }
 /* On the accent card, status colours would vanish: messages and the Retry take the card's own colours. */
 .today-card .ok, .today-card .error { color: inherit; font-weight: 600; }
 .today-card .add-word { border: 0; background: var(--on-accent); }
@@ -181,6 +184,7 @@ form > input:not([type="hidden"]) + button, form > textarea + button { margin-to
   .today-card { padding: 26px; gap: 20px; }
   .today-count { font-size: 72px; }
   .today-action { justify-self: start; padding: 13px 26px; }
+  .today-card .today-word { font-size: 2.4rem; }
   .week-card { display: grid; gap: 12px; background: var(--surface); border: 1px solid var(--edge); border-radius: 18px; padding: 14px; }
   .week-card h2 { position: static; width: auto; height: auto; overflow: visible; clip-path: none; white-space: normal; font-size: 1rem; }
 }
@@ -493,3 +497,4 @@ button.setting-link:disabled { opacity: 0.6; }
 @keyframes landing-wrong { from { color: var(--text); } }
 @keyframes landing-press { 40% { transform: scale(0.93); } }
 @keyframes landing-pulse { from { box-shadow: 0 0 0 0 color-mix(in srgb, var(--accent) 60%, transparent); } to { box-shadow: 0 0 0 12px transparent; } }
+@media (min-width: 900px) and (hover: hover) { .today-action kbd { display: inline-block; } }

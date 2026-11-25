@@ -239,11 +239,11 @@ Consequences: after the first learned word Today shows Done and the streak is 1.
 - 30 seconds per card for the time estimate.
 - The Preparing state of the primary card (found by the builder check: without it a new user's first minute
   shows "Nothing to review").
-- No `Enter` shortcut on the desktop review button, although the mockup shows the hint: the add-word field
-  is autofocused, so Enter already belongs to it.
+- `Enter` starts the review on desktop (owner's decision after the design critique: the add-word field is autofocused only on first run, so the key is free). The hint is shown from 900px on hover-capable devices.
 - Single 640px column for Cards, Settings and Streak on desktop.
 - The shell loader as a public exception, handled like the `home` loader.
 - 900px as the sidebar breakpoint.
 - The Learn and Nothing-due states of the primary card (the mockups show First run, Review and Done).
 - The streak screen shows the current month only.
 - The owner sees money spent instead of the credit meter, and the admin link lives in settings.
+- After the design critique (owner's decisions): the Learn state of the primary card shows the word itself in Literata instead of "start with <word>"; the flip review mode is called "Fiszka" in Polish; a day with nothing due and no new words still breaks the streak.

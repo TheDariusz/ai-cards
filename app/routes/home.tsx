@@ -1,4 +1,4 @@
-import { Form, Link, useRevalidator } from 'react-router'
+import { Form, Link, useNavigate, useRevalidator } from 'react-router'
 import { useEffect } from 'react'
 import type { Route } from './+types/home'
 import { getUserId, requireAuth } from '../lib/session'
@@ -124,6 +124,19 @@ function UserHome({ loaderData, actionData }: { loaderData: UserHome; actionData
     return () => clearInterval(t)
   }, [pending.length, revalidator])
 
+  // Enter starts the review from anywhere on the page, unless a control already owns the key
+  const navigate = useNavigate()
+  useEffect(() => {
+    if (state !== 'review') return
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Enter' || e.repeat || e.metaKey || e.ctrlKey || e.altKey || e.shiftKey) return
+      if (e.target instanceof Element && e.target.closest('input, textarea, select, button, a, [contenteditable]')) return
+      navigate('/review')
+    }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [state, navigate])
+
   const showTile = state !== 'learn' && newCards.length > 0
   const weekLabel = `${t.home.weekLabel} · ${streak} ${t.streak.inARow(streak)}`
   // While the first card is on its way the primary card already says so: no "added" line, no status line.
@@ -237,15 +250,16 @@ function TodayCard({ data, actionData }: { data: UserHome; actionData: ActionDat
             <p className="today-count">{due}</p>
             <p>{t.home.reviewLine(due, minutes)}</p>
           </div>
-          <Link to="/review" className="today-action">{t.home.startReview}</Link>
+          <Link to="/review" className="today-action">{t.home.startReview} <kbd>Enter</kbd></Link>
         </section>
       )
     case 'learn':
       return (
         <section className="primary-card today-card" data-state={state}>
           <div>
-            <h2>{t.home.newWords(newCards.length)}</h2>
-            <p>{t.home.startWith(newCards[0].word)}</p>
+            <p className="today-eyebrow">{t.home.newWords(newCards.length)}</p>
+            <h2 className="today-word study" lang="en">{newCards[0].word}</h2>
+            <p>{t.home.learnTomorrow}</p>
           </div>
           <Link to="/learn" className="today-action">{t.home.learnNow}</Link>
         </section>
