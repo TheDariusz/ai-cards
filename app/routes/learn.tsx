@@ -12,6 +12,7 @@ import { finishSummary } from '../lib/today'
 import { ProgressBar } from '../ui/progress-bar'
 import { TaskHead } from '../ui/task-head'
 import { TaskFinish } from '../ui/task-finish'
+import { AudioPlayer } from '../ui/audio-player'
 
 export async function loader({ request, context }: Route.LoaderArgs) {
   const env = context.cloudflare.env
@@ -114,7 +115,7 @@ function LearningCard({ card, remaining, failed }: {
         <>
           <p className="muted">{t.listenHint}</p>
           {card.audioKey
-            ? <audio controls autoPlay src={`/audio/${card.id}?v=${encodeURIComponent(card.audioKey)}`} />
+            ? <AudioPlayer autoPlay src={`/audio/${card.id}?v=${encodeURIComponent(card.audioKey)}`} />
             : <p className="pending">{t.noAudio}</p>}
           <Decode parts={parts} headword={card.word} />
         </>
@@ -172,7 +173,7 @@ function LearningCard({ card, remaining, failed }: {
         <>
           <p className="muted">{t.speakHint}</p>
           {card.audioKey
-            ? <audio controls src={`/audio/${card.id}?v=${encodeURIComponent(card.audioKey)}`} />
+            ? <AudioPlayer src={`/audio/${card.id}?v=${encodeURIComponent(card.audioKey)}`} />
             : <p className="pending">{t.readAloudOnce}</p>}
           <label className="spoken-check">
             <input type="checkbox" checked={spoken} onChange={(event) => setSpoken(event.target.checked)} />

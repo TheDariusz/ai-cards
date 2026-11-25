@@ -10,6 +10,7 @@ import { parseLocale } from '../lib/locale'
 import { dict, useT } from '../lib/i18n'
 import { MAX_TEXT_CHARS, MAX_WORD_CHARS } from '../lib/limits'
 import { TaskHead } from '../ui/task-head'
+import { AudioPlayer } from '../ui/audio-player'
 
 export async function loader({ request, params, context }: Route.LoaderArgs) {
   const env = context.cloudflare.env
@@ -142,7 +143,7 @@ export default function CardDetail({ loaderData, actionData }: Route.ComponentPr
       <TaskHead to="/cards" label={t.card.back}><h1>{card.word}</h1></TaskHead>
       {card.audioKey ? (
         <section className="surface-card">
-          <audio controls src={`/audio/${card.id}?v=${encodeURIComponent(card.audioKey ?? '')}`} />
+          <AudioPlayer src={`/audio/${card.id}?v=${encodeURIComponent(card.audioKey ?? '')}`} />
         </section>
       ) : card.status === 'ready' && outOfCredits ? (
         <p className="muted">{t.card.noAudio} {t.common.noCredits}</p>

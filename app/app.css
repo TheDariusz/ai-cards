@@ -48,6 +48,19 @@ button:disabled { opacity: 0.45; cursor: not-allowed; }
 .danger-button { background: var(--bad); color: var(--on-accent); }
 /* A secondary action that still reads as a button: tinted, accent text. */
 .soft-button { background: var(--accent-soft); color: var(--accent); }
+
+/* Audio player (app/ui/audio-player.tsx): our own controls over a hidden <audio>, so it matches the app in every browser. */
+.audio-player { display: flex; align-items: center; gap: 12px; width: 100%; padding: 6px 16px 6px 6px; border-radius: 99px; background: var(--accent-soft); }
+.audio-toggle { flex: none; display: grid; place-items: center; width: 44px; height: 44px; padding: 0; border-radius: 50%; }
+.audio-toggle svg { width: 18px; height: 18px; }
+.audio-seek { --track: color-mix(in srgb, var(--muted) 30%, transparent); flex: 1; min-width: 0; height: 24px; padding: 0; border: none; border-radius: 9px; background: transparent; appearance: none; -webkit-appearance: none; cursor: pointer; }
+.audio-seek:disabled { cursor: default; }
+.audio-seek::-webkit-slider-runnable-track { height: 5px; border-radius: 9px; background: linear-gradient(var(--accent), var(--accent)) 0 / var(--pct, 0%) 100% no-repeat, var(--track); }
+.audio-seek::-webkit-slider-thumb { -webkit-appearance: none; width: 14px; height: 14px; margin-top: -4.5px; border: none; border-radius: 50%; background: var(--accent); }
+.audio-seek::-moz-range-track { height: 5px; border-radius: 9px; background: var(--track); }
+.audio-seek::-moz-range-progress { height: 5px; border-radius: 9px; background: var(--accent); }
+.audio-seek::-moz-range-thumb { width: 14px; height: 14px; border: none; border-radius: 50%; background: var(--accent); }
+.audio-time { flex: none; font-size: 0.8rem; color: var(--muted); font-variant-numeric: tabular-nums; }
 .primary-wide { width: 100%; }
 label { display: block; margin: 0.6rem 0; }
 form > input:not([type="hidden"]) + button, form > textarea + button { margin-top: 0.6rem; }
@@ -217,7 +230,6 @@ form > input:not([type="hidden"]) + button, form > textarea + button { margin-to
 /* Card detail: the task header, then the audio, the edit fields and the regenerate row as surface cards; delete stays a plain red button at the end. */
 .card-detail { display: grid; gap: 12px; overflow-wrap: anywhere; }
 .card-detail p { margin: 0; }
-.card-detail audio { display: block; width: 100%; }
 .card-fields { display: grid; gap: 12px; }
 .card-fields label { display: grid; gap: 4px; margin: 0; }
 .card-fields label .muted { font-size: 0.85rem; }
@@ -296,7 +308,6 @@ button.setting-link:disabled { opacity: 0.6; }
 /* Learn and Review: a task header, then one column of labelled blocks. The pinned action row is .bottom-actions. */
 .task-screen { display: grid; gap: 14px; overflow-wrap: anywhere; }
 .task-screen p { margin: 0; }
-.task-screen audio { width: 100%; }
 .task-intro { display: grid; gap: 2px; }
 /* A long headword breaks at hyphenation points (lang="en" on the word), mid-word only when it can't fit at all.
    min-width: 0 lets the grid tracks shrink below an unbroken word, so it never scrolls sideways. */

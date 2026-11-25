@@ -15,6 +15,7 @@ import { useT } from '../lib/i18n'
 import { ProgressBar } from '../ui/progress-bar'
 import { TaskHead } from '../ui/task-head'
 import { TaskFinish } from '../ui/task-finish'
+import { AudioPlayer } from '../ui/audio-player'
 
 const KEY_TO_GRADE: Record<string, 'again' | 'good' | 'easy'> = { '1': 'again', '2': 'good', '3': 'easy' }
 
@@ -153,7 +154,7 @@ function FlipCard({ card }: { card: Route.ComponentProps['loaderData']['due'][nu
             <p className="section-label">{t.answer}</p>
             <Sentence text={card.sentenceEn} headword={card.word} lang="en" bold />
             <p className="muted">{card.word} = {card.wordPl} · {card.explanationEn}</p>
-            {card.audioKey && <audio ref={audioRef} controls src={`/audio/${card.id}?v=${encodeURIComponent(card.audioKey)}`} />}
+            {card.audioKey && <AudioPlayer ref={audioRef} src={`/audio/${card.id}?v=${encodeURIComponent(card.audioKey)}`} />}
           </div>
           <div className="bottom-actions">
             <GradeButtons cardId={card.id} mode="flip" />
@@ -270,7 +271,7 @@ function WriteCard({ card }: { card: Route.ComponentProps['loaderData']['due'][n
             )}
             {local.headword === 'missing' && <p className="error">{t.headwordMissing} <b>{card.word}</b></p>}
             {local.headword === 'typo' && <p className="muted">{t.headwordTypo}</p>}
-            {card.audioKey && <audio ref={audioRef} controls src={`/audio/${card.id}?v=${encodeURIComponent(card.audioKey)}`} />}
+            {card.audioKey && <AudioPlayer ref={audioRef} src={`/audio/${card.id}?v=${encodeURIComponent(card.audioKey)}`} />}
           </div>
           <div className="bottom-actions">
             {suggested && <p className="section-label">{t.suggested} {t.grades[suggested].toLowerCase()}</p>}
