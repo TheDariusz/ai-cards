@@ -1,5 +1,5 @@
 import { useFetcher, useSearchParams } from 'react-router'
-import { useEffect, useRef, useState } from 'react'
+import { useEffect, useState } from 'react'
 import type { Route } from './+types/review'
 import { requireAuth } from '../lib/session'
 import { createDb, getDueCards, applyReview, countReviewsOn, completedDays } from '../db/repo'
@@ -120,10 +120,6 @@ function GradeButtons({ cardId, mode, typed, suggested }: { cardId: number; mode
 function FlipCard({ card }: { card: Route.ComponentProps['loaderData']['due'][number] }) {
   const t = useT().review
   const [revealed, setRevealed] = useState(false)
-  const audioRef = useRef<HTMLAudioElement>(null)
-  useEffect(() => {
-    if (revealed) audioRef.current?.play().catch(() => {}) // autoplay may need a tap on iOS
-  }, [revealed])
   useEffect(() => {
     if (revealed) return
     const onKey = (e: KeyboardEvent) => {
@@ -154,7 +150,7 @@ function FlipCard({ card }: { card: Route.ComponentProps['loaderData']['due'][nu
             <p className="section-label">{t.answer}</p>
             <Sentence text={card.sentenceEn} headword={card.word} lang="en" bold />
             <p className="muted">{card.word} = {card.wordPl} · {card.explanationEn}</p>
-            {card.audioKey && <AudioPlayer ref={audioRef} src={`/audio/${card.id}?v=${encodeURIComponent(card.audioKey)}`} />}
+            {card.audioKey && <AudioPlayer autoPlay cardId={card.id} audioKey={card.audioKey} />}
           </div>
           <div className="bottom-actions">
             <GradeButtons cardId={card.id} mode="flip" />
@@ -172,10 +168,6 @@ function WriteCard({ card }: { card: Route.ComponentProps['loaderData']['due'][n
   const [local, setLocal] = useState<{ diff: DiffResult; headword: HeadwordStatus } | null>(null)
   const [checked, setChecked] = useState<CheckResult | null>(null)
   const done = local !== null && checked !== null
-  const audioRef = useRef<HTMLAudioElement>(null)
-  useEffect(() => {
-    if (done) audioRef.current?.play().catch(() => {})
-  }, [done])
 
   const check = async () => {
     if (!typed.trim() || local) return
@@ -271,7 +263,7 @@ function WriteCard({ card }: { card: Route.ComponentProps['loaderData']['due'][n
             )}
             {local.headword === 'missing' && <p className="error">{t.headwordMissing} <b>{card.word}</b></p>}
             {local.headword === 'typo' && <p className="muted">{t.headwordTypo}</p>}
-            {card.audioKey && <AudioPlayer ref={audioRef} src={`/audio/${card.id}?v=${encodeURIComponent(card.audioKey)}`} />}
+            {card.audioKey && <AudioPlayer autoPlay cardId={card.id} audioKey={card.audioKey} />}
           </div>
           <div className="bottom-actions">
             {suggested && <p className="section-label">{t.suggested} {t.grades[suggested].toLowerCase()}</p>}

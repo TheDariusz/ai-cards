@@ -53,7 +53,7 @@ button:disabled { opacity: 0.45; cursor: not-allowed; }
 .audio-player { display: flex; align-items: center; gap: 12px; width: 100%; padding: 6px 16px 6px 6px; border-radius: 99px; background: var(--accent-soft); }
 .audio-toggle { flex: none; display: grid; place-items: center; width: 44px; height: 44px; padding: 0; border-radius: 50%; }
 .audio-toggle svg { width: 18px; height: 18px; }
-.audio-seek { --track: color-mix(in srgb, var(--muted) 30%, transparent); flex: 1; min-width: 0; height: 24px; padding: 0; border: none; border-radius: 9px; background: transparent; appearance: none; -webkit-appearance: none; cursor: pointer; }
+.audio-seek { --track: color-mix(in srgb, var(--muted) 30%, transparent); flex: 1; min-width: 0; height: 24px; padding: 0; border: none; background: transparent; appearance: none; cursor: pointer; }
 .audio-seek:disabled { cursor: default; }
 .audio-seek::-webkit-slider-runnable-track { height: 5px; border-radius: 9px; background: linear-gradient(var(--accent), var(--accent)) 0 / var(--pct, 0%) 100% no-repeat, var(--track); }
 .audio-seek::-webkit-slider-thumb { -webkit-appearance: none; width: 14px; height: 14px; margin-top: -4.5px; border: none; border-radius: 50%; background: var(--accent); }

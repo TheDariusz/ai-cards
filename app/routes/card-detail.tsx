@@ -143,7 +143,7 @@ export default function CardDetail({ loaderData, actionData }: Route.ComponentPr
       <TaskHead to="/cards" label={t.card.back}><h1>{card.word}</h1></TaskHead>
       {card.audioKey ? (
         <section className="surface-card">
-          <AudioPlayer src={`/audio/${card.id}?v=${encodeURIComponent(card.audioKey ?? '')}`} />
+          <AudioPlayer cardId={card.id} audioKey={card.audioKey} />
         </section>
       ) : card.status === 'ready' && outOfCredits ? (
         <p className="muted">{t.card.noAudio} {t.common.noCredits}</p>

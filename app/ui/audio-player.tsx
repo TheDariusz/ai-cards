@@ -1,32 +1,24 @@
-import { useEffect, useRef, useState, type CSSProperties, type Ref } from 'react'
+import { useRef, useState, type CSSProperties } from 'react'
 import { useT } from '../lib/i18n'
 
 // A hidden <audio> driven by our own controls, so the player matches the app instead of the browser.
-// `ref` reaches the <audio> element itself, for callers that start playback (review reveals).
-export function AudioPlayer({ src, autoPlay, ref }: { src: string; autoPlay?: boolean; ref?: Ref<HTMLAudioElement> }) {
+// Keyed by src: new audio (a regenerated card) remounts the player, so the controls start from zero.
+export function AudioPlayer({ cardId, audioKey, autoPlay }: { cardId: number; audioKey: string; autoPlay?: boolean }) {
+  const src = `/audio/${cardId}?v=${encodeURIComponent(audioKey)}`
+  return <Player key={src} src={src} autoPlay={autoPlay} />
+}
+
+function Player({ src, autoPlay }: { src: string; autoPlay?: boolean }) {
   const t = useT()
-  const audio = useRef<HTMLAudioElement | null>(null)
+  const audio = useRef<HTMLAudioElement>(null)
   const [playing, setPlaying] = useState(false)
   const [current, setCurrent] = useState(0)
   const [duration, setDuration] = useState(0)
 
-  const setAudio = (el: HTMLAudioElement | null) => {
-    audio.current = el
-    if (typeof ref === 'function') ref(el)
-    else if (ref) ref.current = el
-  }
-
-  // a new card swaps the src: start the controls from zero
-  useEffect(() => {
-    setPlaying(false)
-    setCurrent(0)
-    setDuration(0)
-  }, [src])
-
   const toggle = () => {
     const el = audio.current
     if (!el) return
-    if (el.paused) el.play().catch(() => {})
+    if (el.paused) el.play().catch(() => {}) // autoplay may need a tap on iOS
     else el.pause()
   }
 
@@ -40,16 +32,15 @@ export function AudioPlayer({ src, autoPlay, ref }: { src: string; autoPlay?: bo
 
   return (
     <div className="audio-player">
+      {/* pause also fires when playback reaches the end, so it covers ended */}
       <audio
-        ref={setAudio}
+        ref={audio}
         src={src}
         autoPlay={autoPlay}
         preload="metadata"
         onPlay={() => setPlaying(true)}
         onPause={() => setPlaying(false)}
-        onEnded={() => setPlaying(false)}
         onTimeUpdate={(event) => setCurrent(event.currentTarget.currentTime)}
-        onLoadedMetadata={(event) => setDuration(event.currentTarget.duration)}
         onDurationChange={(event) => setDuration(event.currentTarget.duration)}
       />
       <button type="button" className="audio-toggle" onClick={toggle} aria-label={playing ? t.common.pause : t.common.play}>

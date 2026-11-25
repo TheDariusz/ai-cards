@@ -115,7 +115,7 @@ function LearningCard({ card, remaining, failed }: {
         <>
           <p className="muted">{t.listenHint}</p>
           {card.audioKey
-            ? <AudioPlayer autoPlay src={`/audio/${card.id}?v=${encodeURIComponent(card.audioKey)}`} />
+            ? <AudioPlayer autoPlay cardId={card.id} audioKey={card.audioKey} />
             : <p className="pending">{t.noAudio}</p>}
           <Decode parts={parts} headword={card.word} />
         </>
@@ -173,7 +173,7 @@ function LearningCard({ card, remaining, failed }: {
         <>
           <p className="muted">{t.speakHint}</p>
           {card.audioKey
-            ? <AudioPlayer src={`/audio/${card.id}?v=${encodeURIComponent(card.audioKey)}`} />
+            ? <AudioPlayer cardId={card.id} audioKey={card.audioKey} />
             : <p className="pending">{t.readAloudOnce}</p>}
           <label className="spoken-check">
             <input type="checkbox" checked={spoken} onChange={(event) => setSpoken(event.target.checked)} />
