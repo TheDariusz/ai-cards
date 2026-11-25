@@ -92,9 +92,13 @@ export function headwordVariants(headword: string | null | undefined): string[][
 // headword truly isn't spelled out verbatim, never a competitor to a spot
 // where it is. So try an exact-only pass first, and only fall back to the
 // fuzzy scan when that pass finds nothing.
+//
+// `accept` drops occurrences the caller can't use before that choice, so an unusable
+// exact hit never hides a usable fuzzy one.
 export function findHeadwordIndices(
   tokens: string[],
   headword: string | null | undefined,
+  accept: (occ: number[]) => boolean = () => true,
 ): number[][] {
   const variants = headwordVariants(headword)
   const scan = (matches: (word: string, head: string) => boolean) =>
@@ -103,6 +107,7 @@ export function findHeadwordIndices(
       .sort((a, b) => a[0] - b[0])
       // two variants can land on the same spot ("zdecydowany / zdecydowana")
       .filter((occ, i, all) => i === 0 || occ[0] !== all[i - 1][0])
+      .filter(accept)
   const exact = scan((word, head) => word === head)
   return exact.length > 0 ? exact : scan(tokenMatchesHeadword)
 }
@@ -134,4 +139,17 @@ export function highlightHeadword(sentence: string, headword: string | null | un
     else segments.push({ text, head })
   })
   return segments
+}
+
+// Which decode pairs hold the headword, by index. An occurrence counts only when it
+// sits inside one pair's English part. The pairs are scanned as one sentence, so an
+// exact spelling in one pair outranks a lookalike in another, as in findHeadwordIndices.
+export function headwordPairIndices(pairs: string[], headword: string | null | undefined): Set<number> {
+  const owner: number[] = []
+  const tokens = pairs.flatMap((en, pair) => normalize(en).map((token) => {
+    owner.push(pair)
+    return token
+  }))
+  const inOnePair = (occ: number[]) => occ.every((i) => owner[i] === owner[occ[0]])
+  return new Set(findHeadwordIndices(tokens, headword, inOnePair).map((occ) => owner[occ[0]]))
 }

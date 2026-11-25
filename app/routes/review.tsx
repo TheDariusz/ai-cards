@@ -1,16 +1,20 @@
-import { Link, useFetcher, useSearchParams } from 'react-router'
+import { useFetcher, useSearchParams } from 'react-router'
 import { useEffect, useRef, useState } from 'react'
 import type { Route } from './+types/review'
 import { requireAuth } from '../lib/session'
-import { createDb, getDueCards, applyReview, completedDays, countReviewsOn } from '../db/repo'
+import { createDb, getDueCards, applyReview, countReviewsOn, completedDays } from '../db/repo'
 import { diffAnswer, type DiffResult, type HeadwordStatus } from '../lib/diff'
 import { headwordInAnswer, suggestGrade } from '../lib/evaluate'
 import { highlightHeadword } from '../lib/headword'
 import type { Grade } from '../lib/srs'
-import { computeStreak, dayKey } from '../lib/streak'
+import { dayKey } from '../lib/streak'
+import { finishSummary } from '../lib/today'
 import type { CheckResult } from './review-check'
 import { MAX_TEXT_CHARS } from '../lib/limits'
 import { useT } from '../lib/i18n'
+import { ProgressBar } from '../ui/progress-bar'
+import { TaskHead } from '../ui/task-head'
+import { TaskFinish } from '../ui/task-finish'
 
 const KEY_TO_GRADE: Record<string, 'again' | 'good' | 'easy'> = { '1': 'again', '2': 'good', '3': 'easy' }
 
@@ -20,11 +24,10 @@ export async function loader({ request, context }: Route.LoaderArgs) {
   const db = createDb(env.DB)
   const now = Date.now()
   const today = dayKey(now)
-  return {
-    due: await getDueCards(db, userId, now),
-    streak: computeStreak(await completedDays(db, userId), today),
-    doneToday: await countReviewsOn(db, userId, today),
-  }
+  const [due, doneToday] = await Promise.all([getDueCards(db, userId, now), countReviewsOn(db, userId, today)])
+  // Nothing left: the closing screen reports today's reviews and, once today counts, the streak.
+  if (due.length === 0) return { due, doneToday, finish: finishSummary(doneToday, await completedDays(db, userId), today) }
+  return { due, doneToday, finish: null }
 }
 
 export async function action({ request, context }: Route.ActionArgs) {
@@ -136,17 +139,25 @@ function FlipCard({ card }: { card: Route.ComponentProps['loaderData']['due'][nu
 
   return (
     <>
-      <div className="card-face"><Sentence text={card.sentencePl} headword={card.wordPl} lang="pl" /></div>
+      <div className="task-prompt">
+        <p className="section-label">{t.promptFlip}</p>
+        <Sentence text={card.sentencePl} headword={card.wordPl} lang="pl" />
+      </div>
       {!revealed ? (
-        <button onClick={() => setRevealed(true)}>{t.showAnswer}</button>
+        <div className="bottom-actions">
+          <button className="primary-wide" onClick={() => setRevealed(true)}>{t.showAnswer}</button>
+        </div>
       ) : (
         <>
-          <div className="card-face">
+          <div className="surface-card">
+            <p className="section-label">{t.answer}</p>
             <Sentence text={card.sentenceEn} headword={card.word} lang="en" bold />
             <p className="muted">{card.word} = {card.wordPl} · {card.explanationEn}</p>
             {card.audioKey && <audio ref={audioRef} controls src={`/audio/${card.id}?v=${encodeURIComponent(card.audioKey)}`} />}
           </div>
-          <GradeButtons cardId={card.id} mode="flip" />
+          <div className="bottom-actions">
+            <GradeButtons cardId={card.id} mode="flip" />
+          </div>
         </>
       )}
     </>
@@ -191,9 +202,12 @@ function WriteCard({ card }: { card: Route.ComponentProps['loaderData']['due'][n
 
   return (
     <>
-      <div className="card-face"><Sentence text={card.sentencePl} headword={card.wordPl} lang="pl" /></div>
+      <div className="task-prompt">
+        <p className="section-label">{t.promptWrite}</p>
+        <Sentence text={card.sentencePl} headword={card.wordPl} lang="pl" />
+      </div>
       {!local ? (
-        <form onSubmit={(e) => { e.preventDefault(); check() }}>
+        <form className="write-form" onSubmit={(e) => { e.preventDefault(); check() }}>
           <textarea
             value={typed}
             onChange={(e) => setTyped(e.target.value)}
@@ -204,55 +218,64 @@ function WriteCard({ card }: { card: Route.ComponentProps['loaderData']['due'][n
               }
             }}
             placeholder={t.writePlaceholder}
+            aria-label={t.yourAnswer}
             maxLength={MAX_TEXT_CHARS}
             autoFocus
             rows={3}
           />
-          <button type="submit" disabled={!typed.trim()}>{t.check}</button>
+          <div className="bottom-actions">
+            <button type="submit" className="primary-wide" disabled={!typed.trim()}>{t.check}</button>
+          </div>
         </form>
       ) : !done ? (
-        <div className="card-face">
-          <p lang="en" className="typed-answer">{typed}</p>
+        <div className="surface-card">
+          <p className="section-label">{t.yourAnswer}</p>
+          <p lang="en" className="study typed-answer">{typed}</p>
           <p className="muted">{t.checking}</p>
         </div>
       ) : (
         <>
-          <div className="card-face">
+          <div className="surface-card">
+            <p className="section-label">{t.yourAnswer}</p>
             {evaluation ? (
-              <div className="feedback">
-                <p lang="en" className="typed-answer">{typed}</p>
-                <p lang="pl" className={`verdict verdict-${evaluation.verdict}`}>{evaluation.summaryPl}</p>
-                {evaluation.corrected !== typed.trim() && (
-                  <Sentence text={evaluation.corrected} headword={card.word} lang="en" />
-                )}
-                {evaluation.notesPl.length > 0 && (
-                  <ul lang="pl" className="feedback-notes">
-                    {evaluation.notesPl.map((note, i) => <li key={i}>{note}</li>)}
-                  </ul>
-                )}
-                <p className="alt-label">{t.alternative}</p>
-              </div>
+              <p lang="en" className="study typed-answer">{typed}</p>
             ) : (
-              <p>
+              <p className="study typed-answer">
                 {local.diff.tokens.map((t, i) => (
                   <span key={i} className={`diff-${t.kind}${t.head ? ' diff-head' : ''}`}>{t.text} </span>
                 ))}
               </p>
             )}
+          </div>
+          {evaluation && (
+            <div className={evaluation.verdict === 'wrong' ? 'verdict-block verdict-block-wrong' : 'verdict-block surface-card'}>
+              <p lang="pl" className={`verdict verdict-${evaluation.verdict}`}>{evaluation.summaryPl}</p>
+              {evaluation.corrected !== typed.trim() && (
+                <Sentence text={evaluation.corrected} headword={card.word} lang="en" />
+              )}
+              {evaluation.notesPl.length > 0 && (
+                <ul lang="pl" className="feedback-notes">
+                  {evaluation.notesPl.map((note, i) => <li key={i}>{note}</li>)}
+                </ul>
+              )}
+            </div>
+          )}
+          <div className="surface-card">
+            <p className="section-label">{evaluation ? t.alternative : t.answer}</p>
             <Sentence text={card.sentenceEn} headword={card.word} lang="en" bold />
-            <p className="muted">
-              {!evaluation && `${Math.round(local.diff.score * 100)}% · `}{t.suggested} <b>{suggested && t.grades[suggested].toLowerCase()}</b>
-            </p>
             {!evaluation && (
               <p className="muted">
-                {checked && !checked.ok && checked.reason === 'no-credits' ? t.aiNoCredits : t.aiUnavailable}
+                {`${Math.round(local.diff.score * 100)}%`} · {checked && !checked.ok && checked.reason === 'no-credits' ? t.aiNoCredits : t.aiUnavailable}
               </p>
             )}
             {local.headword === 'missing' && <p className="error">{t.headwordMissing} <b>{card.word}</b></p>}
             {local.headword === 'typo' && <p className="muted">{t.headwordTypo}</p>}
             {card.audioKey && <audio ref={audioRef} controls src={`/audio/${card.id}?v=${encodeURIComponent(card.audioKey)}`} />}
           </div>
-          <GradeButtons cardId={card.id} mode="write" typed={typed} suggested={suggested ?? undefined} />
+          <div className="bottom-actions">
+            {suggested && <p className="section-label">{t.suggested} {t.grades[suggested].toLowerCase()}</p>}
+            <GradeButtons cardId={card.id} mode="write" typed={typed} suggested={suggested ?? undefined} />
+          </div>
         </>
       )}
     </>
@@ -260,46 +283,45 @@ function WriteCard({ card }: { card: Route.ComponentProps['loaderData']['due'][n
 }
 
 export default function Review({ loaderData }: Route.ComponentProps) {
-  const t = useT().review
+  const tAll = useT()
+  const t = tAll.review
   const [params, setParams] = useSearchParams()
   const mode = params.get('mode') === 'flip' ? 'flip' : 'write'
   const card = loaderData.due[0] // action revalidates the loader → next card appears
 
-  if (!card) {
+  if (loaderData.finish) {
+    const { done, streak } = loaderData.finish
     return (
-      <main className="page">
-        <h1><Link to="/">←</Link> {t.title}</h1>
-        <p className="ok">{t.allDone}</p>
+      <main className="page task-screen">
+        <TaskHead to="/" label={t.close} icon="close"><h1>{t.title}</h1></TaskHead>
+        <TaskFinish title={t.allDone} line={done !== null ? tAll.home.doneReviewed(done) : null} streak={streak} />
       </main>
     )
   }
 
-  const { streak, doneToday } = loaderData
+  const { doneToday } = loaderData
   const left = loaderData.due.length
-  // an Again-graded card stays due, so doneToday can grow while left doesn't drop
-  const pct = Math.min(100, Math.round((doneToday / (doneToday + left)) * 100))
 
   return (
-    <main className="page">
-      <h1 className="review-head">
-        <Link to="/">←</Link> {t.title} <span className="muted">· {t.left(left)}{streak > 0 ? ` · 🔥 ${streak}` : ''}</span>
-      </h1>
-      <div
-        className="progress"
-        role="progressbar"
-        aria-label={t.progress}
-        aria-valuemin={0}
-        aria-valuemax={doneToday + left}
-        aria-valuenow={doneToday}
-      >
-        <span style={{ width: `${pct}%` }} />
+    <main className="page task-screen">
+      <h1 className="visually-hidden">{t.title}</h1>
+      <TaskHead to="/" label={t.close} icon="close">
+        {/* an Again-graded card stays due, so doneToday can grow while left doesn't drop */}
+        <ProgressBar value={doneToday} max={doneToday + left} label={t.progress} />
+        <span className="muted">{t.left(left)}</span>
+      </TaskHead>
+      <div className="segmented" role="group" aria-label={t.mode}>
+        {(['write', 'flip'] as const).map((option) => (
+          <button
+            key={option}
+            type="button"
+            aria-pressed={mode === option}
+            onClick={() => { if (mode !== option) setParams({ mode: option }) }}
+          >
+            {option === 'flip' ? t.modeFlip : t.modeWrite}
+          </button>
+        ))}
       </div>
-      <button
-        className="muted-toggle"
-        onClick={() => setParams({ mode: mode === 'flip' ? 'write' : 'flip' })}
-      >
-        {t.mode} {mode === 'flip' ? t.modeFlip : t.modeWrite}
-      </button>
       {mode === 'flip'
         ? <FlipCard key={card.id} card={card} />
         : <WriteCard key={card.id} card={card} />}

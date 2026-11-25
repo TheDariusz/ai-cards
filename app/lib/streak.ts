@@ -23,19 +23,57 @@ export function startOfDay(epochMs: number): number {
   return t
 }
 
-function prevDay(day: string): string {
+function shiftDay(day: string, delta: number): string {
   const d = new Date(`${day}T12:00:00Z`)
-  d.setUTCDate(d.getUTCDate() - 1)
+  d.setUTCDate(d.getUTCDate() + delta)
   return d.toISOString().slice(0, 10)
 }
 
 export function computeStreak(completedDays: string[], today: string): number {
   const done = new Set(completedDays)
-  let cursor = done.has(today) ? today : prevDay(today)
+  let cursor = done.has(today) ? today : shiftDay(today, -1)
   let streak = 0
   while (done.has(cursor)) {
     streak++
-    cursor = prevDay(cursor)
+    cursor = shiftDay(cursor, -1)
   }
   return streak
+}
+
+// Monday = 0 … Sunday = 6
+function mondayIndex(day: string): number {
+  return (new Date(`${day}T12:00:00Z`).getUTCDay() + 6) % 7
+}
+
+export function longestStreak(completedDays: string[]): number {
+  const done = new Set(completedDays)
+  let best = 0
+  for (const day of done) {
+    if (done.has(shiftDay(day, -1))) continue // not the start of a run
+    let length = 0
+    for (let cursor = day; done.has(cursor); cursor = shiftDay(cursor, 1)) length++
+    best = Math.max(best, length)
+  }
+  return best
+}
+
+export function weekDays(today: string): string[] {
+  const monday = shiftDay(today, -mondayIndex(today))
+  return Array.from({ length: 7 }, (_, i) => shiftDay(monday, i))
+}
+
+export function monthGrid(today: string): (string | null)[] {
+  const first = `${today.slice(0, 8)}01`
+  const grid: (string | null)[] = Array(mondayIndex(first)).fill(null)
+  for (let day = first; day.slice(0, 7) === first.slice(0, 7); day = shiftDay(day, 1)) grid.push(day)
+  return grid
+}
+
+export type DayStatus = 'done' | 'today' | 'future' | 'missed'
+
+// How a day shows in the week strip and the month calendar.
+export function dayStatus(day: string, today: string, done: ReadonlySet<string>): DayStatus {
+  if (done.has(day)) return 'done'
+  if (day === today) return 'today'
+  return day > today ? 'future' : 'missed'
 }

@@ -1,0 +1,384 @@
+<title>AI Cards – Skupienie</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&family=Literata:opsz,wght@7..72,400;7..72,600&display=swap">
+<style>
+/* Layout: screens grouped by moment of use (entry, daily loop, the rest, desktop); each group is a wrapping row of phone mockups. */
+:root {
+  --pg: #f4f5f8; --pg-sf: #ffffff; --pg-tx: #171a26; --pg-mu: #5f667a; --pg-edge: #dfe2ea; --pg-ac: #3d4cc9; --pg-frame: #11131a;
+  --ui: "Instrument Sans", system-ui, sans-serif;
+}
+@media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) {
+  --pg: #0f1117; --pg-sf: #181b24; --pg-tx: #e8eaf2; --pg-mu: #969db2; --pg-edge: #2a2e3b; --pg-ac: #97a2ff; --pg-frame: #000; color-scheme: dark } }
+:root[data-theme="dark"] {
+  --pg: #0f1117; --pg-sf: #181b24; --pg-tx: #e8eaf2; --pg-mu: #969db2; --pg-edge: #2a2e3b; --pg-ac: #97a2ff; --pg-frame: #000; color-scheme: dark }
+
+* { box-sizing: border-box; }
+body { background: var(--pg); color: var(--pg-tx); font: 16px/1.5 var(--ui); padding-block: 32px 64px;
+  padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+.wrap { max-width: 1320px; margin: 0 auto; display: grid; gap: 36px; }
+header h1 { font-size: 1.9rem; line-height: 1.15; letter-spacing: -0.02em; margin: 0 0 8px; text-wrap: balance; }
+header p { margin: 0; color: var(--pg-mu); max-width: 65ch; }
+.bar { display: flex; flex-wrap: wrap; gap: 12px; align-items: center; }
+.seg { display: inline-flex; padding: 3px; gap: 2px; border-radius: 10px; background: var(--pg-sf); border: 1px solid var(--pg-edge); }
+.seg button { font: 600 0.9rem var(--ui); border: 0; background: transparent; color: var(--pg-mu); padding: 6px 14px; border-radius: 7px; cursor: pointer; }
+.seg button[aria-pressed="true"] { background: var(--pg-tx); color: var(--pg); }
+.seg button:focus-visible { outline: 2px solid var(--pg-ac); outline-offset: 2px; }
+.grp { display: grid; gap: 14px; }
+.grp h2 { font-size: 1.25rem; margin: 0; letter-spacing: -0.01em; }
+.grp > p { margin: -8px 0 0; color: var(--pg-mu); max-width: 70ch; }
+.row { display: flex; flex-wrap: wrap; gap: 28px; }
+.scroll { overflow-x: auto; padding-bottom: 12px; }
+figure { margin: 0; flex: 0 0 auto; display: grid; gap: 8px; max-width: 304px; align-content: start; }
+figure.wide { max-width: none; }
+figcaption { font-size: 0.85rem; color: var(--pg-mu); }
+figcaption b { color: var(--pg-tx); display: block; }
+
+/* tokens of the design itself */
+.dA { --bg: #f5f6fb; --sf: #ffffff; --tx: #1a1f33; --mu: #666e88; --ac: #4b5bdc; --on: #ffffff; --soft: #eaecfb; --edge: #e2e5f0; --ok: #17805a; --oksoft: #e3f3ec; --bad: #c53a3a; --badsoft: #fbecec;
+  font-family: "Instrument Sans", system-ui, sans-serif; }
+.mock-dark .dA { --bg: #111421; --sf: #1a1e2e; --tx: #e6e8f2; --mu: #8e95ad; --ac: #8c98ff; --on: #111421; --soft: #242a44; --edge: #262b3f; --ok: #43c793; --oksoft: #1a3229; --bad: #f07a7a; --badsoft: #33202a; }
+
+.ph { width: 304px; height: 640px; border-radius: 40px; padding: 7px; background: var(--pg-frame); }
+.scr { width: 100%; height: 100%; border-radius: 33px; overflow: hidden; background: var(--bg); color: var(--tx); display: flex; flex-direction: column; font-size: 14px; line-height: 1.4; position: relative; }
+.dA p { margin: 0; }
+.dA svg { width: 1.15em; height: 1.15em; flex: none; fill: none; stroke: currentColor; stroke-width: 1.9; stroke-linecap: round; stroke-linejoin: round; }
+.body { flex: 1; min-height: 0; padding: 22px 18px 14px; display: flex; flex-direction: column; gap: 14px; }
+.grow { flex: 1; }
+.mu { color: var(--mu); }
+.sm { font-size: 12px; }
+.btn { display: flex; align-items: center; justify-content: center; gap: 6px; font-weight: 600; text-align: center; }
+del { color: var(--bad); }
+ins { color: var(--ok); text-decoration: none; font-weight: 600; }
+.study { font-family: "Literata", Georgia, serif; }
+.top { display: flex; justify-content: space-between; align-items: center; }
+.top b { font-size: 22px; letter-spacing: -0.02em; display: block; line-height: 1.1; }
+.chip { display: inline-flex; align-items: center; gap: 4px; background: var(--soft); border-radius: 99px; padding: 5px 11px; font-weight: 600; font-size: 13px; }
+.add { display: flex; align-items: center; gap: 8px; background: var(--sf); border: 1px solid var(--edge); border-radius: 14px; padding: 6px 6px 6px 14px; color: var(--mu); }
+.add span:first-child { flex: 1; }
+.add .btn { background: var(--soft); color: var(--ac); border-radius: 10px; padding: 7px 12px; font-size: 13px; }
+.hero { background: var(--ac); color: var(--on); border-radius: 22px; padding: 18px; display: grid; gap: 12px; }
+.hero .n { font-size: 44px; font-weight: 700; line-height: 1; letter-spacing: -0.03em; }
+.hero h3 { margin: 0; font-size: 20px; line-height: 1.2; letter-spacing: -0.01em; }
+.hero .btn { background: var(--on); color: var(--ac); border-radius: 13px; padding: 12px; }
+.hero .add { border: 0; background: var(--on); color: var(--mu); }
+.hero .add .btn { background: var(--ac); color: var(--on); }
+.hero.done { background: var(--oksoft); color: var(--tx); }
+.hero.done svg { color: var(--ok); width: 28px; height: 28px; stroke-width: 2.4; }
+.tile { background: var(--sf); border: 1px solid var(--edge); border-radius: 18px; padding: 14px; display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+.tile .btn { background: var(--soft); color: var(--ac); border-radius: 11px; padding: 8px 14px; font-size: 13px; }
+.week { display: flex; justify-content: space-between; }
+.week i { font-style: normal; display: grid; justify-items: center; gap: 5px; font-size: 11px; color: var(--mu); }
+.week i::after { content: ""; width: 22px; height: 22px; border-radius: 50%; background: var(--soft); }
+.week i.on::after { background: var(--ok); }
+.week i.now::after { background: transparent; border: 2px solid var(--ac); }
+.tabs { display: flex; background: var(--sf); border-top: 1px solid var(--edge); padding: 9px 12px 16px; }
+.tabs span { flex: 1; display: grid; justify-items: center; gap: 2px; font-size: 11px; font-weight: 600; color: var(--mu); }
+.tabs span svg { width: 20px; height: 20px; }
+.tabs .cur { color: var(--ac); }
+.nav { display: flex; align-items: center; gap: 10px; font-weight: 600; }
+.prog { flex: 1; height: 5px; border-radius: 9px; background: var(--soft); overflow: hidden; }
+.prog::after { content: ""; display: block; height: 100%; width: var(--w, 40%); background: var(--ac); border-radius: 9px; }
+.label { font-size: 11px; letter-spacing: 0.07em; text-transform: uppercase; color: var(--mu); font-weight: 600; }
+.sent { font-size: 19px; line-height: 1.35; }
+.pairs { display: flex; flex-wrap: wrap; gap: 7px; }
+.pairs span { background: var(--sf); border: 1px solid var(--edge); border-radius: 12px; padding: 7px 11px; display: grid; text-align: center; font-weight: 600; }
+.pairs small { font-weight: 400; color: var(--mu); font-size: 12px; }
+.pairs .hl { border-color: var(--ac); background: var(--soft); }
+.cta { background: var(--ac); color: var(--on); border-radius: 14px; padding: 13px; }
+.card { background: var(--sf); border: 1px solid var(--edge); border-radius: 18px; padding: 14px; display: grid; gap: 6px; }
+.verdict { background: var(--badsoft); border-radius: 16px; padding: 12px 14px; display: grid; gap: 4px; }
+.verdict b { color: var(--bad); }
+.grades { display: flex; gap: 7px; }
+.grades .btn { flex: 1; background: var(--soft); border-radius: 13px; padding: 12px 4px; font-size: 13px; }
+.grades .sug { background: var(--ac); color: var(--on); }
+/* steps for first run */
+.steps { display: grid; gap: 10px; }
+.steps div { display: flex; gap: 10px; align-items: baseline; }
+.steps b { flex: none; width: 54px; font-size: 11px; letter-spacing: 0.06em; text-transform: uppercase; color: var(--ac); }
+/* login */
+.logo { display: flex; align-items: center; gap: 8px; font-weight: 700; font-size: 18px; }
+.logo i { width: 30px; height: 30px; border-radius: 9px; background: var(--ac); color: var(--on); display: grid; place-items: center; transform: rotate(-8deg); }
+.field { background: var(--sf); border: 1px solid var(--edge); border-radius: 14px; padding: 13px 14px; color: var(--mu); }
+.pill2 { display: inline-flex; padding: 3px; gap: 2px; border-radius: 11px; background: var(--soft); font-size: 12px; font-weight: 600; }
+.pill2 span { padding: 4px 10px; border-radius: 8px; color: var(--mu); }
+.pill2 .cur { background: var(--sf); color: var(--ac); }
+/* cards list */
+.list { background: var(--sf); border: 1px solid var(--edge); border-radius: 18px; overflow: hidden; }
+.list > div { padding: 11px 14px; border-bottom: 1px solid var(--edge); display: grid; gap: 1px; }
+.list > div:last-child { border-bottom: 0; }
+.list .h { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.list .h b span { font-weight: 400; color: var(--mu); }
+.tag { font-size: 11px; font-weight: 600; border-radius: 99px; padding: 2px 8px; background: var(--soft); color: var(--ac); white-space: nowrap; }
+.list .s { color: var(--mu); font-size: 13px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+/* settings */
+.set { display: flex; justify-content: space-between; align-items: center; gap: 10px; min-height: 30px; }
+.sw { width: 40px; height: 24px; border-radius: 99px; background: var(--ac); position: relative; flex: none; }
+.sw::after { content: ""; position: absolute; right: 3px; top: 3px; width: 18px; height: 18px; border-radius: 50%; background: var(--on); }
+.lnk { color: var(--ac); font-weight: 600; }
+.meter { height: 6px; border-radius: 9px; background: var(--soft); overflow: hidden; }
+.meter::after { content: ""; display: block; height: 100%; width: 82%; background: var(--ac); }
+/* streak calendar */
+.cal { display: grid; grid-template-columns: repeat(7, 1fr); gap: 5px; text-align: center; font-size: 12px; }
+.cal span { color: var(--mu); font-size: 11px; }
+.cal i { font-style: normal; aspect-ratio: 1; display: grid; place-items: center; border-radius: 50%; background: var(--soft); color: var(--mu); }
+.cal i.on { background: var(--ok); color: var(--bg); font-weight: 600; }
+.cal i.now { background: transparent; border: 2px solid var(--ac); color: var(--tx); }
+.cal i.off { background: transparent; opacity: 0.5; }
+.cal i.e { visibility: hidden; }
+.stat2 { display: flex; gap: 10px; }
+.stat2 .card { flex: 1; gap: 0; }
+.stat2 b { font-size: 24px; letter-spacing: -0.02em; }
+
+/* desktop */
+.desk { width: 980px; border-radius: 16px; background: var(--pg-frame); padding: 30px 7px 7px; }
+.desk .scr { border-radius: 10px; height: 560px; flex-direction: row; font-size: 15px; }
+.side { width: 208px; background: var(--sf); border-right: 1px solid var(--edge); padding: 22px 14px; display: flex; flex-direction: column; gap: 4px; }
+.side .logo { margin: 0 8px 18px; }
+.side span { display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 11px; font-weight: 600; color: var(--mu); }
+.side span svg { width: 19px; height: 19px; }
+.side .cur { background: var(--soft); color: var(--ac); }
+.main { flex: 1; padding: 30px 40px; display: flex; flex-direction: column; gap: 20px; min-width: 0; }
+.main .top b { font-size: 28px; }
+.main .add { max-width: 460px; padding: 8px 8px 8px 16px; }
+.cols { display: grid; grid-template-columns: 1.15fr 1fr; gap: 20px; align-items: start; }
+.cols .hero { padding: 26px; gap: 20px; }
+.cols .hero .n { font-size: 72px; }
+.cols .hero .btn { justify-self: start; padding: 13px 26px; }
+.cols .hero .btn kbd { font: inherit; font-size: 12px; opacity: 0.6; border: 1px solid currentColor; border-radius: 5px; padding: 0 5px; }
+.col { display: grid; gap: 14px; }
+@media (max-width: 520px) { header h1 { font-size: 1.5rem; } }
+</style>
+
+<svg width="0" height="0" style="position:absolute" aria-hidden="true">
+  <symbol id="flame" viewBox="0 0 24 24"><path d="M12 3c1 3.5 5 5.5 5 10.5a5 5 0 0 1-10 0c0-2 1-3.200 2-4 .2 1.500 1 2.300 2 2.500C10.500 9 11 6 12 3z"/></symbol>
+  <symbol id="back" viewBox="0 0 24 24"><path d="M19 12H5M11 6l-6 6 6 6"/></symbol>
+  <symbol id="x" viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></symbol>
+  <symbol id="check" viewBox="0 0 24 24"><path d="M5 12.500l4.500 4.500L19 7.500"/></symbol>
+  <symbol id="home" viewBox="0 0 24 24"><path d="M4 11l8-7 8 7v8a1 1 0 0 1-1 1h-4v-6h-6v6H5a1 1 0 0 1-1-1z"/></symbol>
+  <symbol id="cards" viewBox="0 0 24 24"><rect x="4" y="7" width="13" height="13" rx="2"/><path d="M8 4h10a2 2 0 0 1 2 2v10"/></symbol>
+  <symbol id="gear" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12 3v3M12 18v3M3 12h3M18 12h3M5.600 5.600l2.100 2.100M16.300 16.300l2.100 2.100M5.600 18.400l2.100-2.100M16.300 7.700l2.100-2.100"/></symbol>
+</svg>
+
+<div class="wrap">
+  <header>
+    <h1>AI Cards · kierunek „Skupienie"</h1>
+    <p>Pełny zestaw ekranów do akceptacji. To nadal makiety: pokazują układ, hierarchię i stany, a nie gotowy kod. Logo jest tu zaślepką, w aplikacji zostaje obecne.</p>
+  </header>
+
+  <div class="bar">
+    <span>Motyw makiet</span>
+    <div class="seg" role="group" aria-label="Motyw makiet">
+      <button id="t-light" type="button" aria-pressed="true">Jasny</button>
+      <button id="t-dark" type="button" aria-pressed="false">Ciemny</button>
+    </div>
+  </div>
+
+  <div id="mocks" class="dA" style="display:grid;gap:44px;font-family:inherit">
+
+  <section class="grp">
+    <h2>Wejście</h2>
+    <p>Pierwsze dwa ekrany, które widzi nowa osoba.</p>
+    <div class="row">
+      <figure><div class="ph"><div class="scr dA">
+        <div class="body" style="padding-top:30px">
+          <div class="top"><span class="logo"><i><svg><use href="#cards"/></svg></i>AI Cards</span><span class="pill2"><span class="cur">PL</span><span>EN</span></span></div>
+          <div class="grow" style="flex:0.5"></div>
+          <div><b style="font-size:26px;letter-spacing:-0.02em;line-height:1.15;display:block">Zaloguj się albo załóż konto</b><p class="mu" style="margin-top:6px">Wyślemy Ci link. Bez hasła, ten sam link zakłada konto.</p></div>
+          <div class="field">E-mail</div>
+          <div class="btn cta">Wyślij mi link</div>
+          <p class="mu sm">Nie ma maila po minucie? Zajrzyj do spamu.</p>
+          <div class="grow"></div>
+        </div>
+      </div></div><figcaption><b>Logowanie</b>To samo logo i ton co na landingu, formularz wyśrodkowany w pionie.</figcaption></figure>
+
+      <figure><div class="ph"><div class="scr dA">
+        <div class="body">
+          <div class="top"><div><span class="mu">wtorek, 24 listopada</span><b>Dziś</b></div></div>
+          <div class="hero">
+            <h3>Dodaj pierwsze słowo</h3>
+            <p>Takie, które ostatnio usłyszałeś i chcesz zapamiętać.</p>
+            <div class="add"><span>np. reluctant</span><span class="btn">Dodaj</span></div>
+          </div>
+          <div class="card steps">
+            <div><b>Teraz</b><p>AI przygotuje fiszkę ze zdaniem i nagraniem.</p></div>
+            <div><b>Potem</b><p>Uczysz się zdania krok po kroku.</p></div>
+            <div><b>Jutro</b><p>Słowo wraca w powtórce, coraz rzadziej.</p></div>
+          </div>
+          <p class="mu sm">Na start masz 500 kredytów. Jedna fiszka to kilka kredytów.</p>
+        </div>
+        <div class="tabs"><span class="cur"><svg><use href="#home"/></svg>Dziś</span><span><svg><use href="#cards"/></svg>Karty</span><span><svg><use href="#gear"/></svg>Ustawienia</span></div>
+      </div></div><figcaption><b>Start, pierwszy raz</b>Pusty stan tłumaczy, co się stanie, zamiast pokazywać zera.</figcaption></figure>
+    </div>
+  </section>
+
+  <section class="grp">
+    <h2>Codzienna pętla</h2>
+    <p>Start ma zawsze jedną główną kartę. Zmienia się jej treść: powtórka, nauka nowych albo „zrobione".</p>
+    <div class="row">
+      <figure><div class="ph"><div class="scr dA">
+        <div class="body">
+          <div class="top"><div><span class="mu">wtorek, 24 listopada</span><b>Dziś</b></div><span class="chip"><svg><use href="#flame"/></svg>12</span></div>
+          <div class="add"><span>Nowe słowo…</span><span class="btn">Dodaj</span></div>
+          <div class="hero">
+            <div><div class="n">12</div><div>kart do powtórki · ok. 6 minut</div></div>
+            <div class="btn">Zacznij powtórkę</div>
+          </div>
+          <div class="tile"><div><b>3 nowe słowa</b><p class="mu">Zacznij od reluctant</p></div><span class="btn">Ucz się</span></div>
+          <div class="week"><i class="on">pn</i><i class="now">wt</i><i>śr</i><i>cz</i><i>pt</i><i>so</i><i>nd</i></div>
+          <p class="mu sm">Generuję: stranger…</p>
+        </div>
+        <div class="tabs"><span class="cur"><svg><use href="#home"/></svg>Dziś</span><span><svg><use href="#cards"/></svg>Karty</span><span><svg><use href="#gear"/></svg>Ustawienia</span></div>
+      </div></div><figcaption><b>Start, zwykły dzień</b>Licznik dni i pasek tygodnia otwierają ekran serii.</figcaption></figure>
+
+      <figure><div class="ph"><div class="scr dA">
+        <div class="body">
+          <div class="nav"><svg><use href="#back"/></svg><div class="prog" style="--w:25%"></div><span class="mu">1 / 4</span></div>
+          <span class="label">Rozbiór zdania</span>
+          <p class="sent study">She was <b style="color:var(--ac)">reluctant</b> to lend her car to a stranger.</p>
+          <p class="mu">Czytaj od lewej do prawej. Polska wersja jest celowo dosłowna.</p>
+          <div class="pairs"><span>She<small>Ona</small></span><span>was<small>była</small></span><span class="hl">reluctant<small>niechętna</small></span><span>to lend<small>pożyczyć</small></span><span>her car<small>swój samochód</small></span><span>to a stranger<small>obcej osobie</small></span></div>
+          <div class="card"><span class="label">Naturalnie po polsku</span><p class="study">Niechętnie pożyczała swój samochód obcej osobie.</p></div>
+          <div class="grow"></div>
+          <div class="btn cta">Rozumiem budowę zdania</div>
+        </div>
+      </div></div><figcaption><b>Nauka nowego słowa</b>Bez zakładek na dole, główny przycisk zawsze przy kciuku.</figcaption></figure>
+
+      <figure><div class="ph"><div class="scr dA">
+        <div class="body" style="gap:11px">
+          <div class="nav"><svg><use href="#x"/></svg><div class="prog" style="--w:60%"></div><span class="mu">zostały 4</span></div>
+          <span class="label">Napisz po angielsku</span>
+          <p class="sent study" style="font-size:17px">Niechętnie pożyczała swój samochód obcej osobie.</p>
+          <div class="card study">She was reluctant to <span><del>borrow</del> <ins>lend</ins></span> her car to a stranger.</div>
+          <div class="verdict"><b>Nie tym razem</b><p>„Lend" to dawać komuś, „borrow" to brać od kogoś. Reszta zdania jest naturalna.</p></div>
+          <div class="grow"></div>
+          <span class="label">Sugerowana ocena: jeszcze raz</span>
+          <div class="grades"><span class="btn sug">Jeszcze raz</span><span class="btn">Dobrze</span><span class="btn">Łatwo</span></div>
+        </div>
+      </div></div><figcaption><b>Powtórka po sprawdzeniu</b>Werdykt w jednym bloku, oceny przypięte na dole.</figcaption></figure>
+
+      <figure><div class="ph"><div class="scr dA">
+        <div class="body">
+          <div class="top"><div><span class="mu">wtorek, 24 listopada</span><b>Dziś</b></div><span class="chip"><svg><use href="#flame"/></svg>13</span></div>
+          <div class="add"><span>Nowe słowo…</span><span class="btn">Dodaj</span></div>
+          <div class="hero done">
+            <svg><use href="#check"/></svg>
+            <div><h3>Na dziś wszystko</h3><p class="mu" style="margin-top:4px">12 kart powtórzonych. Kolejne wrócą jutro.</p></div>
+          </div>
+          <div class="tile"><div><b>3 nowe słowa</b><p class="mu">Masz chwilę? Zacznij od reluctant</p></div><span class="btn">Ucz się</span></div>
+          <div class="week"><i class="on">pn</i><i class="on">wt</i><i>śr</i><i>cz</i><i>pt</i><i>so</i><i>nd</i></div>
+        </div>
+        <div class="tabs"><span class="cur"><svg><use href="#home"/></svg>Dziś</span><span><svg><use href="#cards"/></svg>Karty</span><span><svg><use href="#gear"/></svg>Ustawienia</span></div>
+      </div></div><figcaption><b>Start po powtórce</b>Ta sama karta w stanie „zrobione", dzień w pasku tygodnia się zapala.</figcaption></figure>
+    </div>
+  </section>
+
+  <section class="grp">
+    <h2>Pozostałe ekrany</h2>
+    <div class="row">
+      <figure><div class="ph"><div class="scr dA">
+        <div class="body">
+          <div class="top"><b>Karty</b><span class="mu">48</span></div>
+          <div class="list">
+            <div><div class="h"><b>stranger</b><span class="tag">generuję…</span></div><p class="s">&nbsp;</p></div>
+            <div><div class="h"><b>reluctant <span>· niechętny</span></b><span class="tag">nowa</span></div><p class="s study">She was reluctant to lend her car to a stranger.</p></div>
+            <div><div class="h"><b>to postpone <span>· przełożyć</span></b></div><p class="s study">We had to postpone the meeting until Friday.</p></div>
+            <div><div class="h"><b>thorough <span>· dokładny</span></b></div><p class="s study">The doctor did a thorough check of my knee.</p></div>
+            <div><div class="h"><b>to afford <span>· pozwolić sobie</span></b></div><p class="s study">I can't afford a new laptop this year.</p></div>
+            <div><div class="h"><b>eventually <span>· w końcu</span></b></div><p class="s study">Eventually he agreed to help us move.</p></div>
+            <div><div class="h"><b>to borrow <span>· pożyczyć od</span></b></div><p class="s study">Can I borrow your charger for a minute?</p></div>
+          </div>
+        </div>
+        <div class="tabs"><span><svg><use href="#home"/></svg>Dziś</span><span class="cur"><svg><use href="#cards"/></svg>Karty</span><span><svg><use href="#gear"/></svg>Ustawienia</span></div>
+      </div></div><figcaption><b>Karty</b>Słowo z polskim znaczeniem, zdanie w jednej linii, etykieta tylko gdy stan jest nietypowy.</figcaption></figure>
+
+      <figure><div class="ph"><div class="scr dA">
+        <div class="body">
+          <div class="nav"><svg><use href="#back"/></svg>Seria</div>
+          <div style="display:flex;align-items:center;gap:12px"><span style="font-size:52px;font-weight:700;letter-spacing:-0.03em;line-height:1">12</span><span>dni z rzędu<br><span class="mu">najdłuższa seria: 19</span></span></div>
+          <div class="card">
+            <b>Listopad</b>
+            <div class="cal">
+              <span>pn</span><span>wt</span><span>śr</span><span>cz</span><span>pt</span><span>so</span><span>nd</span>
+              <i class="e"></i><i class="e"></i><i class="e"></i><i class="e"></i><i class="e"></i><i class="e"></i><i class="on">1</i>
+              <i class="on">2</i><i class="on">3</i><i>4</i><i class="on">5</i><i class="on">6</i><i>7</i><i class="on">8</i>
+              <i class="on">9</i><i class="on">10</i><i>11</i><i class="on">12</i><i class="on">13</i><i class="on">14</i><i class="on">15</i>
+              <i class="on">16</i><i class="on">17</i><i class="on">18</i><i class="on">19</i><i class="on">20</i><i class="on">21</i><i class="on">22</i>
+              <i class="on">23</i><i class="now">24</i><i class="off">25</i><i class="off">26</i><i class="off">27</i><i class="off">28</i><i class="off">29</i>
+              <i class="off">30</i>
+            </div>
+          </div>
+          <div class="stat2"><div class="card"><b>20</b><span class="mu">dni nauki w tym miesiącu</span></div><div class="card"><b>48</b><span class="mu">kart łącznie</span></div></div>
+        </div>
+      </div></div><figcaption><b>Seria</b>Tu trafia kalendarz ze startu. Otwiera się po stuknięciu w licznik dni.</figcaption></figure>
+
+      <figure><div class="ph"><div class="scr dA">
+        <div class="body" style="gap:12px">
+          <div class="top"><b>Ustawienia</b></div>
+          <div class="card">
+            <span class="label">Wygląd</span>
+            <div class="set"><span>Motyw</span><span class="pill2"><span class="cur">Auto</span><span>Jasny</span><span>Ciemny</span></span></div>
+            <div class="set"><span>Język</span><span class="pill2"><span class="cur">PL</span><span>EN</span></span></div>
+          </div>
+          <div class="card">
+            <span class="label">Przypomnienie</span>
+            <div class="set"><span>Mail o 19:00, gdy coś czeka</span><span class="sw"></span></div>
+            <span class="lnk">Wyślij testowy mail</span>
+          </div>
+          <div class="card">
+            <span class="label">Kredyty</span>
+            <div class="set"><b>412 z 500</b><span class="mu sm">zużywa je AI</span></div>
+            <div class="meter"></div>
+          </div>
+          <div class="card">
+            <span class="label">Twoje dane</span>
+            <span class="lnk">Eksport do CSV (Anki)</span>
+            <span class="lnk">Kopia zapasowa (JSON)</span>
+          </div>
+          <div class="grow"></div>
+          <p class="mu sm" style="text-align:center">jan@example.com · <span class="lnk">Wyloguj się</span></p>
+        </div>
+        <div class="tabs"><span><svg><use href="#home"/></svg>Dziś</span><span><svg><use href="#cards"/></svg>Karty</span><span class="cur"><svg><use href="#gear"/></svg>Ustawienia</span></div>
+      </div></div><figcaption><b>Ustawienia</b>Wszystko, co dziś siedzi w rozwijanym bloku na starcie, plus kredyty i konto.</figcaption></figure>
+    </div>
+  </section>
+
+  <section class="grp">
+    <h2>Desktop</h2>
+    <p>Zakładki przechodzą do panelu po lewej, treść dostaje dwie kolumny zamiast wąskiego paska na środku.</p>
+    <div class="scroll">
+      <figure class="wide"><div class="desk"><div class="scr dA">
+        <div class="side">
+          <span class="logo" style="color:var(--tx);padding:0"><i><svg><use href="#cards"/></svg></i>AI Cards</span>
+          <span class="cur"><svg><use href="#home"/></svg>Dziś</span>
+          <span><svg><use href="#cards"/></svg>Karty <span class="mu" style="margin-left:auto;padding:0;font-weight:500">48</span></span>
+          <span><svg><use href="#gear"/></svg>Ustawienia</span>
+          <div class="grow"></div>
+          <span class="sm" style="font-weight:500">Kredyty 412 / 500</span>
+        </div>
+        <div class="main">
+          <div class="top"><div><span class="mu">wtorek, 24 listopada</span><b>Dziś</b></div><span class="chip"><svg><use href="#flame"/></svg>12 dni z rzędu</span></div>
+          <div class="add"><span>Nowe słowo…</span><span class="btn">Dodaj</span></div>
+          <div class="cols">
+            <div class="hero">
+              <div><div class="n">12</div><div style="font-size:17px">kart do powtórki · ok. 6 minut</div></div>
+              <div class="btn">Zacznij powtórkę <kbd>Enter</kbd></div>
+            </div>
+            <div class="col">
+              <div class="tile"><div><b>3 nowe słowa</b><p class="mu">Zacznij od reluctant</p></div><span class="btn">Ucz się</span></div>
+              <div class="card" style="gap:12px"><b>Ten tydzień</b><div class="week"><i class="on">pn</i><i class="now">wt</i><i>śr</i><i>cz</i><i>pt</i><i>so</i><i>nd</i></div></div>
+              <p class="mu sm">Generuję: stranger…</p>
+            </div>
+          </div>
+        </div>
+      </div></div><figcaption><b>Start na desktopie</b>Nauka i powtórka zostają wąską, wyśrodkowaną kolumną, bo to czytanie i pisanie.</figcaption></figure>
+    </div>
+  </section>
+
+  </div>
+</div>
+
+<script>
+  const mocks = document.getElementById('mocks'), tl = document.getElementById('t-light'), td = document.getElementById('t-dark')
+  function set(dark) { mocks.classList.toggle('mock-dark', dark); tl.setAttribute('aria-pressed', String(!dark)); td.setAttribute('aria-pressed', String(dark)) }
+  tl.addEventListener('click', () => set(false)); td.addEventListener('click', () => set(true))
+</script>

@@ -1,9 +1,11 @@
 import { describe, it, expect } from 'vitest'
 import { testDb } from './helpers/db'
 import { eq } from 'drizzle-orm'
-import { insertPendingCard, getDueCards, countDue, getCard, listCards, markReady, markFailed, markPending, applyReview, completedDays, updateCardContent, deleteCard, getNewCards, completeFirstLearning, countReviewsOn, getSetting, setSetting, isDayDone, countNew, nextDueAt, setAudioKey, listReviewLog, findOrCreateUser, getUserLocale, setUserLocale, type Db } from '../app/db/repo'
-import { reviewLog, dayLog, users, OWNER_USER_ID as U } from '../app/db/schema'
+import { insertPendingCard, getDueCards, countDue, getCard, listCards, markReady, markFailed, markPending, applyReview, completedDays, updateCardContent, deleteCard, getNewCards, completeFirstLearning, countReviewsOn, countCards, getSetting, setSetting, isDayDone, countNew, nextDueAt, setAudioKey, listReviewLog, findOrCreateUser, getUserLocale, setUserLocale, type Db } from '../app/db/repo'
+import { isNewCard } from '../app/lib/cards'
+import { cards, reviewLog, dayLog, users, OWNER_USER_ID as U } from '../app/db/schema'
 import { dayKey } from '../app/lib/streak'
+import { newCardSrs } from '../app/lib/srs'
 
 const NOW = 1_750_000_000_000
 const DAY = 86_400_000
@@ -11,6 +13,11 @@ const DAY = 86_400_000
 const CONTENT = {
   wordPl: 'x', explanationEn: 'x', sentenceEn: 'x', sentencePl: 'x',
   decodeParts: [{ en: 'x', pl: 'x' }],
+}
+
+// marks a card as learned without going through completeFirstLearning, which now also logs the day
+async function seedLearned(db: Db, id: number, at: number) {
+  await db.update(cards).set({ firstLearnedAt: at, ...newCardSrs(at) }).where(eq(cards.id, id))
 }
 
 describe('repo', () => {
@@ -81,7 +88,7 @@ describe('applyReview', () => {
     const db = testDb()
     const id = await insertPendingCard(db, U, 'reluctant', NOW)
     await markReady(db, id, CONTENT, null)
-    await completeFirstLearning(db, U, id, NOW)
+    await seedLearned(db, id, NOW)
     const later = NOW + 2 * DAY
     await applyReview(db, U, id, 'good', 'flip', null, later)
     const card = await getCard(db, U, id)
@@ -96,8 +103,8 @@ describe('applyReview', () => {
     const b = await insertPendingCard(db, U, 'b', NOW)
     await markReady(db, a, CONTENT, null)
     await markReady(db, b, CONTENT, null)
-    await completeFirstLearning(db, U, a, NOW)
-    await completeFirstLearning(db, U, b, NOW)
+    await seedLearned(db, a, NOW)
+    await seedLearned(db, b, NOW)
     const later = NOW + 2 * DAY
     await applyReview(db, U, a, 'good', 'flip', null, later)
     expect(await completedDays(db, U, U)).toEqual([])
@@ -192,13 +199,61 @@ describe('countNew', () => {
   })
 })
 
+describe('completeFirstLearning and the day', () => {
+  it('completes the day when nothing is due', async () => {
+    const db = testDb()
+    const id = await insertPendingCard(db, U, 'reluctant', NOW)
+    await markReady(db, id, CONTENT, null)
+    expect(await completeFirstLearning(db, U, id, NOW)).toBe(true)
+    expect(await isDayDone(db, U, dayKey(NOW))).toBe(true)
+  })
+  it('does not complete the day while a review is due', async () => {
+    const db = testDb()
+    const learned = await insertPendingCard(db, U, 'eager', NOW - 3 * DAY)
+    await markReady(db, learned, CONTENT, null)
+    await db.update(cards).set({ firstLearnedAt: NOW - 3 * DAY, dueAt: NOW - DAY }).where(eq(cards.id, learned))
+    const id = await insertPendingCard(db, U, 'reluctant', NOW)
+    await markReady(db, id, CONTENT, null)
+    expect(await completeFirstLearning(db, U, id, NOW)).toBe(true)
+    expect(await isDayDone(db, U, dayKey(NOW))).toBe(false)
+  })
+  it('does not complete the day when the card was not learnable', async () => {
+    const db = testDb()
+    const id = await insertPendingCard(db, U, 'reluctant', NOW)
+    expect(await completeFirstLearning(db, U, id, NOW)).toBe(false)
+    expect(await isDayDone(db, U, dayKey(NOW))).toBe(false)
+  })
+})
+
+describe('isNewCard', () => {
+  it('agrees with getNewCards for every card state', async () => {
+    const db = testDb()
+    await insertPendingCard(db, U, 'pending', NOW)
+    const failed = await insertPendingCard(db, U, 'failed', NOW)
+    await markFailed(db, failed)
+    const noDecode = await insertPendingCard(db, U, 'nodecode', NOW)
+    await markReady(db, noDecode, CONTENT, null)
+    await updateCardContent(db, U, noDecode, { ...CONTENT, decodeParts: null })
+    const fresh = await insertPendingCard(db, U, 'fresh', NOW)
+    await markReady(db, fresh, CONTENT, null)
+    const learned = await insertPendingCard(db, U, 'learned', NOW)
+    await markReady(db, learned, CONTENT, null)
+    await completeFirstLearning(db, U, learned, NOW)
+    const all = await listCards(db, U)
+    expect(all).toHaveLength(5)
+    const expected = (await getNewCards(db, U)).map((c) => c.id).sort()
+    expect(expected).toEqual([fresh])
+    expect(all.filter(isNewCard).map((c) => c.id).sort()).toEqual(expected)
+  })
+})
+
 describe('per-user isolation', () => {
   async function twoUsers() {
     const db = testDb()
     const [other] = await db.insert(users).values({ email: 'other@example.com', createdAt: NOW }).returning()
     const mine = await insertPendingCard(db, U, 'reluctant', NOW - 3 * DAY)
     await markReady(db, mine, CONTENT, 'audio/mine.mp3')
-    await completeFirstLearning(db, U, mine, NOW - 2 * DAY)
+    await seedLearned(db, mine, NOW - 2 * DAY)
     return { db, other: other.id, mine }
   }
 
@@ -213,6 +268,8 @@ describe('per-user isolation', () => {
     expect(await listCards(db, other)).toEqual([])
     expect(await getDueCards(db, other, NOW + 365 * DAY)).toEqual([])
     expect(await countDue(db, other, NOW + 365 * DAY)).toBe(0)
+    expect(await countCards(db, other)).toBe(0)
+    expect(await countCards(db, U)).toBe(1)
     expect(await nextDueAt(db, other, NOW)).toBeNull()
     expect(await countReviewsOn(db, other, dayKey(NOW))).toBe(0)
     expect(await listReviewLog(db, other)).toEqual([])

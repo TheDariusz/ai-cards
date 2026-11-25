@@ -20,14 +20,14 @@ export async function action({ request, context }: Route.ActionArgs) {
   if (intent === 'test') {
     const to = reminderRecipient({ id: userId, email: await getUserEmail(db, userId) }, env.REMINDER_TO)
     const mailer = to ? mailerFromEnv(env, to) : null
-    if (!mailer) return { reminderError: t.home.reminderNotConfigured }
+    if (!mailer) return { reminderError: t.settings.reminderNotConfigured }
     try {
       await runReminder({ db, mailer, appUrl: env.APP_URL }, userId, Date.now(), { force: true })
       return { reminderSent: true as const }
     } catch (err) {
       console.error('reminder: test failed', err)
       context.log.error('reminder test failed', { user_id: userId }, err)
-      return { reminderError: t.home.reminderFailed }
+      return { reminderError: t.settings.reminderFailed }
     }
   }
   throw new Response('Bad Request', { status: 400 })

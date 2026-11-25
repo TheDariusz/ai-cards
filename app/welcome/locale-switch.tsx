@@ -1,11 +1,10 @@
-import { Form, useLocation, useRouteLoaderData } from 'react-router'
-import { useT } from '../lib/i18n'
-import type { loader as rootLoader } from '../root'
+import { Form, useLocation } from 'react-router'
+import { useLocale, useT } from '../lib/i18n'
 
 export function LocaleSwitch() {
   const location = useLocation()
   const t = useT()
-  const locale = useRouteLoaderData<typeof rootLoader>('root')?.locale ?? 'pl'
+  const locale = useLocale()
   return (
     // Switching language re-renders the same page; keep the reader where they were.
     <Form method="post" action="/locale" className="locale-switch" preventScrollReset>

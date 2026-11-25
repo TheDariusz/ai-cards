@@ -12,11 +12,11 @@ A personal English-learning flashcard app for a Polish native speaker. Hear an u
 - **Spaced repetition** — simplified SM-2 scheduler; newly introduced cards become due the day after first learning
 - **Two review modes** — *write it* (default: translate the Polish sentence in your own words) and classic flip (Polish → reveal English + audio → self-grade)
 - **AI answer check** — in *write it*, AI judges meaning, grammar and naturalness, shows a corrected version with up to three short Polish notes and suggests a grade (correct → *easy*, minor errors → *good*, wrong → *again*); you still pick the grade. The tested word must appear or the suggestion is *again* (a typo in it lowers *easy* to *good*; only regular inflections are recognized). Falls back to a word-by-word diff when AI is unavailable or credits run out
-- **Streak** — a day counts when all due cards are reviewed (or ≥10 reviews on backlog days), Europe/Warsaw timezone, month calendar on the home screen
+- **Streak** — a day counts when all due cards are reviewed (or ≥10 reviews on backlog days), or when a new card is learned with nothing due; Europe/Warsaw timezone; the home screen shows this week, the Streak screen (`/streak`) the month calendar
 - **Card management** — edit any field, regenerate with a hint ("make it shorter", "business context"), delete; SRS progress survives edits
 - **Export** — CSV (Anki/spreadsheet-compatible) and JSON full backup, no import by design
-- **Light and dark themes** — calm, study-focused look (Instrument Sans UI, Literata for study sentences); *Auto* follows the phone, or pin *Light* / *Dark* from the home footer — remembered in a cookie and rendered on the server, so there is no wrong-theme flash; review shows a progress bar for today, the streak, and highlights the suggested grade
-- **Email reminder** — at 19:00 Europe/Warsaw, a short Polish email to each user whose day is not done yet and cards are due or new; On/Off and *Send test* on the home screen
+- **Light and dark themes** — calm, study-focused look (Instrument Sans UI, Literata for study sentences); *Auto* follows the phone, or pin *Light* / *Dark* in Settings — remembered in a cookie and rendered on the server, so there is no wrong-theme flash; review shows a progress bar for today and highlights the suggested grade
+- **Email reminder** — at 19:00 Europe/Warsaw, a short Polish email to each user whose day is not done yet and cards are due or new; On/Off and *Send test* in Settings
 - **Landing page** — visitors at `/` without a session see a public page explaining the product with the real learn and review screens; signed-in users land on home
 - **Accounts** — log in or sign up with a one-time link mailed via Resend (15 min, single use); every user's cards, streak and settings are separate
 - **Credits** — every new account gets `STARTER_CREDITS` (default 500; 1 credit = $0.001). Every OpenRouter call made for a user (new card, retry, regenerate, audio, answer check) is charged at its real cost and logged in `usage_log`; at zero, adding cards and AI features stop while learning and reviews keep working. The owner is never limited and tops users up or blocks them on `/admin`
@@ -110,7 +110,7 @@ New migrations must be applied remotely by hand (`npx wrangler d1 migrations app
 per 15 minutes). Following the link for a new address creates the account with the starter credit pool. At most
 `MAX_SIGNUPS_PER_DAY` (default 20) accounts are created per Warsaw day; beyond that, and for blocked addresses, no
 link is sent, but the visitor sees the same message either way. The owner sees every user's spend and balance on
-`/admin` (*Users* in the home footer), and can add credits or block and unblock a user. Blocking also ends the
+`/admin` (*Users* in Settings), and can add credits or block and unblock a user. Blocking also ends the
 user's existing session.
 
 Chat calls are charged from OpenRouter's `usage.cost`; if it is missing, a 2¢ fallback is charged and logged. TTS
@@ -127,8 +127,8 @@ working as the owner. Afterwards `npx wrangler secret delete APP_PASSWORD_HASH`.
 ### Email reminders
 
 Two Cron Triggers (`0 17 * * *` and `0 18 * * *` UTC) run `scheduled` in `workers/app.ts`; only the one that is
-19:00 in Warsaw (CEST or CET) goes on. It emails every user, at their login email (the owner falls back to `REMINDER_TO` until their first email login), once a day when their today has no completed review day and there are
-due or new cards, unless switched off on the home screen. Mail goes through [Resend](https://resend.com)'s
+19:00 in Warsaw (CEST or CET) goes on. It emails every user, at their login email (the owner falls back to `REMINDER_TO` until their first email login), once a day when their today has no completed day and there are
+due or new cards, unless switched off in Settings. Mail goes through [Resend](https://resend.com)'s
 free plan (3,000/month, 100/day) from `AI Cards <cards@ai-cards.app>` (`REMINDER_FROM` in `wrangler.jsonc`), an
 address in the `ai-cards.app` domain verified in Resend, so `REMINDER_TO` can be any address of yours.
 
@@ -138,7 +138,7 @@ One-time setup for a new deployment:
 2. `npx wrangler secret put RESEND_API_KEY`. `REMINDER_TO` is optional: it is only the owner's reminder address
    until their first email login.
 3. Deploy; CI applies all pending migrations.
-4. On production, press **Send test** on the home screen to confirm the setup.
+4. On production, press **Send test** in Settings to confirm the setup.
 
 Failures show up in `npx wrangler tail ai-cards` as `reminder: …` lines (`Resend <status>: <body>`). Locally the
 mail is really sent via Resend, so put a real `RESEND_API_KEY` in `.dev.vars` to try it; fire the cron by hand with:

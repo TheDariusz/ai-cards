@@ -62,10 +62,10 @@ export function buildReminder(input: {
     status = t.noneStatus
     button = { label: t.openApp, url: `${base}/` }
   }
-  // only reviews complete a day, so the streak is at stake only when cards are due
-  const streakLine = due > 0 && streak >= 1 ? t.streakLine(streak) : null
+  // learning a card completes the day too, so a learn-only reminder also carries the streak
+  const streakLine = (due > 0 || fresh > 0) && streak >= 1 ? t.streakLine(streak) : null
   const footer = t.footer
-  const homeUrl = `${base}/`
+  const settingsUrl = `${base}/settings`
 
   const text = [
     status,
@@ -73,7 +73,7 @@ export function buildReminder(input: {
     '',
     `${button.label}: ${button.url}`,
     '',
-    `${footer} ${homeUrl}`,
+    `${footer} ${settingsUrl}`,
   ].join('\n')
 
   const font = "-apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif"
@@ -90,7 +90,7 @@ ${streakLine ? `<p style="margin:0 0 12px;font-size:15px;line-height:1.5;">🔥 
 <p style="margin:20px 0 4px;"><a href="${escapeHtml(button.url)}" style="display:inline-block;background:#4b5bdc;color:#ffffff;text-decoration:none;font-weight:600;font-size:16px;padding:12px 22px;border-radius:12px;">${escapeHtml(button.label)}</a></p>
 </td></tr>
 </table>
-<p style="margin:16px 0 0;font-size:12px;line-height:1.5;color:#1d2233;opacity:0.7;"><a href="${escapeHtml(homeUrl)}" style="color:#1d2233;">${escapeHtml(footer)}</a></p>
+<p style="margin:16px 0 0;font-size:12px;line-height:1.5;color:#1d2233;opacity:0.7;"><a href="${escapeHtml(settingsUrl)}" style="color:#1d2233;">${escapeHtml(footer)}</a></p>
 </td></tr>
 </table>
 </body></html>`

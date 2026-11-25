@@ -3,25 +3,51 @@ import type { Route } from './+types/cards'
 import { requireAuth } from '../lib/session'
 import { createDb, listCards } from '../db/repo'
 import { useT } from '../lib/i18n'
+import { cardStatus } from '../lib/cards'
 
 export async function loader({ request, context }: Route.LoaderArgs) {
   const env = context.cloudflare.env
   const userId = await requireAuth(request, env)
-  return { cards: await listCards(createDb(env.DB), userId) }
+  const rows = await listCards(createDb(env.DB), userId)
+  const now = Date.now()
+  return {
+    cards: rows.map((c) => {
+      const status = cardStatus(c, now)
+      return { id: c.id, word: c.word, wordPl: c.wordPl, sentenceEn: c.sentenceEn, tag: status === 'ready' ? null : status }
+    }),
+  }
 }
 
 export default function Cards({ loaderData }: Route.ComponentProps) {
-  const t = useT().cards
+  const { cards: t, nav } = useT()
+  const { cards } = loaderData
   return (
-    <main className="page">
-      <h1><Link to="/">←</Link> {t.title}</h1>
-      {loaderData.cards.map((c) => (
-        <Link key={c.id} to={`/cards/${c.id}`} className="card-row">
-          <b>{c.word}</b> {c.status !== 'ready' && <em className="muted">({t.status[c.status]})</em>}
-          <br />
-          <span className="muted">{c.sentenceEn ?? '…'}</span>
-        </Link>
-      ))}
+    <main className="page cards-page">
+      <header className="cards-head">
+        <h1>{t.title}</h1>
+        <span className="muted">{cards.length}</span>
+      </header>
+      {cards.length === 0 ? (
+        <div className="surface-card cards-empty">
+          <p className="muted">{t.empty}</p>
+          <Link to="/" className="cards-empty-link">{nav.today}</Link>
+        </div>
+      ) : (
+        <div className="surface-card cards-list">
+          {cards.map((c) => (
+            <Link key={c.id} to={`/cards/${c.id}`} className="card-row">
+              <span className="card-row-head">
+                <span className="card-row-word">
+                  <b>{c.word}</b>
+                  {c.wordPl && <span className="muted"> · {c.wordPl}</span>}
+                </span>
+                {c.tag && <span className="tag" data-tag={c.tag}>{t.tag[c.tag]}</span>}
+              </span>
+              {c.sentenceEn && <span className="card-row-sentence">{c.sentenceEn}</span>}
+            </Link>
+          ))}
+        </div>
+      )}
     </main>
   )
 }

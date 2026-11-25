@@ -48,6 +48,11 @@ export async function listCards(db: Db, userId: number): Promise<Card[]> {
   return db.select().from(cards).where(eq(cards.userId, userId)).orderBy(desc(cards.createdAt))
 }
 
+export async function countCards(db: Db, userId: number): Promise<number> {
+  const [row] = await db.select({ n: count() }).from(cards).where(eq(cards.userId, userId))
+  return row.n
+}
+
 const dueCondition = (userId: number, now: number) =>
   and(eq(cards.userId, userId), eq(cards.status, 'ready'), isNotNull(cards.firstLearnedAt), lte(cards.dueAt, now))
 
@@ -83,6 +88,7 @@ export async function nextDueAt(db: Db, userId: number, after: number): Promise<
   return row.at ?? null
 }
 
+// SQL twin of isNewCard in app/lib/cards.ts: keep the two in sync
 const newCardCondition = (userId: number) =>
   and(eq(cards.userId, userId), eq(cards.status, 'ready'), isNull(cards.firstLearnedAt), isNotNull(cards.decodeParts))
 
@@ -101,7 +107,11 @@ export async function completeFirstLearning(db: Db, userId: number, cardId: numb
     .set({ firstLearnedAt: now, ...newCardSrs(now) })
     .where(and(ownCard(userId, cardId), eq(cards.status, 'ready'), isNull(cards.firstLearnedAt), isNotNull(cards.decodeParts)))
     .returning({ id: cards.id })
-  return updated.length === 1
+  if (updated.length !== 1) return false
+  if ((await countDue(db, userId, now)) === 0) {
+    await db.insert(dayLog).values({ userId, date: dayKey(now) }).onConflictDoNothing()
+  }
+  return true
 }
 
 export async function applyReview(
