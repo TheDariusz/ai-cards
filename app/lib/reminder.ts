@@ -62,8 +62,8 @@ export function buildReminder(input: {
     status = t.noneStatus
     button = { label: t.openApp, url: `${base}/` }
   }
-  // the streak line goes only with a review reminder (cards due), not with a learn-only one
-  const streakLine = due > 0 && streak >= 1 ? t.streakLine(streak) : null
+  // learning a card completes the day too, so a learn-only reminder also carries the streak
+  const streakLine = (due > 0 || fresh > 0) && streak >= 1 ? t.streakLine(streak) : null
   const footer = t.footer
   const settingsUrl = `${base}/settings`
 

@@ -61,6 +61,8 @@ export async function loader({ request, context }: Route.LoaderArgs) {
     reviewedToday,
     learnedToday: countLearnedOn(all, today),
     nextDueLine: next === null ? null : formatDayLine(dayKey(next), locale),
+    // a card reviewed late yesterday can come due again later today
+    nextDueToday: next !== null && dayKey(next) === today,
   }
 }
 
@@ -207,7 +209,7 @@ function UserHome({ loaderData, actionData }: { loaderData: UserHome; actionData
 
 // The one primary card; its content follows `state` (see todayState).
 function TodayCard({ data, actionData, outOfCredits }: { data: UserHome; actionData: ActionData; outOfCredits: boolean }) {
-  const { state, due, minutes, newCards, pending, failed, reviewedToday, learnedToday, nextDueLine } = data
+  const { state, due, minutes, newCards, pending, failed, reviewedToday, learnedToday, nextDueLine, nextDueToday } = data
   const t = useT()
 
   switch (state) {
@@ -283,8 +285,10 @@ function TodayCard({ data, actionData, outOfCredits }: { data: UserHome; actionD
     case 'nothing-due':
       return (
         <section className="surface-card today-card" data-state={state}>
-          <h2>{t.home.nothingTitle}</h2>
-          {nextDueLine && <p className="muted">{t.home.nothingNext(nextDueLine)}</p>}
+          <h2>{nextDueToday ? t.home.nothingNowTitle : t.home.nothingTitle}</h2>
+          {nextDueToday
+            ? <p className="muted">{t.home.nothingLaterToday}</p>
+            : nextDueLine && <p className="muted">{t.home.nothingNext(nextDueLine)}</p>}
         </section>
       )
   }

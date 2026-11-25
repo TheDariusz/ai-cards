@@ -152,6 +152,10 @@ describe('headwordPairIndices', () => {
     expect([...headwordPairIndices(['She wants', 'to', 'lend', 'it'], 'to lend')]).toEqual([])
   })
 
+  it('falls back to an inflected form in one pair when the exact spelling is split across pairs', () => {
+    expect([...headwordPairIndices(['to', 'lend it', 'and to lending'], 'to lend')]).toEqual([2])
+  })
+
   it('prefers the exact spelling over a lookalike in another pair', () => {
     expect([...headwordPairIndices(['helpful', 'help'], 'help')]).toEqual([1])
   })

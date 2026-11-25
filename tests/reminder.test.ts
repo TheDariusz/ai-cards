@@ -91,12 +91,12 @@ describe('buildReminder', () => {
     expect(m.text).toContain('Przypomnienia wyłączysz w Ustawieniach aplikacji. https://x.dev/settings')
     expect(m.html).toContain('href="https://x.dev/review"')
   })
-  it('no streak line on new-cards-only days: it goes only with a review reminder', () => {
+  it('streak line on new-cards-only days: learning a card completes the day', () => {
     const m = buildReminder({ due: 0, fresh: 3, streak: 7, appUrl: url, locale: 'pl' })
-    expect(m.text).not.toContain('seria')
-    expect(m.html).not.toContain('seria')
+    expect(m.text).toContain('Twoja seria: 7 dni')
+    expect(m.html).toContain('Twoja seria: 7 dni')
   })
-  it('streak line appears in HTML only when due and streak', () => {
+  it('streak line appears in HTML only with a streak', () => {
     expect(buildReminder({ due: 2, fresh: 0, streak: 7, appUrl: url, locale: 'pl' }).html).toContain('Twoja seria: 7 dni')
     expect(buildReminder({ due: 2, fresh: 0, streak: 0, appUrl: url, locale: 'pl' }).html).not.toContain('seria')
   })

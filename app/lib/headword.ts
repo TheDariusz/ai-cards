@@ -92,9 +92,13 @@ export function headwordVariants(headword: string | null | undefined): string[][
 // headword truly isn't spelled out verbatim, never a competitor to a spot
 // where it is. So try an exact-only pass first, and only fall back to the
 // fuzzy scan when that pass finds nothing.
+//
+// `accept` drops occurrences the caller can't use before that choice, so an unusable
+// exact hit never hides a usable fuzzy one.
 export function findHeadwordIndices(
   tokens: string[],
   headword: string | null | undefined,
+  accept: (occ: number[]) => boolean = () => true,
 ): number[][] {
   const variants = headwordVariants(headword)
   const scan = (matches: (word: string, head: string) => boolean) =>
@@ -103,6 +107,7 @@ export function findHeadwordIndices(
       .sort((a, b) => a[0] - b[0])
       // two variants can land on the same spot ("zdecydowany / zdecydowana")
       .filter((occ, i, all) => i === 0 || occ[0] !== all[i - 1][0])
+      .filter(accept)
   const exact = scan((word, head) => word === head)
   return exact.length > 0 ? exact : scan(tokenMatchesHeadword)
 }
@@ -145,9 +150,6 @@ export function headwordPairIndices(pairs: string[], headword: string | null | u
     owner.push(pair)
     return token
   }))
-  const marked = new Set<number>()
-  for (const occ of findHeadwordIndices(tokens, headword)) {
-    if (occ.every((i) => owner[i] === owner[occ[0]])) marked.add(owner[occ[0]])
-  }
-  return marked
+  const inOnePair = (occ: number[]) => occ.every((i) => owner[i] === owner[occ[0]])
+  return new Set(findHeadwordIndices(tokens, headword, inOnePair).map((occ) => owner[occ[0]]))
 }

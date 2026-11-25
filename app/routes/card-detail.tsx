@@ -129,6 +129,8 @@ export default function CardDetail({ loaderData, actionData }: Route.ComponentPr
   const { card, outOfCredits } = loaderData
   const nav = useNavigation()
   const busy = nav.state !== 'idle'
+  // the LLM/TTS call runs inside the action, so the pressed button says it is working
+  const pending = nav.state === 'submitting' ? nav.formData?.get('intent') : null
   const t = useT()
   // Remount the edit form when the editable content changes (e.g. after
   // Regenerate) so its uncontrolled defaultValue inputs re-read fresh values.
@@ -147,7 +149,7 @@ export default function CardDetail({ loaderData, actionData }: Route.ComponentPr
       ) : card.status === 'ready' ? (
         <Form method="post">
           <input type="hidden" name="intent" value="retry-audio" />
-          <button type="submit" className="soft-button" disabled={busy}>{t.card.generateAudio}</button>
+          <button type="submit" className="soft-button" disabled={busy}>{pending === 'retry-audio' ? t.card.generatingAudio : t.card.generateAudio}</button>
         </Form>
       ) : null}
 
@@ -176,7 +178,7 @@ export default function CardDetail({ loaderData, actionData }: Route.ComponentPr
           <Form method="post" className="quick-add" aria-busy={busy}>
             <input type="hidden" name="intent" value="regenerate" />
             <input name="hint" maxLength={MAX_TEXT_CHARS} placeholder={t.card.hintPlaceholder} />
-            <button type="submit" disabled={busy}>{t.card.regenerate}</button>
+            <button type="submit" disabled={busy}>{pending === 'regenerate' ? t.card.regenerating : t.card.regenerate}</button>
           </Form>
         </section>
       )}
